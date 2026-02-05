@@ -1,80 +1,122 @@
 <template>
-  <div class="h-full flex flex-col">
-    <div ref="scrollRef" class="flex-1 overflow-y-auto p-4 space-y-4">
-      <div
-        v-for="(msg, i) in messages"
-        :key="i"
-        class="flex"
-        :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
-      >
-        <ChatMessageBubble :message="msg" :streaming="msg.role === 'assistant' && i === messages.length - 1 && streaming" />
-      </div>
-    </div>
-    <div class="shrink-0 border-t border-zinc-800 p-4">
-      <form @submit.prevent="send" class="flex gap-2">
-        <input
-          v-model="input"
-          type="text"
-          placeholder="输入问题或指令…"
-          class="flex-1 rounded-lg bg-zinc-900 border border-zinc-700 px-4 py-2.5 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
-          :disabled="streaming"
-        />
+  <div class="flex-1 flex min-h-0 gap-4 p-4">
+    <!-- 左：会话列表（仿 IM 首页） -->
+    <aside class="flex flex-col w-full max-w-md shrink-0 min-h-0 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm">
+      <div class="shrink-0 flex items-center justify-between border-b border-zinc-200 px-3 py-3">
+        <h2 class="text-sm font-medium text-zinc-600">会话</h2>
         <button
-          type="submit"
-          class="rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
-          :disabled="streaming || !input.trim()"
+          type="button"
+          class="rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
+          @click="startNewChat"
         >
-          发送
+          新会话
         </button>
-      </form>
-    </div>
+      </div>
+      <div class="flex-1 overflow-y-auto overscroll-contain">
+        <!-- 快捷入口：联系人、机器人（切换右侧应用视图） -->
+        <div class="p-2 space-y-0.5 border-b border-zinc-100">
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left text-zinc-700 hover:bg-zinc-50 transition-colors"
+            @click="setAppView('contacts')"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-500 text-lg">👤</span>
+            <div class="min-w-0 flex-1">
+              <p class="font-medium text-zinc-800">联系人</p>
+              <p class="text-xs text-zinc-500">与同事发起对话</p>
+            </div>
+            <span class="text-zinc-400">›</span>
+          </button>
+          <button
+            type="button"
+            class="w-full flex items-center gap-3 rounded-xl px-3 py-3 text-left text-zinc-700 hover:bg-zinc-50 transition-colors"
+            @click="setAppView('bots')"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 text-lg">◇</span>
+            <div class="min-w-0 flex-1">
+              <p class="font-medium text-zinc-800">机器人</p>
+              <p class="text-xs text-zinc-500">AI 助手与专用机器人</p>
+            </div>
+            <span class="text-zinc-400">›</span>
+          </button>
+        </div>
+        <!-- 会话列表 -->
+        <ul class="divide-y divide-zinc-100">
+          <li
+            v-for="c in chats"
+            :key="c.id"
+            class="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-zinc-50 active:bg-zinc-100 transition-colors"
+            @click="goToChat(c.id)"
+          >
+            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600 text-sm font-medium">
+              {{ c.title.charAt(0) }}
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="font-medium text-zinc-800 truncate">{{ c.title }}</p>
+              <p class="text-xs text-zinc-500 truncate">{{ lastPreview(c.id) }}</p>
+            </div>
+            <span class="text-zinc-400">›</span>
+          </li>
+        </ul>
+      </div>
+    </aside>
+    <!-- 右：应用区 -->
+    <section class="flex-1 min-w-0 flex flex-col min-h-0">
+      <div class="flex-1 min-h-0">
+        <AppPanel />
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-const scrollRef = ref<HTMLElement | null>(null)
-const input = ref('')
-const streaming = ref(false)
-const messages = ref<Array<{ role: 'user' | 'assistant'; content: string; thinking?: string }>>([])
+const router = useRouter()
+const { chats, getMessages, ensureChat, createNewChat } = useChatSessions()
+const { setView: setAppView } = useAppView()
 
-const { streamChat } = useChatStream()
-
-async function send() {
-  const text = input.value.trim()
-  if (!text || streaming.value) return
-  input.value = ''
-  messages.value.push({ role: 'user', content: text })
-  messages.value.push({ role: 'assistant', content: '', thinking: '' })
-  streaming.value = true
-  const idx = messages.value.length - 1
-  const placeholder = '思考中…'
-  try {
-    await streamChat(
-      text,
-      (delta) => {
-        const current = messages.value[idx].content
-        if (current === placeholder) messages.value[idx].content = delta
-        else messages.value[idx].content += delta
-      },
-      {
-        onThinking: () => { messages.value[idx].content = placeholder },
-        onThinkingDelta: (delta) => {
-          if (!messages.value[idx].thinking) messages.value[idx].thinking = ''
-          messages.value[idx].thinking += delta
-        },
-        onThinkingDone: (fullText) => {
-          if (fullText) messages.value[idx].thinking = fullText
-        },
-      }
-    )
-    if (!messages.value[idx].content) {
-      messages.value[idx].content = '（未收到任何内容，请检查中间层与 CORS 配置）'
-    }
-  } catch (e) {
-    messages.value[idx].content = `请求失败：${e instanceof Error ? e.message : String(e)}`
-  } finally {
-    streaming.value = false
-  }
-  nextTick(() => scrollRef.value?.scrollTo({ top: scrollRef.value.scrollHeight, behavior: 'smooth' }))
+function lastPreview(chatId: string): string {
+  const list = getMessages(chatId)
+  if (list.length === 0) return '暂无消息'
+  const last = list[list.length - 1]
+  const text = last.content.trim()
+  return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '暂无消息'
 }
+
+function goToChat(id: string) {
+  router.push(`/chat/${id}`)
+}
+
+function startNewChat() {
+  const id = createNewChat()
+  router.push(`/chat/${id}`)
+}
+
+// 支持从 /list 跳转过来时带 ?with=contact-xx，先确保有该会话再跳转
+const route = useRoute()
+const { getWithTitle } = useContactsAndBots()
+
+onMounted(() => {
+  const withId = route.query.with as string | undefined
+  if (withId) {
+    const title = getWithTitle(withId)
+    if (title) {
+      ensureChat(withId, title)
+      router.replace({ path: '/chat/' + withId, query: {} })
+    }
+    return
+  }
+  const app = route.query.app as 'contacts' | 'bots' | undefined
+  if (app === 'contacts' || app === 'bots') setAppView(app)
+})
+
+watch(() => route.query.with, (withId) => {
+  if (!withId || typeof withId !== 'string') return
+  const title = getWithTitle(withId)
+  if (!title) return
+  ensureChat(withId, title)
+  router.replace({ path: '/chat/' + withId, query: {} })
+})
+watch(() => route.query.app, (app) => {
+  if (app === 'contacts' || app === 'bots') setAppView(app)
+})
 </script>
