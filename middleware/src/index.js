@@ -3,14 +3,12 @@
  * - SSE 流式代理（Dify Chat API → 前端），使用官方 dify-client
  * - 编排：Dify 意图 → cos / ERPNext API
  * - 写入前确认与权限校验
- * - Git 只读：多次提交分析（log）
  */
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { simpleGit } from 'simple-git';
 import { ChatClient } from 'dify-client';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -24,88 +22,6 @@ await app.register(cors, { origin: true });
 
 // 健康检查
 app.get('/health', async () => ({ status: 'ok' }));
-
-// Git 仓库路径：仅读，不信任前端传入路径；默认取工作区根目录
-const GIT_REPO_PATH = process.env.GIT_REPO_PATH || path.resolve(__dirname, '..', '..');
-const MAX_GIT_LOG = Math.min(Number(process.env.GIT_LOG_MAX) || 50, 100);
-
-/**
- * Git 多次提交分析（只读）
- * GET /api/git/log?limit=20
- * 返回最近 N 条提交的摘要，供 Dify/前端做 changelog 或上下文
- */
-app.get('/api/git/log', async (request, reply) => {
-  const limit = Math.min(Math.max(1, Number(request.query?.limit) || 20), MAX_GIT_LOG);
-  try {
-    const git = simpleGit({ baseDir: GIT_REPO_PATH });
-    const isRepo = await git.checkIsRepo();
-    if (!isRepo) {
-      return reply.code(404).send({ error: 'not a git repository', path: GIT_REPO_PATH });
-    }
-    const log = await git.log({ maxCount: limit });
-    const commits = (log.all || []).map((c) => ({
-      hash: c.hash,
-      shortHash: c.hash.slice(0, 7),
-      date: c.date,
-      author: c.author_name,
-      message: c.message,
-    }));
-    return reply.send({ commits, total: commits.length });
-  } catch (e) {
-    request.log.error(e);
-    return reply.code(500).send({
-      error: 'git log failed',
-      message: e.message || String(e),
-    });
-  }
-});
-
-/**
- * 单次提交详情（只读）
- * GET /api/git/log/:hash
- * 返回该提交的元数据与 diff 摘要（--stat），便于分析单次变更
- */
-app.get('/api/git/log/:hash', async (request, reply) => {
-  const { hash } = request.params;
-  if (!hash || !/^[a-fA-F0-9]{7,40}$/.test(hash)) {
-    return reply.code(400).send({ error: 'invalid commit hash' });
-  }
-  try {
-    const git = simpleGit({ baseDir: GIT_REPO_PATH });
-    const isRepo = await git.checkIsRepo();
-    if (!isRepo) {
-      return reply.code(404).send({ error: 'not a git repository', path: GIT_REPO_PATH });
-    }
-    const show = await git.show([hash, '--stat', '--format=%H%n%an%n%ae%n%ad%n%s%n%b', '--no-patch']);
-    const lines = show.split('\n');
-    const files = [];
-    let i = 0;
-    const [fullHash, authorName, authorEmail, date, subject, ...bodyLines] = lines;
-    let bodyEnd = bodyLines.findIndex((l) => /^\s*[\d]+ files? changed/.test(l));
-    if (bodyEnd < 0) bodyEnd = bodyLines.length;
-    const body = bodyLines.slice(0, bodyEnd).join('\n').trim();
-    for (let j = bodyEnd + 1; j < bodyLines.length; j++) {
-      const line = bodyLines[j];
-      const m = line.match(/^(.+?)\s+\|\s+(\d+)(?:\s+([+\-]+))?/);
-      if (m) files.push({ path: m[1].trim(), changes: parseInt(m[2], 10), insertions: m[3] || '' });
-    }
-    return reply.send({
-      hash: fullHash?.trim(),
-      shortHash: (fullHash || hash).slice(0, 7),
-      author: { name: authorName?.trim(), email: authorEmail?.trim() },
-      date: date?.trim(),
-      subject: subject?.trim(),
-      body: body || undefined,
-      files,
-    });
-  } catch (e) {
-    request.log.error(e);
-    return reply.code(404).send({
-      error: 'commit not found',
-      message: e.message || String(e),
-    });
-  }
-});
 
 const DIFY_API_BASE = (process.env.DIFY_API_BASE || 'https://api.dify.ai/v1').replace(/\/$/, '');
 const DIFY_API_KEY = process.env.DIFY_API_KEY || '';
