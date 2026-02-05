@@ -1,0 +1,31 @@
+---
+description: 本工作区 AI 交互工作台的关键全局规则与约定
+alwaysApply: true
+---
+
+# 项目全局规则（供其它会话复用）
+
+## 语言与输出
+- **所有对话与产出统一使用中文。**
+
+## 项目定位与技术栈
+- **前端**：Vue 3 + Nuxt 3 + Tailwind + Shadcn-vue，对话流 + 任务卡片，极简「去 ERP 化」UX。
+- **中间层**：Node.js (Fastify)，SSE 流式代理、Dify/ERP 编排、鉴权；Dify API Key 仅放中间层，前端不直连 Dify/Frappe。
+- **后端**：ERPNext v16 + cos App（REST API）；前端不直连 Frappe，经中间层访问。
+
+## 流式与 AI 行为
+- **必须支持高性能 SSE 流式输出**，打字机效果；禁止一次性拉取长文本造成卡顿。
+- **AI 思考过程**：前端需完整展示并在思考结束后保留；中间层在流结束前发送 `thinking` 事件（含 `fullText`）；前端监听 `onThinkingDone` 更新并保留内容。解析 `<think>` 时需兼容大小写、可选空格及 HTML 实体（如 `&lt;think&gt;`）。
+- **Dify 事件**：中间层转发 `agent_thought`、`tool_call` 等为 `dify_event`；前端根据其展示「正在调用工具」等状态。`useChatStream.ts` 处理流时**不得重置** `lastEvent`。
+
+## 安全与写入
+- 写入路径：**意图 → 参数/草稿 → 用户确认 → 权限校验 → 再写入**。物料创建走「草稿 → 确认 → create_from_draft」。
+- 中间层负责 CORS 及 `Access-Control-Allow-*` 等头部，确保前后端通信无跨域错误。
+
+## 前端约定
+- 布局：`layouts/default.vue` 使用 `h-screen`；`pages/index.vue` 左右分栏（左侧会话列表 `max-w-md`，右侧应用区 `flex-1`）；单聊页为 `pages/chat/[id].vue`，顶栏采用类似灵动岛的 sticky 悬浮胶囊。
+- 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理右侧 AppPanel 视图（`home` | `contacts` | `bots`）。
+- 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。已废弃的 `SessionDrawer`、`SessionSidebar` 保持移除。
+
+## 仓库与文档
+- 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC）。

@@ -11,6 +11,6 @@ const router = useRouter()
 onMounted(() => {
   const tab = (route.query.tab as string) || 'contacts'
   const app = tab === 'bots' ? 'bots' : 'contacts'
-  router.replace({ path: '/', query: { app } })
+  router.replace({ path: '/space', query: { app } })
 })
 </script>

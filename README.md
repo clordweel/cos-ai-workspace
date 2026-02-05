@@ -12,6 +12,7 @@
 | **middleware** | 中间层（SSE 流式、API 编排） | Node.js, Fastify |
 | **cos** | Frappe 自定义 App（物料/生产 API） | Frappe, ERPNext v16 |
 | **docs** | 架构与 API 文档 | — |
+| **logs** | 开发变更记录 | [CHANGELOG.md](./logs/CHANGELOG.md) |
 
 详细架构见 [PROJECT.md](./PROJECT.md) 与 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
 

@@ -3,7 +3,7 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],
   compatibilityDate: '2025-02-01',
-  devServer: { port: 3001 },
+  devServer: { port: 3001, host: '0.0.0.0' },
   app: {
     head: {
       title: 'AI 工作台',
