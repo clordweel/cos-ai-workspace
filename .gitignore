@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Build / output
+dist/
+.output/
+.nuxt/
+.nitro/
+.cache/
+
+# Logs
+*.log
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tauri
+frontend/src-tauri/target/
+
+# Frappe / cos (if developed in workspace)
+cos/**/__pycache__/
+cos/**/*.pyc
+*.egg-info/

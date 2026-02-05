@@ -1,0 +1,17 @@
+{
+  "name": "ai-workbench-middleware",
+  "version": "0.1.0",
+  "description": "Fastify SSE + API orchestration for AI Workbench",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@fastify/cors": "^10.x",
+    "dify-client": "^3.0.0",
+    "dotenv": "^16.6.1",
+    "fastify": "^5.x"
+  }
+}
