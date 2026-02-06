@@ -1,9 +1,37 @@
 <template>
   <nav
-    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible border-r border-zinc-200 py-1.5 rounded-l-lg transition-[width] duration-200"
+    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg transition-[width] duration-200"
     :class="isNavExpanded ? 'w-44' : 'w-12'"
     aria-label="应用"
   >
+    <!-- 顶部：右侧内容区显隐切换（侧栏展开时居左，折叠时居中） -->
+    <div class="shrink-0 flex items-center py-1.5" :class="isNavExpanded ? 'justify-start pl-1' : 'justify-center'">
+      <button
+        type="button"
+        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+        :title="isContentVisible ? '折叠内容区' : '展开内容区'"
+        aria-label="切换应用内容区"
+        @click="toggleContentPanel"
+      >
+        <PanelRightOpen v-if="isContentVisible" class="h-3.5 w-3.5" />
+        <PanelRightClose v-else class="h-3.5 w-3.5" />
+      </button>
+    </div>
+    <!-- 设置：置于导航列表上方 -->
+    <div class="shrink-0 flex flex-col gap-px px-1 pb-0.5">
+      <button
+        type="button"
+        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+        :class="isNavExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
+        title="系统设置"
+        @click="openApp('settings')"
+      >
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
+          <Settings class="h-3.5 w-3.5" />
+        </span>
+        <span v-show="isNavExpanded" class="text-xs font-medium truncate">设置</span>
+      </button>
+    </div>
     <div class="flex-1 min-h-0 flex flex-col gap-px overflow-y-auto overscroll-contain min-w-0 px-1 py-0.5">
       <button
         type="button"
@@ -56,42 +84,25 @@
         </button>
       </template>
     </div>
-    <!-- 分隔线 + 悬浮收起按钮 -->
-    <div class="relative shrink-0 pt-1.5 pb-2">
-      <div class="absolute left-0 right-0 top-1.5 h-px bg-zinc-200" aria-hidden="true" />
-      <button
-        type="button"
-        class="absolute right-0 top-1.5 z-10 flex h-7 w-7 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-700 hover:shadow"
-        :title="isNavExpanded ? '收起侧栏' : '展开侧栏'"
-        @click="isNavExpanded = !isNavExpanded"
-      >
-        <PanelLeftClose v-if="isNavExpanded" class="h-3.5 w-3.5" />
-        <PanelLeftOpen v-else class="h-3.5 w-3.5" />
-      </button>
-    </div>
-    <div class="mt-auto shrink-0 flex flex-col gap-px px-1 pb-0.5">
-      <button
-        type="button"
-        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
-        :class="isNavExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
-        title="系统设置"
-        @click="openApp('settings')"
-      >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
-          <Settings class="h-3.5 w-3.5" />
-        </span>
-        <span v-show="isNavExpanded" class="text-xs font-medium truncate">设置</span>
-      </button>
-    </div>
+    <!-- 折叠按钮：相对整条侧栏垂直居中 -->
+    <button
+      type="button"
+      class="absolute right-0 top-1/2 z-10 flex h-7 w-7 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition-colors hover:bg-zinc-50 hover:text-zinc-700 hover:shadow"
+      :title="isNavExpanded ? '收起侧栏' : '展开侧栏'"
+      @click="isNavExpanded = !isNavExpanded"
+    >
+      <PanelLeftClose v-if="isNavExpanded" class="h-3.5 w-3.5" />
+      <PanelLeftOpen v-else class="h-3.5 w-3.5" />
+    </button>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { Home, Users, Bot, Settings, PanelLeftClose, PanelLeftOpen, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
+import { Home, Users, Bot, Settings, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
 
-const { openPanel, openNavPage } = useAppView()
+const { openPanel, openNavPage, isContentVisible, toggleContentPanel } = useAppView()
 
-const isNavExpanded = ref(true)
+const isNavExpanded = ref(false)
 
 const appEntries = [
   { id: 'material', title: '物料助手', icon: Package },

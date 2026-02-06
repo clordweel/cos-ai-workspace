@@ -11,6 +11,8 @@ const defaultCard: AppCard = { id: 'home', view: 'home' }
 const appStack = ref<AppCard[]>([])
 /** 应用区是否展示；默认展示并打开导航页（导航页视作一种应用） */
 const isPanelOpen = ref(true)
+/** 右侧应用内容区是否展示；为 false 时仅保留侧边栏 */
+const isContentVisible = ref(true)
 
 const currentView = computed<AppView>(() => {
   const stack = appStack.value
@@ -53,6 +55,7 @@ export function useAppView() {
   }
   function openPanel(view?: AppView) {
     isPanelOpen.value = true
+    isContentVisible.value = true
     if (view) pushCard(view)
     else if (appStack.value.length === 0) {
       appStack.value = [defaultCard] // 默认打开导航页（home）
@@ -61,17 +64,23 @@ export function useAppView() {
   /** 切换到导航页（视作一种应用） */
   function openNavPage() {
     isPanelOpen.value = true
+    isContentVisible.value = true
     appStack.value = [defaultCard]
   }
   function closePanel() {
     isPanelOpen.value = false
     appStack.value = []
   }
+  function toggleContentPanel() {
+    isContentVisible.value = !isContentVisible.value
+  }
   return {
     appStack: readonly(appStack),
     currentView,
     canGoBack,
     isPanelOpen: readonly(isPanelOpen),
+    isContentVisible: readonly(isContentVisible),
+    toggleContentPanel,
     setView,
     pushCard,
     goBack,

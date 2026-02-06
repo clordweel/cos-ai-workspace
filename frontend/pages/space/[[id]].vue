@@ -1,63 +1,60 @@
 <template>
-  <!-- 会话区：单一 DOM 结构，用 v-show + class 切换布局，避免展开时整树卸载/挂载导致卡顿 -->
-  <div class="h-full flex flex-col min-h-0 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm">
-    <div class="h-full flex min-h-0" :class="isPanelOpen ? 'flex-col' : 'flex-row'">
-      <!-- 列表：单栏时仅无 chat 显示，两栏时始终显示 -->
+  <!-- 会话区：展开时列表与聊天左右并排 -->
+  <div class="h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+    <div
+      class="flex min-h-0 min-w-0 flex-1"
+      :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
+    >
+      <!-- 列表：展开时始终显示，否则仅无 chat 时显示 -->
       <aside
-        v-show="!isPanelOpen || !chatId"
-        class="flex flex-col min-h-0 shrink-0 border-zinc-200"
-        :class="isPanelOpen ? 'flex-1 min-w-0 overflow-hidden border-b' : 'w-64 border-r'"
+        v-show="isSessionExpanded || !chatId"
+        class="flex flex-col min-h-0 shrink-0 bg-white border-zinc-200"
+        :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200'"
       >
-        <div class="shrink-0 flex items-center justify-between border-b border-zinc-200 px-3 py-3">
-          <h2 class="text-sm font-medium text-zinc-600">会话</h2>
-          <button
-            type="button"
-            class="rounded-lg px-3 py-1.5 text-sm font-medium text-emerald-600 hover:bg-emerald-50 transition-colors"
-            @click="startNewChat"
-          >
-            新会话
-          </button>
-        </div>
-        <div class="flex-1 overflow-y-auto overscroll-contain">
+        <SessionListHeader
+          @new-chat="startNewChat"
+          @search="onSessionSearch"
+        />
+        <div class="flex-1 overflow-y-auto overscroll-contain min-h-0">
           <ul class="divide-y divide-zinc-100">
             <li
               v-for="c in chats"
               :key="c.id"
-              class="flex items-center gap-3 px-3 py-3 cursor-pointer transition-colors"
+              class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors"
               :class="[
-                c.id === chatId && !isPanelOpen ? 'bg-emerald-50 text-emerald-800' : 'hover:bg-zinc-50 active:bg-zinc-100',
+                c.id === chatId && isSessionExpanded ? 'bg-emerald-50 text-emerald-800' : 'hover:bg-zinc-50 active:bg-zinc-100',
               ]"
               @click="goToChat(c.id)"
             >
-              <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600 text-sm font-medium">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600 text-xs font-medium">
                 {{ c.title.charAt(0) }}
               </span>
               <div class="min-w-0 flex-1">
-                <p class="font-medium text-zinc-800 truncate">{{ c.title }}</p>
-                <p class="text-xs text-zinc-500 truncate">{{ lastPreview(c.id) }}</p>
+                <p class="text-sm font-medium text-zinc-800 truncate">{{ c.title }}</p>
+                <p class="text-xs text-zinc-500 truncate leading-tight">{{ lastPreview(c.id) }}</p>
               </div>
-              <span class="text-zinc-400">›</span>
+              <span class="text-zinc-400 text-xs">›</span>
             </li>
           </ul>
         </div>
       </aside>
-      <!-- 右侧/下方：聊天或占位，单栏时仅 chat 时显示 -->
+      <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
       <main
         class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden"
-        :class="{ 'border-t border-zinc-200': isPanelOpen }"
-        v-show="isPanelOpen ? !!chatId : true"
+        :class="{ 'border-t border-zinc-200': !isSessionExpanded }"
+        v-show="isSessionExpanded || !!chatId"
       >
         <template v-if="chatId">
-          <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 px-3 py-2.5">
+          <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2">
             <NuxtLink
-              v-if="isPanelOpen"
+              v-if="!isSessionExpanded"
               to="/space"
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
               aria-label="返回会话列表"
             >
-              <ChevronLeft class="h-5 w-5" />
+              <ChevronLeft class="h-4 w-4" />
             </NuxtLink>
-            <span class="flex-1 text-sm font-medium text-zinc-800 truncate">{{ chatTitle }}</span>
+            <span class="flex-1 text-sm font-medium text-zinc-800 truncate min-w-0">{{ chatTitle }}</span>
           </div>
           <div ref="scrollRef" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-3">
             <div
@@ -156,6 +153,12 @@ function startNewChat() {
 
 const { getWithTitle } = useContactsAndBots()
 const { isPanelOpen, openPanel } = useAppView()
+/** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
+const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
+
+function onSessionSearch() {
+  // TODO: 聚焦搜索框或打开搜索 UI
+}
 
 onMounted(() => {
   const id = chatId.value

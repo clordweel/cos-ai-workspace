@@ -1,28 +1,5 @@
 <template>
-  <div class="h-full flex flex-col overflow-hidden bg-white">
-    <!-- 单卡：当前应用 -->
-    <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 px-3 py-2 bg-white">
-      <button
-        v-if="canGoBack"
-        type="button"
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-        aria-label="返回上一应用"
-        @click="goBack"
-      >
-        <ChevronLeft class="h-3.5 w-3.5" />
-      </button>
-      <h2 class="flex-1 text-xs font-medium text-zinc-500 tracking-wide truncate min-w-0">
-        {{ cardTitle(currentView) }}
-      </h2>
-      <button
-        type="button"
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-        aria-label="关闭应用面板"
-        @click="closePanel"
-      >
-        <X class="h-3.5 w-3.5" />
-      </button>
-    </div>
+  <div class="h-full flex flex-col overflow-hidden bg-white rounded-[inherit]">
     <div class="flex-1 overflow-y-auto p-3 min-h-0">
           <template v-if="currentView === 'home'">
             <div class="grid gap-2 sm:grid-cols-2">
@@ -106,23 +83,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AppView } from '~/composables/useAppView'
-import { ChevronLeft, X, Bot, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
+import { Bot, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
 
 const router = useRouter()
-const { currentView, canGoBack, goBack, closePanel } = useAppView()
+const { currentView } = useAppView()
 const { contacts, bots } = useContactsAndBots()
 const { ensureChat } = useChatSessions()
-
-function cardTitle(view: AppView): string {
-  const titles: Record<AppView, string> = {
-    home: '应用',
-    contacts: '联系人',
-    bots: '机器人',
-    settings: '系统设置',
-  }
-  return titles[view]
-}
 
 function openChat(type: 'contact' | 'bot', id: string, name: string) {
   const chatId = type === 'contact' ? `contact-${id}` : `bot-${id}`
