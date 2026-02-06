@@ -23,9 +23,9 @@ alwaysApply: true
 - 中间层负责 CORS 及 `Access-Control-Allow-*` 等头部，确保前后端通信无跨域错误。
 
 ## 前端约定
-- 布局：`layouts/default.vue` 使用 `h-screen`；`pages/index.vue` 左右分栏（左侧会话列表 `max-w-md`，右侧应用区 `flex-1`）；单聊页为 `pages/chat/[id].vue`，顶栏采用类似灵动岛的 sticky 悬浮胶囊。
-- 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理右侧 AppPanel 视图（`home` | `contacts` | `bots`）。
-- 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。已废弃的 `SessionDrawer`、`SessionSidebar` 保持移除。
+- 布局与组件详见 **`.cursor/rules/frontend-spec.mdc`**（在编辑 `frontend/**` 时生效）。主布局为 `layouts/workspace.vue`（会话区 + 应用区），会话页为 `pages/space/[[id]].vue`。
+- 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理应用区（`isPanelOpen`、`isContentVisible`、`currentView`：`home` | `contacts` | `bots` | `settings`）。Layout 向子组件 provide `isSessionExpanded`。
+- 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。
 
 ## 仓库与文档
 - 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC）。

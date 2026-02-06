@@ -5,6 +5,54 @@
 - **Vue 3** + **Nuxt 3** + **Tailwind CSS** + **Shadcn-vue**
 - 跨端：**Tauri**（桌面）/ **Capacitor**（移动/PWA）
 
+## UI 布局（当前实现）
+
+主界面采用 **workspace 布局**（`layouts/workspace.vue`），全屏 `h-screen`、背景 `bg-zinc-50`，主体为横向 flex + 内边距 `p-3`。
+
+### 整体结构
+
+- **左侧：会话区**  
+  - 由 layout 的 `<slot />` 渲染（一般为 `pages/space/[[id]].vue`）。  
+  - 当应用区打开且内容区展开时，会话区宽度限制为 `max-w-sm`，右侧留出应用区；当应用区关闭或仅侧栏可见时，会话区占满剩余宽度。
+
+- **右侧：应用区**（可选）  
+  - 一块 `section`：圆角 `rounded-2xl`、白底、边框 `border-zinc-200`、外阴影。  
+  - 内部为 **应用侧栏 + 应用内容区** 横向拼接。  
+  - 通过 `useAppView()` 的 `isPanelOpen`、`isContentVisible` 控制显隐与宽度；出场/离场使用 `app-panel` 过渡动画。
+
+### 应用区内部
+
+- **WorkspaceAppNav（应用侧栏）**  
+  - 宽度可折叠：展开 `w-44`，折叠 `w-12`，带过渡。  
+  - **自上而下**：  
+    1. **内容区显隐**：图标按钮（展开/折叠右侧内容区）；侧栏展开时居左，折叠时居中。  
+    2. **设置**：跳转应用内容区「设置」视图。  
+    3. **导航列表**（可滚动）：导航（首页）、联系人、机器人、以及扩展应用入口（如物料助手、订单进度、BOM 状态、库存概览）。  
+  - 右侧缘有**折叠/展开侧栏**的悬浮按钮（相对整条侧栏垂直居中）。
+
+- **应用内容区**  
+  - 当 `isContentVisible` 为 true 时显示：内层容器圆角 `rounded-xl`、浅底 `bg-zinc-50/50`、内阴影 + 边框外阴影。  
+  - 由 **AppPanel** 根据 `useAppView()` 的 `currentView` 切换：**home**（导航页，应用卡片网格）、**contacts**（联系人列表）、**bots**（机器人列表）、**settings**（设置项）。
+
+### 会话区（space 页）
+
+- **布局模式**  
+  - **展开模式**（`isSessionExpanded` 为 true：应用区关闭或应用内容区折叠）：会话列表与聊天区**左右并排**（列表 `w-64`，右侧主区 flex-1）。  
+  - **收起模式**：列表在上、聊天在下，或仅显示其一；无会话时仅显示列表，选中会话后显示顶栏 + 消息流 + 输入框，顶栏带「返回」到列表。
+
+- **会话列表**  
+  - 顶部 **SessionListHeader**：Logo +「AI COS 工作台」标题、新会话按钮、搜索按钮。  
+  - 下方为会话列表（头像、标题、最后一条预览），当前会话高亮（emerald）。
+
+- **主区**  
+  - 有 `chatId` 时：顶栏（可选返回、会话标题）、可滚动消息区（`ChatMessageBubble`）、底部输入框 + 发送。  
+  - 无 `chatId` 时：居中提示「选择左侧会话或新建会话」+ 新会话按钮。
+
+### 状态与注入
+
+- **useAppView**：`isPanelOpen`、`isContentVisible`、`currentView`、`openPanel`、`openNavPage`、`toggleContentPanel` 等。  
+- Layout 向子组件 provide **`isSessionExpanded`**（computed：当应用区关闭或应用内容区折叠时为 true），用于 space 页切换列表/聊天布局。
+
 ## UX 原则（De-ERP）
 
 - **极简、抽象、深色模式**；严禁传统密集表格。
@@ -36,22 +84,29 @@ const decoder = new TextDecoder();
 frontend/
 ├── app.vue
 ├── nuxt.config.ts
+├── layouts/
+│   └── workspace.vue     # 工作台布局：会话区 + 应用区
 ├── pages/
-│   └── index.vue          # 主对话页
+│   ├── index.vue          # 入口（可重定向至 space）
+│   └── space/
+│       └── [[id]].vue     # 会话页（列表 + 聊天），layout: workspace
 ├── components/
-│   ├── ChatFlow.vue       # 对话流容器
-│   ├── MessageBubble.vue  # 单条消息（含打字机）
+│   ├── SessionListHeader.vue   # 会话列表顶栏（Logo、新会话、搜索）
+│   ├── WorkspaceAppNav.vue     # 应用侧栏（导航、设置、应用入口、折叠）
+│   ├── AppPanel.vue            # 应用内容区（home/contacts/bots/settings）
+│   ├── ChatMessageBubble.vue   # 单条消息（含打字机）
 │   └── TaskCard/
 │       ├── OrderProgress.vue
 │       ├── InventorySummary.vue
 │       ├── BomStatus.vue
 │       └── MaterialConfirm.vue  # 待确认物料 + 确认按钮
 ├── composables/
+│   ├── useAppView.ts      # 应用区视图状态（面板开关、内容区、currentView）
 │   └── useChatStream.ts   # SSE 封装
 └── tailwind.config.js / shadcn 配置
 ```
 
 ## 主题
 
-- 默认**深色**；可提供浅色切换。
-- 与 Shadcn-vue 深色主题变量一致，保证对比度与可访问性。
+- 当前布局与组件为**浅色**实现（如 `bg-zinc-50`、`border-zinc-200`、白底卡片）；可扩展**深色**切换。
+- 与 Shadcn-vue 主题变量一致，保证对比度与可访问性。

@@ -1,0 +1,34 @@
+---
+description: 前端 UI 布局、组件职责与约定（基于 docs/FRONTEND_SPEC.md）
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# 前端规范要点
+
+## 技术栈与主题
+- **Vue 3** + **Nuxt 3** + **Tailwind** + **Shadcn-vue**。当前为**浅色**实现：`bg-zinc-50`、`border-zinc-200`、白底卡片；可扩展深色。
+- 样式：圆角容器（`rounded-xl` / `rounded-2xl`）、统一边框与阴影，避免传统密集表格。
+
+## 布局（workspace）
+- **布局文件**：`layouts/workspace.vue`。全屏 `h-screen`、主体横向 flex、`p-3`。
+- **左侧会话区**：`<slot />`（一般为 `pages/space/[[id]].vue`）。应用区打开且内容区展开时 `max-w-sm`，否则占满。
+- **右侧应用区**：`section`（`rounded-2xl`、白底、`border-zinc-200`、`shadow-sm`）。内为 **WorkspaceAppNav** + 应用内容区；由 `useAppView()` 的 `isPanelOpen`、`isContentVisible` 控制，过渡动画 `app-panel`。
+
+## 应用区结构
+- **WorkspaceAppNav**：宽度 `w-44` / `w-12` 可折叠。自上而下：内容区显隐按钮（展开时居左、折叠时居中）→ 设置 → 导航列表（导航、联系人、机器人、扩展应用）；右侧缘折叠/展开侧栏按钮。
+- **应用内容区**：内层 `rounded-xl`、`bg-zinc-50/50`、内阴影+外阴影。**AppPanel** 按 `currentView` 切换：`home` | `contacts` | `bots` | `settings`。
+
+## 会话区（space 页）
+- **useAppView**：`isPanelOpen`、`isContentVisible`、`currentView`、`openPanel`、`openNavPage`、`toggleContentPanel`。
+- Layout provide **`isSessionExpanded`**（应用区关闭或内容区折叠时为 true）。为 true 时：会话列表 `w-64` 与聊天区左右并排；否则列表在上或仅聊天，顶栏可带「返回」。
+- **SessionListHeader**：Logo + 标题、新会话、搜索。会话列表当前项高亮（emerald）。主区：有 `chatId` 时顶栏 + 消息流（**ChatMessageBubble**）+ 输入框；无 `chatId` 时居中提示 + 新会话按钮。
+
+## UX 与 API
+- 主界面以**对话流**为主，结构化结果用**任务卡片**（订单进度、库存摘要、BOM 状态、待确认物料等）。
+- 对话：`POST /api/chat/stream`，消费 **SSE**，打字机展示。确认创建物料：卡片「确认」→ `POST /api/material/confirm`（`draft_id`、用户标识）。
+
+## 关键文件
+- 布局/页：`layouts/workspace.vue`、`pages/space/[[id]].vue`
+- 组件：`SessionListHeader.vue`、`WorkspaceAppNav.vue`、`AppPanel.vue`、`ChatMessageBubble.vue`、`TaskCard/*`
+- 状态：`composables/useAppView.ts`、`useChatSessions.ts`、`useChatStream.ts`
