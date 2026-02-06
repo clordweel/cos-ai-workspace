@@ -1,4 +1,4 @@
-export type AppView = 'home' | 'contacts' | 'bots'
+export type AppView = 'home' | 'contacts' | 'bots' | 'settings'
 
 export interface AppCard {
   id: string

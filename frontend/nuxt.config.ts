@@ -15,7 +15,7 @@ export default defineNuxtConfig({
   devServer: { port: 3001, host: '0.0.0.0' },
   app: {
     head: {
-      title: 'AI 工作台',
+      title: 'AI COS 工作台',
       meta: [{ name: 'theme-color', content: '#0a0a0a' }],
     },
   },

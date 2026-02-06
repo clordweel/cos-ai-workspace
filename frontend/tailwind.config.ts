@@ -8,7 +8,20 @@ export default {
     './app.vue',
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: [
+          '"HarmonyOS Sans SC"',
+          'HarmonyOSHans-Regular',
+          'HarmonyOSHans-fallback',
+          'PingFangSC-Regular',
+          'Microsoft YaHei',
+          'Arial',
+          'Helvetica',
+          'sans-serif',
+        ],
+      },
+    },
   },
   plugins: [],
 } satisfies Config

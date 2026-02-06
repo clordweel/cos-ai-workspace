@@ -55,9 +55,7 @@
               class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
               aria-label="返回会话列表"
             >
-              <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeft class="h-5 w-5" />
             </NuxtLink>
             <span class="flex-1 text-sm font-medium text-zinc-800 truncate">{{ chatTitle }}</span>
           </div>
@@ -109,6 +107,8 @@
 </template>
 
 <script setup lang="ts">
+import { ChevronLeft } from 'lucide-vue-next'
+
 definePageMeta({ layout: 'workspace' })
 
 const route = useRoute()

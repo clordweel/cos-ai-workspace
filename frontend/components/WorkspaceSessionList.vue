@@ -1,5 +1,5 @@
 <template>
-  <aside class="flex flex-col w-full max-w-md shrink-0 min-h-0 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm ml-4">
+  <aside class="session-shell flex flex-col w-full max-w-md shrink-0 min-h-0 overflow-hidden rounded-xl border border-zinc-200 bg-white/80 shadow-sm ml-4">
     <div class="shrink-0 flex items-center justify-between border-b border-zinc-200 px-3 py-3">
       <h2 class="text-sm font-medium text-zinc-600">会话</h2>
       <button
@@ -57,3 +57,30 @@ function startNewChat() {
   router.push(`/space/${id}`)
 }
 </script>
+
+<style scoped>
+.session-shell {
+  position: relative;
+  z-index: 0;
+}
+
+.session-shell::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.55), rgba(59, 130, 246, 0.5), rgba(168, 85, 247, 0.45));
+  filter: blur(12px);
+  opacity: 0.9;
+}
+
+.session-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+}
+</style>

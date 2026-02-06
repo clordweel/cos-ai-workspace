@@ -1,4 +1,4 @@
-# AI 工作台 — 前端
+# AI COS 工作台 — 前端
 
 Nuxt 3 + Vue 3 + Tailwind，对话流 + 任务卡片，深色模式。
 
