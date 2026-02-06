@@ -13,6 +13,8 @@ const appStack = ref<AppCard[]>([])
 const isPanelOpen = ref(true)
 /** 右侧应用内容区是否展示；为 false 时仅保留侧边栏 */
 const isContentVisible = ref(true)
+/** 侧边栏是否固定为展开（不随鼠标移出收起） */
+const isSidebarPinned = ref(false)
 
 const currentView = computed<AppView>(() => {
   const stack = appStack.value
@@ -74,13 +76,18 @@ export function useAppView() {
   function toggleContentPanel() {
     isContentVisible.value = !isContentVisible.value
   }
+  function toggleSidebarPinned() {
+    isSidebarPinned.value = !isSidebarPinned.value
+  }
   return {
     appStack: readonly(appStack),
     currentView,
     canGoBack,
     isPanelOpen: readonly(isPanelOpen),
     isContentVisible: readonly(isContentVisible),
+    isSidebarPinned: readonly(isSidebarPinned),
     toggleContentPanel,
+    toggleSidebarPinned,
     setView,
     pushCard,
     goBack,

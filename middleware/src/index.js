@@ -253,3 +253,27 @@ app.post('/api/material/confirm', async (request, reply) => {
 const port = Number(process.env.PORT) || 3000;
 await app.listen({ port, host: '0.0.0.0' });
 console.log(`Middleware listening on http://0.0.0.0:${port}`);
+
+/** 退出或终端关闭时关闭 Fastify 并释放端口 */
+let shuttingDown = false;
+function gracefulShutdown(signal) {
+  return () => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}, closing server...`);
+    app
+      .close()
+      .then(() => {
+        console.log('Server closed, port released.');
+        process.exit(0);
+      })
+      .catch((err) => {
+        console.error('Error closing server:', err);
+        process.exit(1);
+      });
+  };
+}
+
+process.on('SIGINT', gracefulShutdown('SIGINT'));   // Ctrl+C
+process.on('SIGTERM', gracefulShutdown('SIGTERM')); // kill / 容器停止
+process.on('SIGHUP', gracefulShutdown('SIGHUP'));   // 终端断开/关闭
