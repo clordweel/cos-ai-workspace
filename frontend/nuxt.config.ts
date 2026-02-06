@@ -1,4 +1,13 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+/// <reference types="node" />
+import path from 'path'
+import { fileURLToPath } from 'url'
+import { defineNuxtConfig } from 'nuxt/config'
+import dotenv from 'dotenv'
+
+const dir = path.dirname(fileURLToPath(import.meta.url))
+dotenv.config({ path: path.resolve(dir, '..', '.env') })
+
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss'],

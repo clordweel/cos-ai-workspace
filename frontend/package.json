@@ -14,6 +14,9 @@
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
-    "@nuxtjs/tailwindcss": "^6.12.0"
+    "@nuxtjs/tailwindcss": "^6.12.0",
+    "@types/node": "^25.2.1",
+    "imagetracerjs": "^1.2.6",
+    "sharp": "^0.34.5"
   }
 }

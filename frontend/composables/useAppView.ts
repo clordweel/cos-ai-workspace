@@ -9,8 +9,8 @@ const defaultCard: AppCard = { id: 'home', view: 'home' }
 
 /** 应用卡片栈，栈顶为当前展示；空栈时视为仅有一张 home 卡 */
 const appStack = ref<AppCard[]>([])
-/** 右侧应用面板是否展示；默认不展示，仅点击应用入口后展示 */
-const isPanelOpen = ref(false)
+/** 应用区是否展示；默认展示并打开导航页（导航页视作一种应用） */
+const isPanelOpen = ref(true)
 
 const currentView = computed<AppView>(() => {
   const stack = appStack.value
@@ -55,8 +55,13 @@ export function useAppView() {
     isPanelOpen.value = true
     if (view) pushCard(view)
     else if (appStack.value.length === 0) {
-      appStack.value = [defaultCard]
+      appStack.value = [defaultCard] // 默认打开导航页（home）
     }
+  }
+  /** 切换到导航页（视作一种应用） */
+  function openNavPage() {
+    isPanelOpen.value = true
+    appStack.value = [defaultCard]
   }
   function closePanel() {
     isPanelOpen.value = false
@@ -72,6 +77,7 @@ export function useAppView() {
     goBack,
     removeCard,
     openPanel,
+    openNavPage,
     closePanel,
   }
 }

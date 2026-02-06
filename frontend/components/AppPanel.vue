@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col rounded-xl border border-zinc-200 bg-white shadow-sm overflow-hidden">
+  <div class="h-full flex flex-col overflow-hidden bg-white">
     <!-- 单卡：当前应用 -->
     <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 px-4 py-3 bg-white/80">
       <button
