@@ -1,6 +1,6 @@
 <template>
   <!-- 会话区：展开时列表与聊天左右并排 -->
-  <div class="h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+  <div class="h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
     <div
       class="flex min-h-0 min-w-0 flex-1"
       :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
@@ -8,32 +8,32 @@
       <!-- 列表：展开时始终显示，否则仅无 chat 时显示 -->
       <aside
         v-show="isSessionExpanded || !chatId"
-        class="flex flex-col min-h-0 shrink-0 bg-white border-zinc-200"
-        :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200'"
+        class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+        :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
       >
         <SessionListHeader
           @new-chat="startNewChat"
           @search="onSessionSearch"
         />
         <div class="flex-1 overflow-y-auto overscroll-contain min-h-0">
-          <ul class="divide-y divide-zinc-100">
+          <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
             <li
               v-for="c in chats"
               :key="c.id"
               class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors"
               :class="[
-                c.id === chatId && isSessionExpanded ? 'bg-emerald-50 text-emerald-800' : 'hover:bg-zinc-50 active:bg-zinc-100',
+                c.id === chatId && isSessionExpanded ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
               ]"
               @click="goToChat(c.id)"
             >
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600 text-xs font-medium">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
                 {{ c.title.charAt(0) }}
               </span>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-zinc-800 truncate">{{ c.title }}</p>
-                <p class="text-xs text-zinc-500 truncate leading-tight">{{ lastPreview(c.id) }}</p>
+                <p class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate leading-tight">{{ lastPreview(c.id) }}</p>
               </div>
-              <span class="text-zinc-400 text-xs">›</span>
+              <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
             </li>
           </ul>
         </div>
@@ -41,11 +41,11 @@
       <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
       <main
         class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden"
-        :class="{ 'border-t border-zinc-200': !isSessionExpanded }"
+        :class="{ 'border-t border-zinc-200 dark:border-zinc-700': !isSessionExpanded }"
         v-show="isSessionExpanded || !!chatId"
       >
         <template v-if="chatId">
-          <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2">
+          <div class="shrink-0 flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2">
             <NuxtLink
               v-if="!isSessionExpanded"
               to="/space"
@@ -54,7 +54,7 @@
             >
               <ChevronLeft class="h-4 w-4" />
             </NuxtLink>
-            <span class="flex-1 text-sm font-medium text-zinc-800 truncate min-w-0">{{ chatTitle }}</span>
+            <span class="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate min-w-0">{{ chatTitle }}</span>
           </div>
           <div ref="scrollRef" class="flex-1 overflow-y-auto overscroll-contain p-3 space-y-3">
             <div
@@ -69,13 +69,13 @@
               />
             </div>
           </div>
-          <div class="shrink-0 border-t border-zinc-200 p-3">
+          <div class="shrink-0 border-t border-zinc-200 dark:border-zinc-700 p-3">
             <form @submit.prevent="send" class="flex gap-2">
               <input
                 v-model="input"
                 type="text"
                 placeholder="输入消息…"
-                class="flex-1 rounded-xl bg-zinc-50 border border-zinc-200 px-4 py-3 text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
+                class="flex-1 rounded-xl bg-zinc-50 dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 px-4 py-3 text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 text-sm"
                 :disabled="streaming"
               />
               <button
@@ -88,7 +88,7 @@
             </form>
           </div>
         </template>
-        <div v-else class="flex-1 flex flex-col items-center justify-center gap-4 p-6 text-zinc-500">
+        <div v-else class="flex-1 flex flex-col items-center justify-center gap-4 p-6 text-zinc-500 dark:text-zinc-400">
           <p class="text-sm">选择左侧会话或新建会话</p>
           <button
             type="button"

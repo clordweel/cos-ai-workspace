@@ -10,12 +10,12 @@
     <div class="shrink-0 flex flex-col gap-px px-1 pb-0.5">
       <button
         type="button"
-        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         :class="showExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
         title="系统设置"
         @click="openApp('settings')"
       >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
           <Settings class="h-3.5 w-3.5" />
         </span>
         <span v-show="showExpanded" class="text-xs font-medium truncate">设置</span>
@@ -24,31 +24,31 @@
     <div class="flex-1 min-h-0 flex flex-col gap-px overflow-y-auto overscroll-contain min-w-0 px-1 py-0.5">
       <button
         type="button"
-        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         :class="showExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
         title="导航"
         @click="openNavPage"
       >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
           <Home class="h-3.5 w-3.5" />
         </span>
         <span v-show="showExpanded" class="text-xs font-medium truncate">导航</span>
       </button>
       <button
         type="button"
-        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         :class="showExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
         title="联系人"
         @click="openApp('contacts')"
       >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 text-zinc-600">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
           <Users class="h-3.5 w-3.5" />
         </span>
         <span v-show="showExpanded" class="text-xs font-medium truncate">联系人</span>
       </button>
       <button
         type="button"
-        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+        class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
         :class="showExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
         title="机器人"
         @click="openApp('bots')"
@@ -61,7 +61,7 @@
       <template v-for="app in appEntries" :key="app.id">
         <button
           type="button"
-          class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 hover:bg-zinc-100 hover:text-zinc-800 transition-colors"
+          class="flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors"
           :class="showExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
           :title="app.title"
           @click="openApp('home', app.id)"
