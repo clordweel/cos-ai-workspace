@@ -1,0 +1,58 @@
+---
+description: Git 提交信息规范，生成或修改 commit 时遵循
+alwaysApply: true
+---
+
+# Git 提交信息规范
+
+## 格式
+
+```
+<type>(<scope>): <简短描述>
+
+- 可选：正文列表说明
+- 多条时每行一条
+```
+
+- **type**：`feat`（新功能）、`fix`（修复）、`docs`（文档）、`chore`（构建/工具）、`refactor`（重构）等。
+- **scope**：**必须使用实际目录/模块名**（英文、小写），与仓库结构一致。
+- **简短描述**：中文，一句话说清本次提交；首行不加句号。
+
+## Scope 约定
+
+- 使用仓库中的**真实目录或模块名**，例如：`frontend`、`middleware`、`docs`、`logs`。
+- **禁止**使用中文或泛称（如「前端」→ 用 `frontend`）。
+
+| 变更范围     | scope        |
+|-------------|--------------|
+| 前端代码     | `frontend`   |
+| 中间层       | `middleware` |
+| 文档         | `docs`       |
+| 日志/CHANGELOG | `logs`     |
+| 根目录/多模块 | 可省略或 `root` |
+
+## 示例
+
+```
+feat(frontend): 应用区顶栏与免责提示调整
+```
+
+```
+feat(frontend): 主题切换与 Shadcn-vue Select
+
+- 主题：浅色/深色/跟随系统；useTheme + 插件防闪
+- 设置页：主题选项改为 Shadcn Select
+```
+
+```
+docs: 前端规范转 Cursor 规则并记录移除悬浮胶囊
+```
+
+```
+chore: 移除 simple-git 及中间层 Git API，更新文档
+```
+
+## 执行提交时
+
+- 生成或改写 `git commit -m "..."` 时，严格按上述格式与 scope 约定。
+- 多文件、多改动时，可写多行正文（`-` 列表），不要堆在标题里。

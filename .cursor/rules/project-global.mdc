@@ -29,3 +29,4 @@ alwaysApply: true
 
 ## 仓库与文档
 - 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC）。
+- **提交信息**：遵循 **`.cursor/rules/git-commit.mdc`**（`type(scope): 描述`，scope 用实际目录如 `frontend`、`middleware`）。
