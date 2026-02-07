@@ -11,78 +11,93 @@
         class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
         :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
       >
-        <SessionListHeader
-          @new-chat="startNewChat"
-          @search="onSessionSearch"
-        />
-        <!-- 搜索栏：类似微信下拉，点击搜索后展开 -->
-        <Transition name="search-slide">
-          <div
-            v-show="showSearchBar"
-            class="shrink-0 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/80 px-2 py-2"
-          >
-            <div class="flex items-center gap-2 rounded-lg bg-white dark:bg-zinc-700 border border-zinc-200 dark:border-zinc-600 px-2.5 py-1.5">
-              <Search class="h-4 w-4 shrink-0 text-zinc-400 dark:text-zinc-500" />
-              <input
-                ref="searchInputRef"
-                v-model="searchQuery"
-                type="text"
-                placeholder="搜索会话"
-                class="min-w-0 flex-1 bg-transparent text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none"
-              />
-              <button
-                v-if="searchQuery"
-                type="button"
-                class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
-                aria-label="清空"
-                @click="searchQuery = ''"
+        <div class="relative flex-1 min-h-0 flex flex-col">
+          <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain">
+            <template v-if="displayChats.length > 0">
+              <ul
+                class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full transition-[padding] duration-200"
+                :style="{ paddingTop: listPaddingTop }"
               >
-                <X class="h-3.5 w-3.5" />
-              </button>
-              <button
-                type="button"
-                class="shrink-0 text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
-                @click="closeSearch"
-              >
-                取消
-              </button>
-            </div>
-          </div>
-        </Transition>
-        <div class="session-list-scroll-area flex-1 overflow-y-auto overscroll-contain min-h-0">
-          <template v-if="filteredChats.length > 0">
-            <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
               <li
-                v-for="c in filteredChats"
+                v-for="c in displayChats"
                 :key="c.id"
                 role="button"
                 tabindex="0"
-                class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
+                class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
                 :class="[
                   c.id === chatId && isSessionExpanded ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
+                  isMockSession(c.id) ? 'opacity-80' : '',
                 ]"
-                @click="goToChat(c.id)"
-                @keydown.enter.prevent="goToChat(c.id)"
+                @click="onSessionItemClick(c.id)"
+                @keydown.enter.prevent="onSessionItemClick(c.id)"
               >
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
                 {{ c.title.charAt(0) }}
               </span>
-              <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
-                <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate leading-tight">{{ lastPreview(c.id) }}</p>
-              </div>
+              <p class="min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
+              <span v-if="getChatDateLabel(c.id)" class="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">{{ getChatDateLabel(c.id) }}</span>
               <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
             </li>
-          </ul>
-          </template>
-          <div
-            v-else-if="searchQuery"
-            class="flex flex-col items-center justify-center py-12 px-4 text-center"
-          >
-            <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
-            <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
+              </ul>
+            </template>
+            <div
+              v-else-if="searchQuery"
+              class="flex flex-col items-center justify-center py-12 px-4 text-center min-h-full transition-[padding] duration-200"
+              :style="{ paddingTop: listPaddingTop }"
+            >
+              <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+              <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
+              <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
+            </div>
           </div>
+          <!-- 应用抽屉：整块可滚动（含「应用 / 更多」行 + 网格），展开时顶栏下移 -->
+          <Transition name="fade">
+            <div
+              v-show="showAppList"
+              class="app-drawer absolute left-0 right-0 z-20 flex max-h-[16rem] w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg transition-all duration-200 isolate"
+              :style="{ top: '0' }"
+            >
+              <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-8 pr-7 pt-3 pb-8">
+                <!-- 由 logo + COS AI 驱动（跟随滚动） -->
+                <div class="mb-3 flex flex-col items-center gap-0">
+                  <Logo :size="22" class="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
+                  <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
+                </div>
+                <div
+                  class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5"
+                  style="grid-template-columns: repeat(auto-fill, minmax(3.5rem, 1fr));"
+                >
+                <button
+                  v-for="app in drawerApps"
+                  :key="app.id"
+                  type="button"
+                  class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors"
+                  :class="app.view && currentView === app.view ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''"
+                  @click="onDrawerAppClick(app)"
+                >
+                  <span
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700"
+                    :class="app.view && currentView === app.view ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''"
+                  >
+                    <component :is="app.icon" class="h-4 w-4" />
+                  </span>
+                  <span class="text-xs">{{ app.title }}</span>
+                </button>
+              </div>
+              </div>
+            </div>
+          </Transition>
+          <!-- 顶栏：随应用展开整体下移，搜索条从搜索按钮向左展开 -->
+          <SessionListHeader
+            class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md"
+            :style="{ top: toolbarTop }"
+            :app-drawer-open="showAppList"
+            :search-bar-open="showSearchBar"
+            v-model:search-query="searchQuery"
+            @new-chat="startNewChat"
+            @search="toggleSearchBar"
+            @app="toggleAppList"
+          />
         </div>
       </aside>
       <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
@@ -93,7 +108,7 @@
         <template v-if="chatId">
           <!-- 顶部导航：半透明亚克力 -->
           <header
-            class="absolute top-0 left-0 right-0 z-20 grid h-12 shrink-0 grid-cols-[1fr_1fr_1fr] items-center gap-2 px-3 py-2 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
+            class="absolute top-0 left-0 right-0 z-20 grid h-12 shrink-0 grid-cols-[1fr_1fr_1fr] items-center gap-2 px-3 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
             aria-label="会话标题"
           >
             <div class="flex min-w-0 items-center gap-2">
@@ -123,6 +138,10 @@
                   <DropdownMenuItem text-value="复制会话链接" @select="onCopySessionLink">
                     <Link class="h-3.5 w-3.5 shrink-0 opacity-70" />
                     复制会话链接
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="关闭会话" @select="onCloseChat">
+                    <X class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    关闭会话
                   </DropdownMenuItem>
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger text-value="导出为...">
@@ -333,7 +352,7 @@
                       title="图片"
                       aria-label="上传图片"
                     >
-                      <Image class="h-4 w-4" />
+                      <ImageIcon class="h-4 w-4" />
                     </button>
                     <button
                       v-if="streaming"
@@ -393,7 +412,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '~/lib/dropdown-menu'
-import { Archive, ChevronDown, ChevronLeft, ChevronRight, Download, Globe, Image, Infinity, Link, Loader2, Pencil, Search, Send, Share2, Square, Trash2, User, X } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, Cloud, Download, FileText, Globe, Home, Image as ImageIcon, Infinity, Link, Loader2, Music, Pencil, Search, Send, Settings, Share2, Square, StickyNote, Trash2, User, Users, X } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -404,11 +423,52 @@ const router = useRouter()
 const chatId = computed(() => (route.params.id as string) || undefined)
 
 const scrollRef = ref<HTMLElement | null>(null)
-const searchInputRef = ref<HTMLInputElement | null>(null)
 const input = ref('')
 const streaming = ref(false)
-const showSearchBar = ref(false)
 const searchQuery = ref('')
+const showAppList = ref(false)
+const showSearchBar = ref(false)
+function toggleAppList() {
+  showAppList.value = !showAppList.value
+}
+function toggleSearchBar() {
+  showSearchBar.value = !showSearchBar.value
+}
+
+/** 应用抽屉列表：前 4 个为真实入口，其余为 mock 填充 */
+const drawerApps = [
+  { id: 'home', title: '导航', view: 'home' as const, icon: Home },
+  { id: 'contacts', title: '联系人', view: 'contacts' as const, icon: Users },
+  { id: 'bots', title: '机器人', view: 'bots' as const, icon: Bot },
+  { id: 'settings', title: '设置', view: 'settings' as const, icon: Settings },
+  { id: 'mock-calendar', title: '日历', icon: Calendar },
+  { id: 'mock-files', title: '文件', icon: FileText },
+  { id: 'mock-notes', title: '笔记', icon: StickyNote },
+  { id: 'mock-tasks', title: '任务', icon: CheckSquare },
+  { id: 'mock-bookmark', title: '书签', icon: Bookmark },
+  { id: 'mock-gallery', title: '图库', icon: ImageIcon },
+  { id: 'mock-music', title: '音乐', icon: Music },
+  { id: 'mock-weather', title: '天气', icon: Cloud },
+]
+function onDrawerAppClick(app: (typeof drawerApps)[number]) {
+  if ('view' in app && app.view) {
+    if (app.view === 'home') openNavPage()
+    else openPanel(app.view)
+  }
+}
+
+/** 应用抽屉可见高度固定，内容超出可滚动 */
+const appDrawerHeightRem = 16
+/** 顶栏 top：应用抽屉高度随内容，展开时顶栏整体下移 */
+const toolbarTop = computed(() => {
+  const rem = showAppList.value ? appDrawerHeightRem : 0
+  return `${rem}rem`
+})
+/** 列表内容区顶部留白：顶栏下移量 + 工具栏 3rem，避免被抽屉遮挡 */
+const listPaddingTop = computed(() => {
+  const above = showAppList.value ? appDrawerHeightRem : 0
+  return `${above + 3}rem`
+})
 const streamAbortRef = ref<AbortController | null>(null)
 /** 流式内容缓冲，定时刷新到 UI，避免每 chunk 都触发渲染 */
 const streamContentBuffer = ref('')
@@ -487,6 +547,9 @@ function onCopySessionLink() {
   const url = `${window.location.origin}${route.fullPath}`
   navigator.clipboard.writeText(url).catch(() => {})
 }
+function onCloseChat() {
+  router.push('/space')
+}
 function onRenameChat() {
   // TODO: 重命名会话
 }
@@ -524,6 +587,37 @@ const filteredChats = computed(() => {
   })
 })
 
+/** 调试用：mock 会话列表，便于调试会话列表滚动样式。设为 false 可关闭。 */
+const MOCK_SESSION_LIST_DEBUG = true
+const mockSessionList: Array<{ id: string; title: string }> = Array.from({ length: 18 }, (_, i) => ({
+  id: `mock-session-${i + 1}`,
+  title: `调试会话 ${i + 1} 预览标题`,
+}))
+const displayChats = computed(() =>
+  MOCK_SESSION_LIST_DEBUG ? [...mockSessionList, ...filteredChats.value] : filteredChats.value,
+)
+function isMockSession(id: string) {
+  return id.startsWith('mock-')
+}
+function onSessionItemClick(id: string) {
+  if (isMockSession(id)) return
+  goToChat(id)
+}
+
+function formatChatDate(ts: number): string {
+  const d = new Date(ts)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (d.toDateString() === today.toDateString()) return '今天'
+  if (d.toDateString() === yesterday.toDateString()) return '昨天'
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+function getChatDateLabel(chatId: string): string {
+  const c = chats.value.find((x) => x.id === chatId)
+  return c?.updatedAt ? formatChatDate(c.updatedAt) : ''
+}
+
 const chatTitle = computed(() => {
   if (!chatId.value) return ''
   const c = chats.value.find((x) => x.id === chatId.value)
@@ -550,19 +644,10 @@ function startNewChat() {
 }
 
 const { getWithTitle } = useContactsAndBots()
-const { isPanelOpen, openPanel } = useAppView()
+const { isPanelOpen, openPanel, openNavPage, currentView } = useAppView()
 /** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
 const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
 
-function onSessionSearch() {
-  showSearchBar.value = true
-  nextTick(() => searchInputRef.value?.focus())
-}
-
-function closeSearch() {
-  showSearchBar.value = false
-  searchQuery.value = ''
-}
 
 onMounted(() => {
   const id = chatId.value
@@ -750,6 +835,25 @@ function retryMessage(index: number) {
   transform: translateY(-8px);
 }
 
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.slide-down-enter-from,
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-100%);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
 /* 可定制滚动条：细条、圆角、悬停显色，千条消息下仍流畅 */
 .chat-scroll-area {
   scrollbar-gutter: stable;
@@ -802,5 +906,15 @@ function retryMessage(index: number) {
     scrollbar-width: thin;
     scrollbar-color: rgb(161 161 170 / 0.5) transparent;
   }
+}
+
+/* 应用抽屉滚动区：滚动条隐藏 */
+.app-drawer-scroll {
+  scrollbar-width: none;
+}
+.app-drawer-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 </style>

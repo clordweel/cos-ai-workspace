@@ -13,8 +13,8 @@ export type ChatMessage = {
   contentChunks?: string[]
 }
 
-const chats = ref<Array<{ id: string; title: string }>>([
-  { id: 'default', title: '当前会话' },
+const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([
+  { id: 'default', title: '当前会话', updatedAt: Date.now() },
 ])
 const messagesByChatId = ref<Record<string, ChatMessage[]>>({})
 const conversationIds = ref<Record<string, string | undefined>>({})
@@ -31,6 +31,7 @@ export function useChatSessions() {
   const appendMessage = (chatId: string, msg: ChatMessage) => {
     const list = getMessages(chatId)
     setMessages(chatId, [...list, msg])
+    touchChatUpdatedAt(chatId)
   }
 
   const updateLastMessage = (chatId: string, updater: (m: ChatMessage) => void) => {
@@ -42,12 +43,19 @@ export function useChatSessions() {
   }
 
   const ensureChat = (id: string, title: string) => {
+    const now = Date.now()
     if (!chats.value.some((c) => c.id === id)) {
-      chats.value = [{ id, title }, ...chats.value]
+      chats.value = [{ id, title, updatedAt: now }, ...chats.value]
     } else {
-      const c = chats.value.find((x) => x.id === id)
-      if (c && c.title !== title) c.title = title
+      chats.value = chats.value.map((c) =>
+        c.id === id ? { ...c, title: c.title !== title ? title : c.title } : c,
+      )
     }
+  }
+
+  const touchChatUpdatedAt = (id: string) => {
+    const now = Date.now()
+    chats.value = chats.value.map((c) => (c.id === id ? { ...c, updatedAt: now } : c))
   }
 
   const getConversationId = (chatId: string) => conversationIds.value[chatId]
@@ -68,6 +76,7 @@ export function useChatSessions() {
     appendMessage,
     updateLastMessage,
     ensureChat,
+    touchChatUpdatedAt,
     getConversationId,
     setConversationId,
     createNewChat,

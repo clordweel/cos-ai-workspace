@@ -1,41 +1,52 @@
 <template>
   <header
-    class="shrink-0 flex items-center justify-between gap-2 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2"
+    class="session-list-header h-12 shrink-0 flex items-center justify-between gap-1 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75 px-3"
     role="banner"
     aria-label="会话列表"
   >
-    <div class="flex items-center gap-2 min-w-0">
-      <Logo class="h-7 w-7 shrink-0 text-zinc-800 dark:text-zinc-100" />
-      <h1 class="m-0 text-sm font-semibold leading-none tracking-tight text-zinc-800 dark:text-zinc-200 truncate">AI COS 工作台</h1>
-    </div>
-    <div class="flex items-center gap-1 shrink-0">
     <button
       type="button"
       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-      title="新会话"
-      aria-label="新会话"
-      @click="$emit('newChat')"
+      :title="appDrawerOpen ? '收起应用' : '应用'"
+      :aria-label="appDrawerOpen ? '收起应用' : '应用'"
+      @click="$emit('app')"
     >
-      <Plus class="h-4 w-4" />
+      <ChevronUp v-if="appDrawerOpen" class="h-4 w-4" />
+      <ChevronDown v-else class="h-4 w-4" />
     </button>
-    <button
-      type="button"
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
-      title="搜索"
-      aria-label="搜索"
-      @click="$emit('search')"
-    >
-      <Search class="h-4 w-4" />
-    </button>
+    <div class="flex min-w-0 flex-1 items-center justify-end gap-1">
+      <SessionSearchBar
+        :open="searchBarOpen"
+        :model-value="searchQuery"
+        @update:model-value="$emit('update:searchQuery', $event)"
+        @toggle="$emit('search')"
+      />
+      <button
+        type="button"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+        title="新会话"
+        aria-label="新会话"
+        @click="$emit('newChat')"
+      >
+        <MessageSquarePlus class="h-4 w-4" />
+      </button>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
-import { Plus, Search } from 'lucide-vue-next'
+import { ChevronDown, ChevronUp, MessageSquarePlus } from 'lucide-vue-next'
+
+defineProps<{
+  appDrawerOpen?: boolean
+  searchBarOpen?: boolean
+  searchQuery?: string
+}>()
 
 defineEmits<{
   newChat: []
   search: []
+  app: []
+  'update:searchQuery': [value: string]
 }>()
 </script>
