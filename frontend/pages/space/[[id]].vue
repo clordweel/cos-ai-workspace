@@ -195,7 +195,7 @@
           <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表以显示调试占位 -->
           <div
             ref="scrollRef"
-            class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pt-16 pb-52"
+            class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pt-16 pb-52"
           >
             <!-- 虚拟列表就绪时：只渲染可见行 -->
             <template v-if="virtualRows.length > 0">
@@ -435,7 +435,16 @@ const streaming = ref(false)
 const showSearchBar = ref(false)
 const searchQuery = ref('')
 const streamAbortRef = ref<AbortController | null>(null)
+/** 流式内容缓冲，定时刷新到 UI，避免每 chunk 都触发渲染 */
+const streamContentBuffer = ref('')
 const config = useRuntimeConfig()
+
+/** 结论流式：接收到的文字先入队，再按间隔从队列取出“打字”；流结束后加速打完剩余 */
+const STREAM_TYPEWRITER_INTERVAL_MS = 80
+const STREAM_TYPEWRITER_CHARS_PER_TICK = 1
+const STREAM_TYPEWRITER_MIN_INTERVAL_MS = 16
+const STREAM_TYPEWRITER_ACCELERATION = 0.92
+let typewriterTimerId: ReturnType<typeof setTimeout> | null = null
 
 const {
   chats,
@@ -627,22 +636,67 @@ async function streamReply(id: string, text: string) {
   appendMessage(id, { role: 'assistant', content: '', thinking: '' })
   streaming.value = true
   streamAbortRef.value = new AbortController()
+  streamContentBuffer.value = ''
   const placeholder = '思考中…'
   updateLastMessage(id, (m) => { m.content = placeholder })
+
+  let streamEnded = false
+  let currentDelayMs = STREAM_TYPEWRITER_INTERVAL_MS
+
+  /** 从队列取出一小段“打字”到界面；流结束后每 tick 缩短间隔（加速） */
+  function typewriterTick() {
+    const buf = streamContentBuffer.value
+    if (buf) {
+      const take = buf.slice(0, STREAM_TYPEWRITER_CHARS_PER_TICK)
+      streamContentBuffer.value = buf.slice(STREAM_TYPEWRITER_CHARS_PER_TICK)
+      updateLastMessage(id, (m) => {
+        const base = m.content === placeholder ? '' : m.content
+        m.content = base + take
+        if (!m.contentChunks) m.contentChunks = []
+        m.contentChunks.push(take)
+      })
+    }
+
+    if (buf === '' && streamEnded) {
+      typewriterTimerId = null
+      updateLastMessage(id, (m) => { m.contentChunks = undefined })
+      const list = getMessages(id)
+      const last = list[list.length - 1]
+      if (last && !last.content) {
+        updateLastMessage(id, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
+      }
+      streamAbortRef.value = null
+      streaming.value = false
+      nextTick(() => {
+        const n = displayMessages.value.length
+        if (n > 0) rowVirtualizerRef.value?.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
+      })
+      return
+    }
+
+    if (streamEnded) {
+      currentDelayMs = Math.max(STREAM_TYPEWRITER_MIN_INTERVAL_MS, currentDelayMs * STREAM_TYPEWRITER_ACCELERATION)
+    }
+    typewriterTimerId = setTimeout(typewriterTick, currentDelayMs)
+  }
+
+  typewriterTimerId = setTimeout(typewriterTick, currentDelayMs)
+
   try {
     await streamChat(
       text,
       (delta) => {
-        updateLastMessage(id, (m) => {
-          if (m.content === placeholder) m.content = delta
-          else m.content += delta
-        })
+        streamContentBuffer.value += delta
       },
       {
         signal: streamAbortRef.value?.signal,
         conversationId: getConversationId(id),
         onThinking: () => {
-          updateLastMessage(id, (m) => { m.content = placeholder })
+          streamContentBuffer.value = ''
+          updateLastMessage(id, (m) => {
+            m.content = placeholder
+            m.contentChunks = undefined
+          })
         },
         onThinkingDelta: (delta) => {
           updateLastMessage(id, (m) => {
@@ -655,25 +709,28 @@ async function streamReply(id: string, text: string) {
         },
       }
     )
-    const list = getMessages(id)
-    const last = list[list.length - 1]
-    if (last && !last.content) {
-      updateLastMessage(id, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
-    }
+    streamEnded = true
   } catch (e) {
     updateLastMessage(id, (m) => {
       m.content = `请求失败：${e instanceof Error ? e.message : String(e)}`
     })
   } finally {
-    streamAbortRef.value = null
-    streaming.value = false
-  }
-  nextTick(() => {
-    const n = displayMessages.value.length
-    if (n > 0) {
-      rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
+    if (!streamEnded) {
+      if (typewriterTimerId) {
+        clearTimeout(typewriterTimerId)
+        typewriterTimerId = null
+      }
+      updateLastMessage(id, (m) => { m.contentChunks = undefined })
+      streamAbortRef.value = null
+      streaming.value = false
     }
-  })
+  }
+  if (!streamEnded) {
+    nextTick(() => {
+      const n = displayMessages.value.length
+      if (n > 0) rowVirtualizerRef.value?.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
+    })
+  }
 }
 
 async function send() {

@@ -9,6 +9,8 @@ export type ChatMessage = {
   thinking?: string
   /** 左侧消息可标注多种来源，头像堆叠展示 */
   sources?: MessageSource[]
+  /** 流式输出时按片段推送，用于渐显动画；非流式时由 content 展示 */
+  contentChunks?: string[]
 }
 
 const chats = ref<Array<{ id: string; title: string }>>([

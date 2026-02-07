@@ -24,9 +24,29 @@
         {{ message.thinking }}
       </div>
     </div>
-    <p class="whitespace-pre-wrap break-words">
-      {{ message.content }}
-      <span v-if="streaming" class="inline-block w-px h-3.5 ml-0.5 bg-emerald-500 dark:bg-emerald-400 animate-pulse align-middle" />
+    <!-- 思考中占位：卡片 + 图标 + 轻微动效 -->
+    <div
+      v-if="isThinkingPlaceholder"
+      class="thinking-placeholder inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-600/80 bg-zinc-50/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400"
+    >
+      <Sparkles class="h-3.5 w-3.5 shrink-0 text-amber-500/80 dark:text-amber-400/80 thinking-icon" />
+      <span>思考中</span>
+      <span class="thinking-dots">
+        <span class="thinking-dot" />
+        <span class="thinking-dot thinking-dot-2" />
+        <span class="thinking-dot thinking-dot-3" />
+      </span>
+    </div>
+    <p v-else class="whitespace-pre-wrap break-words">
+      <template v-if="message.contentChunks?.length">
+        <span
+          v-for="(chunk, i) in message.contentChunks"
+          :key="i"
+          class="stream-token"
+        >{{ chunk }}</span>
+      </template>
+      <template v-else>{{ message.content }}</template>
+      <span v-if="streaming" class="streaming-cursor ml-0.5 align-middle" aria-hidden />
     </p>
     <!-- 消息工具栏：左侧按钮 + 右侧堆叠来源头像 -->
     <div class="mt-1.5 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-500">
@@ -129,10 +149,12 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { Bookmark, Bot, Cog, Copy, FileDown, MoreVertical, RefreshCw, ThumbsDown, ThumbsUp, User, Volume2 } from 'lucide-vue-next'
+import { Bookmark, Bot, Cog, Copy, FileDown, MoreVertical, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, User, Volume2 } from 'lucide-vue-next'
+
+const THINKING_PLACEHOLDER = '思考中…'
 
 const props = defineProps<{
-  message: { role: string; content: string; thinking?: string; sources?: MessageSource[] }
+  message: { role: string; content: string; thinking?: string; sources?: MessageSource[]; contentChunks?: string[] }
   streaming?: boolean
 }>()
 const emit = defineEmits<{ retry: []; favorite: []; exportMarkdown: []; listenReply: [] }>()
@@ -146,6 +168,9 @@ const displaySources = computed(() => {
 })
 
 const hasBotSource = computed(() => displaySources.value.some((s) => s.type === 'bot'))
+const isThinkingPlaceholder = computed(
+  () => props.message.role === 'assistant' && props.message.content === THINKING_PLACEHOLDER
+)
 
 function sourceLabel(src: MessageSource) {
   if (src.label) return src.label
@@ -160,3 +185,83 @@ function onCopy() {
   }
 }
 </script>
+
+<style scoped>
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: rgb(16 185 129);
+  animation: streaming-blink 1s ease-in-out infinite;
+}
+.dark .streaming-cursor {
+  background: rgb(52 211 153);
+}
+@keyframes streaming-blink {
+  0%,
+  45%,
+  55%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 流式结论每段文字轻微渐显 */
+.stream-token {
+  animation: stream-token-in 0.2s ease-out;
+}
+@keyframes stream-token-in {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* 思考中占位：图标轻微呼吸 + 三点依次亮起 */
+.thinking-icon {
+  animation: thinking-icon-pulse 2s ease-in-out infinite;
+}
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.thinking-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.4;
+  animation: thinking-dot-step 1.2s ease-in-out infinite;
+}
+.thinking-dot-2 {
+  animation-delay: 0.2s;
+}
+.thinking-dot-3 {
+  animation-delay: 0.4s;
+}
+@keyframes thinking-icon-pulse {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes thinking-dot-step {
+  0%,
+  80%,
+  100% {
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+</style>
