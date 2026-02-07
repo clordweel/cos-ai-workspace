@@ -49,7 +49,7 @@
             </div>
           </div>
         </Transition>
-        <div class="flex-1 overflow-y-auto overscroll-contain min-h-0">
+        <div class="session-list-scroll-area flex-1 overflow-y-auto overscroll-contain min-h-0">
           <template v-if="filteredChats.length > 0">
             <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
               <li
@@ -104,13 +104,12 @@
             >
               <ChevronLeft class="h-4 w-4" />
             </NuxtLink>
-            <span class="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate min-w-0">{{ chatTitle }}</span>
             <DropdownMenuRoot>
               <DropdownMenuTrigger
                 class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2"
                 aria-label="更多操作"
               >
-                <MoreVertical class="h-4 w-4" />
+                <Menu class="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuPortal to="body">
                 <DropdownMenuContent
@@ -184,51 +183,83 @@
                 </DropdownMenuContent>
               </DropdownMenuPortal>
             </DropdownMenuRoot>
+            <span class="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate min-w-0">{{ chatTitle }}</span>
+            <span class="shrink-0 text-sm text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="chatUserName">{{ chatUserName }}</span>
+            <span
+              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
+              aria-hidden
+            >
+              <User class="h-3.5 w-3.5" />
+            </span>
           </header>
-          <!-- 滚动区：虚拟列表 + 可定制滚动条，支持千条以上消息 -->
+          <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表以显示调试占位 -->
           <div
             ref="scrollRef"
-            class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pt-12 pb-40"
+            class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pt-16 pb-52"
           >
-            <div
-              :style="{
-                height: `${virtualTotalSize}px`,
-                width: '100%',
-                position: 'relative',
-              }"
-            >
+            <!-- 虚拟列表就绪时：只渲染可见行 -->
+            <template v-if="virtualRows.length > 0">
               <div
-                v-for="virtualRow in virtualRows"
-                :key="virtualRow.key"
-                :data-index="virtualRow.index"
-                class="flex w-full pb-3"
-                :class="
-                  (displayMessages[virtualRow.index]?.role === 'user'
-                    ? 'justify-end'
-                    : 'justify-start')
-                "
                 :style="{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
+                  height: `${virtualTotalSize}px`,
                   width: '100%',
-                  transform: `translateY(${virtualRow.start}px)`,
+                  position: 'relative',
                 }"
-                :ref="
-                  (el) => {
-                    if (el) rowVirtualizerRef.measureElement(el)
-                  }
-                "
+              >
+                <div
+                  v-for="virtualRow in virtualRows"
+                  :key="virtualRow.key"
+                  :data-index="virtualRow.index"
+                  class="flex w-full pb-3"
+                  :class="
+                    (displayMessages[virtualRow.index]?.role === 'user'
+                      ? 'justify-end'
+                      : 'justify-start')
+                  "
+                  :style="{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }"
+                  :ref="
+                    (el) => {
+                      if (el) rowVirtualizerRef.measureElement(el)
+                    }
+                  "
+                >
+                  <ChatMessageBubble
+                    v-if="displayMessages[virtualRow.index]"
+                    :message="displayMessages[virtualRow.index]"
+                    :streaming="
+                      messages.length > 0 &&
+                      displayMessages[virtualRow.index]?.role === 'assistant' &&
+                      virtualRow.index === displayMessages.length - 1 &&
+                      streaming
+                    "
+                    @retry="retryMessage(virtualRow.index)"
+                  />
+                </div>
+              </div>
+            </template>
+            <!-- 虚拟未就绪（如首帧 scrollRef 未挂载）或无虚拟行时：普通列表，保证调试占位可见 -->
+            <div v-else class="space-y-3">
+              <div
+                v-for="(msg, i) in displayMessages"
+                :key="'msg-' + i"
+                class="flex"
+                :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
               >
                 <ChatMessageBubble
-                  v-if="displayMessages[virtualRow.index]"
-                  :message="displayMessages[virtualRow.index]"
+                  :message="msg"
                   :streaming="
                     messages.length > 0 &&
-                    displayMessages[virtualRow.index]?.role === 'assistant' &&
-                    virtualRow.index === displayMessages.length - 1 &&
+                    msg.role === 'assistant' &&
+                    i === displayMessages.length - 1 &&
                     streaming
                   "
+                  @retry="retryMessage(i)"
                 />
               </div>
             </div>
@@ -254,13 +285,13 @@
                   >
                     停止
                   </button>
-                  <span>Ctrl+Shift+</span>
+                  <span>Ctrl+Shift+Enter 停止</span>
                 </div>
                 <div class="flex items-center gap-1">
                   <button
                     type="button"
                     class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    aria-label="清空"
+                    aria-label="清空输入"
                     @click="input = ''"
                   >
                     <X class="h-4 w-4" />
@@ -268,6 +299,7 @@
                   <button
                     type="button"
                     class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
+                    @click="scrollToLastMessage"
                   >
                     回顾
                   </button>
@@ -372,6 +404,8 @@
 </template>
 
 <script setup lang="ts">
+import type { ChatMessage } from '~/composables/useChatSessions'
+import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import {
   DropdownMenuContent,
@@ -384,7 +418,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { ChevronLeft, ChevronDown, ChevronRight, Download, Globe, Image, Infinity, Loader2, MoreVertical, Pencil, Search, Send, Share2, Square, Trash2, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronDown, ChevronRight, Download, Globe, Image, Infinity, Loader2, Menu, Pencil, Search, Send, Share2, Square, Trash2, User, X } from 'lucide-vue-next'
+
+const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
 definePageMeta({ layout: 'workspace' })
 
@@ -398,10 +434,13 @@ const input = ref('')
 const streaming = ref(false)
 const showSearchBar = ref(false)
 const searchQuery = ref('')
+const streamAbortRef = ref<AbortController | null>(null)
+const config = useRuntimeConfig()
 
 const {
   chats,
   getMessages,
+  setMessages,
   appendMessage,
   updateLastMessage,
   ensureChat,
@@ -416,8 +455,45 @@ function onExportCurrentScreen() {
 function onExportLongScreenshot() {
   // TODO: 完整聊天内容长屏截图
 }
-function onExportMarkdown() {
-  // TODO: 导出为 Markdown
+/** 客户端兜底：服务端不可用时在浏览器内生成 Markdown */
+function messagesToMarkdown(list: ChatMessage[]): string {
+  const lines: string[] = []
+  for (const msg of list) {
+    const roleLabel = msg.role === 'user' ? '用户' : '助手'
+    lines.push(`## ${roleLabel}\n`)
+    if (msg.content.trim()) lines.push(msg.content.trim(), '\n')
+    if (msg.thinking?.trim()) {
+      lines.push('> **思考过程**\n> ', msg.thinking.trim().replace(/\n/g, '\n> '), '\n')
+    }
+    lines.push('\n')
+  }
+  return lines.join('').trimEnd()
+}
+
+function triggerMarkdownDownload(markdown: string, filename: string) {
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function onExportMarkdown() {
+  const list = chatId.value ? getMessages(chatId.value) : []
+  const title = chatTitle.value || '会话'
+  const filename = `${title.replace(/[/\\?%*:|"<>]/g, '-')}-${Date.now()}.md`
+  const apiBase = (config.public.apiBase as string) || ''
+  try {
+    const { markdown } = await $fetch<{ markdown: string }>(`${apiBase}/api/chat/export-markdown`, {
+      method: 'POST',
+      body: { messages: list },
+    })
+    triggerMarkdownDownload(markdown, filename)
+  } catch {
+    triggerMarkdownDownload(messagesToMarkdown(list), filename)
+  }
 }
 function onShareConversation() {
   // TODO: 分享会话
@@ -431,32 +507,6 @@ function onDeleteChat() {
 
 const messages = computed(() => (chatId.value ? getMessages(chatId.value) : []))
 
-/** 占位消息气泡，用于无消息时会话区的样式调试 */
-const PLACEHOLDER_MESSAGES: { role: 'user' | 'assistant'; content: string; thinking?: string }[] = [
-  { role: 'user', content: '这是一条用户消息占位，用于调试气泡样式与布局。' },
-  {
-    role: 'assistant',
-    content: '这是一条助手回复占位。可在此调试助手气泡的圆角、边距与思考块展示。',
-    thinking: '思考过程占位：用于调试可折叠思考块的样式。展开后可见多行内容，便于检查滚动与折叠区域。',
-  },
-  { role: 'user', content: '再发一条，方便测滚动。' },
-  {
-    role: 'assistant',
-    content: '第二条助手回复。多几条气泡后，消息列表会变长，可以调试滚动条、触底与 overscroll 行为。',
-    thinking: '思考过程示例：\n1. 解析用户意图\n2. 检索上下文\n3. 组织回复\n4. 流式输出',
-  },
-  { role: 'user', content: '第三条用户消息，拉长列表。' },
-  {
-    role: 'assistant',
-    content: '第三条助手回复。若仍不够长，可继续在 PLACEHOLDER_MESSAGES 里追加。',
-    thinking: '长思考块占位，用于调试思考区域展开时的滚动与布局。可折叠块应不影响整体滚动体验。',
-  },
-  { role: 'user', content: '第四条。' },
-  {
-    role: 'assistant',
-    content: '第四条助手消息，用于撑满视口并测试滚动。',
-  },
-]
 const displayMessages = computed(() => {
   const list = messages.value
   if (list.length > 0) return list
@@ -487,6 +537,8 @@ const chatTitle = computed(() => {
   const c = chats.value.find((x) => x.id === chatId.value)
   return c?.title ?? '会话'
 })
+
+const chatUserName = computed(() => '张三')
 
 function lastPreview(chatId: string): string {
   const list = getMessages(chatId)
@@ -538,21 +590,43 @@ watch(() => route.query.app, (app) => {
   if (app === 'contacts' || app === 'bots') openPanel(app)
 })
 
+onMounted(() => {
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Enter' && e.ctrlKey && e.shiftKey && streaming.value) {
+      e.preventDefault()
+      stopStream()
+    }
+  }
+  window.addEventListener('keydown', onKey)
+  onUnmounted(() => window.removeEventListener('keydown', onKey))
+})
+
 const { streamChat } = useChatStream()
 
 function stopStream() {
-  // TODO: 与 useChatStream 的 AbortController 联动
+  if (streamAbortRef.value) {
+    streamAbortRef.value.abort()
+    streamAbortRef.value = null
+  }
   streaming.value = false
 }
 
-async function send() {
-  const id = chatId.value
-  const text = input.value.trim()
-  if (!id || !text || streaming.value) return
-  input.value = ''
-  appendMessage(id, { role: 'user', content: text })
+function scrollToLastMessage() {
+  const n = displayMessages.value.length
+  if (n === 0) return
+  if (virtualRows.value.length > 0) {
+    rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
+  } else {
+    const el = scrollRef.value
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  }
+}
+
+/** 仅追加助手占位并流式回复，不追加用户消息（供 send / retry 复用） */
+async function streamReply(id: string, text: string) {
   appendMessage(id, { role: 'assistant', content: '', thinking: '' })
   streaming.value = true
+  streamAbortRef.value = new AbortController()
   const placeholder = '思考中…'
   updateLastMessage(id, (m) => { m.content = placeholder })
   try {
@@ -565,6 +639,7 @@ async function send() {
         })
       },
       {
+        signal: streamAbortRef.value?.signal,
         conversationId: getConversationId(id),
         onThinking: () => {
           updateLastMessage(id, (m) => { m.content = placeholder })
@@ -590,6 +665,7 @@ async function send() {
       m.content = `请求失败：${e instanceof Error ? e.message : String(e)}`
     })
   } finally {
+    streamAbortRef.value = null
     streaming.value = false
   }
   nextTick(() => {
@@ -598,6 +674,28 @@ async function send() {
       rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
     }
   })
+}
+
+async function send() {
+  const id = chatId.value
+  const text = input.value.trim()
+  if (!id || !text || streaming.value) return
+  input.value = ''
+  appendMessage(id, { role: 'user', content: text })
+  await streamReply(id, text)
+}
+
+/** 重试该条助手消息：移除当前助手回复，用上一条用户消息重新请求 */
+function retryMessage(index: number) {
+  const id = chatId.value
+  if (!id || streaming.value) return
+  const list = getMessages(id)
+  if (index < 1 || index >= list.length) return
+  const assistantMsg = list[index]
+  const userMsg = list[index - 1]
+  if (assistantMsg.role !== 'assistant' || userMsg.role !== 'user') return
+  setMessages(id, list.slice(0, index))
+  streamReply(id, userMsg.content)
 }
 </script>
 
@@ -617,7 +715,7 @@ async function send() {
   scrollbar-gutter: stable;
 }
 .chat-scroll-area::-webkit-scrollbar {
-  width: 8px;
+  width: 2px;
 }
 .chat-scroll-area::-webkit-scrollbar-track {
   background: transparent;
@@ -634,6 +732,33 @@ async function send() {
 }
 @supports (scrollbar-width: thin) {
   .chat-scroll-area {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
+  }
+}
+
+/* 左侧会话列表滚动条：与聊天区一致 2px */
+.session-list-scroll-area {
+  scrollbar-gutter: stable;
+}
+.session-list-scroll-area::-webkit-scrollbar {
+  width: 2px;
+}
+.session-list-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+.session-list-scroll-area::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgb(161 161 170 / 0.4);
+}
+.session-list-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170 / 0.6);
+}
+.session-list-scroll-area::-webkit-scrollbar-thumb:active {
+  background: rgb(161 161 170 / 0.8);
+}
+@supports (scrollbar-width: thin) {
+  .session-list-scroll-area {
     scrollbar-width: thin;
     scrollbar-color: rgb(161 161 170 / 0.5) transparent;
   }

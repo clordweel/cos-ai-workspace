@@ -14,6 +14,7 @@ export function useChatStream() {
     options?: {
       conversationId?: string
       userId?: string
+      signal?: AbortSignal
       onThinking?: () => void
       onThinkingDelta?: (delta: string) => void
       /** 流结束时带上完整思考内容，便于前端保留 */
@@ -28,6 +29,7 @@ export function useChatStream() {
         conversation_id: options?.conversationId,
         user_id: options?.userId ?? 'default',
       }),
+      signal: options?.signal,
     })
     if (!res.ok || !res.body) throw new Error('Stream request failed')
     const reader = res.body.getReader()
@@ -35,6 +37,7 @@ export function useChatStream() {
     let buffer = ''
     let lastEvent = ''
     while (true) {
+      if (options?.signal?.aborted) break
       const { done, value } = await reader.read()
       if (value) buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
@@ -64,7 +67,7 @@ export function useChatStream() {
           }
         }
       }
-      if (done) break
+      if (done || options?.signal?.aborted) break
     }
     // 不重置 lastEvent，以便末尾 buffer 的 data 能正确归属到 thinking / message
     if (buffer.startsWith('data: ')) {

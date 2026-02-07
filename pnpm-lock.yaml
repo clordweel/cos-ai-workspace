@@ -66,6 +66,9 @@ importers:
       fastify:
         specifier: ^5.x
         version: 5.7.4
+      http-graceful-shutdown:
+        specifier: ^3.1.15
+        version: 3.1.15
 
 packages:
 
@@ -2491,6 +2494,10 @@ packages:
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
+
+  http-graceful-shutdown@3.1.15:
+    resolution: {integrity: sha512-7BzY5XxGV4g7QaOZ8xf5Hco8vJMMUFDl+AcB8AuOOdS1wTOZ88aV3EIADUnyAItj2QW+QfBPz08/PzxKiDKh6Q==}
+    engines: {node: '>=4.0.0'}
 
   http-shutdown@1.2.2:
     resolution: {integrity: sha512-S9wWkJ/VSY9/k4qcjG318bqJNruzE4HySUhFYknwmu6LBP97KLLfwNf+n4V1BHurvFNkSKLFnK/RsuUnRTf9Vw==}
@@ -6676,6 +6683,12 @@ snapshots:
       setprototypeof: 1.2.0
       statuses: 2.0.2
       toidentifier: 1.0.1
+
+  http-graceful-shutdown@3.1.15:
+    dependencies:
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
 
   http-shutdown@1.2.2: {}
 

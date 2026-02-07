@@ -6,6 +6,18 @@
 
 ## 2026-02-07
 
+### 前端需求梳理与中间层重构
+
+- **需求文档**：新增 `docs/FRONTEND_API_REQUIREMENTS.md`，梳理 frontend 对中间层的三类 API（流式对话、物料确认、导出 Markdown）。
+- **中间层分层重构**：保留 Fastify，按业务拆分目录：`src/config.js` 环境与常量；`src/lib/thinkingParser.js` 思考块解析；`src/services/difyStream.js`、`cosClient.js`、`exportMarkdown.js` 业务逻辑；`src/routes/health.js`、`chat.js`、`material.js` 路由注册；入口 `src/index.js` 仅挂载与启动。
+- **POST /api/material/confirm**：实现对接 cos `create_from_draft`。从环境读取 `COS_ERP_BASE`、`COS_ERP_API_KEY`，POST 到 cos 并返回 `item_code`/`item_name`/`name`；未配置时返回 503。
+- **POST /api/chat/export-markdown**：由中间层实现，Body `{ messages }` 返回 `{ markdown }`；前端导出改为请求 `apiBase + '/api/chat/export-markdown'`，删除 `frontend/server/api/chat/export-markdown.post.ts`，失败时仍使用前端本地 `messagesToMarkdown` 兜底下载。
+
+### 中间层：优雅退出
+
+- **http-graceful-shutdown**：引入 `http-graceful-shutdown`，在 SIGINT/SIGTERM/SIGHUP 时停止接收新连接、等待进行中请求（含 SSE 流）结束后再执行 Fastify `onClose` 并退出。
+- **配置**：支持环境变量 `SHUTDOWN_TIMEOUT_MS`（默认 15000ms）控制最大等待时间；`NODE_ENV=development` 时使用快速关闭。
+
 ### 根仓库：pnpm workspace 改造
 
 - **pnpm workspace**：新增 `pnpm-workspace.yaml`，将 `frontend`、`middleware` 纳入统一 workspace；根目录一条 `pnpm install` 安装全仓库依赖，生成单一 `pnpm-lock.yaml`。

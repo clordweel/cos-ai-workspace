@@ -1,6 +1,15 @@
 import { ref } from 'vue'
 
-export type ChatMessage = { role: 'user' | 'assistant'; content: string; thinking?: string }
+/** 左侧消息来源类型：其它用户、机器人、系统或外部程序 */
+export type MessageSourceType = 'other_user' | 'bot' | 'system'
+export type MessageSource = { type: MessageSourceType; label?: string }
+export type ChatMessage = {
+  role: 'user' | 'assistant'
+  content: string
+  thinking?: string
+  /** 左侧消息可标注多种来源，头像堆叠展示 */
+  sources?: MessageSource[]
+}
 
 const chats = ref<Array<{ id: string; title: string }>>([
   { id: 'default', title: '当前会话' },

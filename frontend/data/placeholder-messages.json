@@ -1,0 +1,41 @@
+[
+  {
+    "role": "user",
+    "content": "这是一条用户消息占位，用于调试气泡样式与布局。"
+  },
+  {
+    "role": "assistant",
+    "content": "这是一条助手回复占位。可在此调试助手气泡的圆角、边距与思考块展示。",
+    "thinking": "思考过程占位：用于调试可折叠思考块的样式。展开后可见多行内容，便于检查滚动与折叠区域。",
+    "sources": [{ "type": "bot" }]
+  },
+  {
+    "role": "user",
+    "content": "再发一条，方便测滚动。"
+  },
+  {
+    "role": "assistant",
+    "content": "第二条助手回复。多几条气泡后，消息列表会变长，可以调试滚动条、触底与 overscroll 行为。",
+    "thinking": "思考过程示例：\n1. 解析用户意图\n2. 检索上下文\n3. 组织回复\n4. 流式输出",
+    "sources": [{ "type": "bot" }, { "type": "system", "label": "外部检索" }]
+  },
+  {
+    "role": "user",
+    "content": "第三条用户消息，拉长列表。"
+  },
+  {
+    "role": "assistant",
+    "content": "第三条助手回复。若仍不够长，可继续在 PLACEHOLDER_MESSAGES 里追加。",
+    "thinking": "长思考块占位，用于调试思考区域展开时的滚动与布局。可折叠块应不影响整体滚动体验。",
+    "sources": [{ "type": "other_user", "label": "协作用户" }]
+  },
+  {
+    "role": "user",
+    "content": "第四条。"
+  },
+  {
+    "role": "assistant",
+    "content": "第四条助手消息，用于撑满视口并测试滚动。",
+    "sources": [{ "type": "system" }]
+  }
+]
