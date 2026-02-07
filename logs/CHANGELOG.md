@@ -6,6 +6,12 @@
 
 ## 2026-02-07
 
+### 前端：应用侧边栏改为浏览器标签式
+
+- **useAppView**：用「标签列表」+「当前标签」替代原 appStack；新增 `tabs`、`activeTabId`、`addTab`、`closeTab`、`switchTab`，保留 `openPanel`、`openNavPage`、`closePanel` 等，打开视图时新增或切换对应标签。
+- **WorkspaceAppNav**：侧栏改为展示已打开标签（图标 + 标题 + 悬停显示关闭按钮），点击标签切换、点击 × 关闭；底部固定「新标签」「设置」按钮，新标签打开首页、设置打开/切换到设置标签。
+- **行为**：默认一个「首页」标签；关闭最后一个标签时收起应用区；从会话页抽屉打开联系人/机器人等仍会新增对应标签。
+
 ### 前端需求梳理与中间层重构
 
 - **需求文档**：新增 `docs/FRONTEND_API_REQUIREMENTS.md`，梳理 frontend 对中间层的三类 API（流式对话、物料确认、导出 Markdown）。

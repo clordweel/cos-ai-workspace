@@ -2,126 +2,100 @@
   <nav
     class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg pt-1 pb-1 nav-width-transition"
     :class="[
-      showExpanded ? 'w-44' : 'w-12',
+      showExpanded ? 'w-48' : 'w-12',
       labelsVisible && 'labels-visible'
     ]"
-    aria-label="应用"
+    aria-label="标签"
     @mouseenter="scheduleSidebarExpand()"
     @mouseleave="scheduleSidebarLeave()"
   >
-    <!-- 设置：置于导航列表上方 -->
-    <div class="shrink-0 flex flex-col gap-px px-1 pb-0.5">
+    <!-- 标签列表：类似浏览器侧栏标签，可切换、关闭；未展开时隐藏滚动条，展开时最细滚动条 -->
+    <div
+      class="nav-tabs-scroll flex-1 min-h-0 flex flex-col gap-px overflow-y-auto overscroll-contain min-w-0 px-1 py-0.5"
+      :class="showExpanded ? 'nav-tabs-scroll-expanded' : 'nav-tabs-scroll-collapsed'"
+    >
       <button
+        v-for="tab in tabs"
+        :key="tab.id"
         type="button"
-        class="nav-item"
+        class="tab-item group"
         :class="[
-          layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0',
-          currentView === 'settings' && 'nav-item-active',
+          layoutExpanded ? 'justify-start pl-2 pr-1' : 'justify-center px-0',
+          activeTabId === tab.id && 'tab-item-active',
         ]"
-        title="系统设置"
-        aria-label="系统设置"
-        @click="openApp('settings')"
+        :title="tab.title"
+        :aria-label="tab.title"
+        @click="switchTab(tab.id)"
       >
         <span
           class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-          :class="currentView === 'settings' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
+          :class="activeTabId === tab.id ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
         >
-          <Settings class="h-3.5 w-3.5" />
+          <component :is="tabIcon(tab)" class="h-3.5 w-3.5" />
         </span>
         <Transition name="nav-label">
-          <span v-if="labelsVisible" key="settings" class="nav-label text-xs font-medium truncate">设置</span>
+          <span v-if="labelsVisible" :key="tab.id" class="tab-label text-xs font-medium truncate min-w-0">{{ tab.title }}</span>
+        </Transition>
+        <Transition name="nav-label">
+          <button
+            v-if="labelsVisible && tabs.length > 1"
+            type="button"
+            class="tab-close shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-opacity focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800"
+            :aria-label="`关闭 ${tab.title}`"
+            @click.stop="closeTab(tab.id)"
+          >
+            <X class="h-3 w-3" />
+          </button>
         </Transition>
       </button>
     </div>
-    <div class="flex-1 min-h-0 flex flex-col gap-px overflow-y-auto overscroll-contain min-w-0 px-1 py-0.5">
+    <!-- 底部：新标签、设置（打开即新增对应标签） -->
+    <div class="shrink-0 flex flex-col gap-px px-1 pt-0.5 pb-1 border-t border-zinc-100 dark:border-zinc-700">
       <button
         type="button"
-        class="nav-item"
-        :class="[
-          layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0',
-          currentView === 'home' && 'nav-item-active',
-        ]"
-        title="导航"
-        aria-label="导航"
-        @click="openNavPage"
+        class="tab-item"
+        :class="layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
+        title="新标签"
+        aria-label="新标签"
+        @click="addTab('home')"
       >
-        <span
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-          :class="currentView === 'home' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
-        >
-          <Home class="h-3.5 w-3.5" />
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+          <Plus class="h-3.5 w-3.5" />
         </span>
         <Transition name="nav-label">
-          <span v-if="labelsVisible" key="home" class="nav-label text-xs font-medium truncate">导航</span>
+          <span v-if="labelsVisible" key="new" class="tab-label text-xs font-medium truncate">新标签</span>
         </Transition>
       </button>
       <button
         type="button"
-        class="nav-item"
-        :class="[
-          layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0',
-          currentView === 'contacts' && 'nav-item-active',
-        ]"
-        title="联系人"
-        aria-label="联系人"
-        @click="openApp('contacts')"
+        class="tab-item"
+        :class="layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
+        title="系统设置"
+        aria-label="系统设置"
+        @click="openSettingsTab"
       >
-        <span
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-          :class="currentView === 'contacts' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
-        >
-          <Users class="h-3.5 w-3.5" />
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+          <Settings class="h-3.5 w-3.5" />
         </span>
         <Transition name="nav-label">
-          <span v-if="labelsVisible" key="contacts" class="nav-label text-xs font-medium truncate">联系人</span>
+          <span v-if="labelsVisible" key="settings" class="tab-label text-xs font-medium truncate">设置</span>
         </Transition>
       </button>
-      <button
-        type="button"
-        class="nav-item"
-        :class="[
-          layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0',
-          currentView === 'bots' && 'nav-item-active',
-        ]"
-        title="机器人"
-        aria-label="机器人"
-        @click="openApp('bots')"
-      >
-        <span
-          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-          :class="currentView === 'bots' ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
-        >
-          <Bot class="h-3.5 w-3.5" />
-        </span>
-        <Transition name="nav-label">
-          <span v-if="labelsVisible" key="bots" class="nav-label text-xs font-medium truncate">机器人</span>
-        </Transition>
-      </button>
-      <template v-for="app in appEntries" :key="app.id">
-        <button
-          type="button"
-          class="nav-item"
-          :class="layoutExpanded ? 'justify-start pl-2.5 pr-1.5' : 'justify-center px-0'"
-          :title="app.title"
-          :aria-label="app.title"
-          @click="openApp('home', app.id)"
-        >
-          <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
-            <component :is="app.icon" class="h-3.5 w-3.5" />
-          </span>
-          <Transition name="nav-label">
-            <span v-if="labelsVisible" :key="app.id" class="nav-label text-xs font-medium truncate">{{ app.title }}</span>
-          </Transition>
-        </button>
-      </template>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
+import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen, X, Plus } from 'lucide-vue-next'
+import type { AppTab } from '~/composables/useAppView'
 
-const { currentView, openPanel, openNavPage, isSidebarPinned, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
+const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
+
+function openSettingsTab() {
+  const settingsTab = tabs.value.find((t) => t.view === 'settings')
+  if (settingsTab) switchTab(settingsTab.id)
+  else addTab('settings')
+}
 
 const showExpanded = computed(() => isSidebarPinned.value || isSidebarHovered.value)
 
@@ -170,31 +144,84 @@ onUnmounted(() => {
   if (layoutCollapseTimer) clearTimeout(layoutCollapseTimer)
 })
 
-const appEntries = [
-  { id: 'material', title: '物料助手', icon: Package },
-  { id: 'order', title: '订单进度', icon: ClipboardList },
-  { id: 'bom', title: 'BOM 状态', icon: Layers },
-  { id: 'inventory', title: '库存概览', icon: PackageOpen },
-]
+const APP_ICONS: Record<string, typeof Package> = {
+  material: Package,
+  order: ClipboardList,
+  bom: Layers,
+  inventory: PackageOpen,
+}
 
-function openApp(view: 'home' | 'contacts' | 'bots' | 'settings', _appId?: string) {
-  openPanel(view)
+const VIEW_ICONS: Record<string, typeof Home> = {
+  home: Home,
+  contacts: Users,
+  bots: Bot,
+  settings: Settings,
+}
+
+function tabIcon(tab: AppTab) {
+  if (tab.appId && APP_ICONS[tab.appId]) return APP_ICONS[tab.appId]
+  return VIEW_ICONS[tab.view] ?? Home
 }
 </script>
 
 <style scoped>
-/* 宽度单独过渡，用 contain 限制布局影响范围 */
 .nav-width-transition {
   transition: width 0.2s ease-out;
   contain: layout style;
 }
-.nav-item {
+
+/* 未展开：滚动条不可见 */
+.nav-tabs-scroll-collapsed {
+  scrollbar-width: none;
+}
+.nav-tabs-scroll-collapsed::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* 展开：最细滚动条（与 zinc 色系一致） */
+.nav-tabs-scroll-expanded {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+.dark .nav-tabs-scroll-expanded {
+  scrollbar-color: rgb(82 82 91) transparent;
+}
+.nav-tabs-scroll-expanded::-webkit-scrollbar {
+  width: 5px;
+}
+.nav-tabs-scroll-expanded::-webkit-scrollbar-track {
+  background: transparent;
+}
+.nav-tabs-scroll-expanded::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 9999px;
+}
+.dark .nav-tabs-scroll-expanded::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
+}
+.nav-tabs-scroll-expanded::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(161 161 170);
+}
+.dark .nav-tabs-scroll-expanded::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(113 113 122);
+}
+.nav-tabs-scroll-expanded::-webkit-scrollbar-button {
+  display: none;
+}
+.tab-item {
   @apply flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800;
 }
-.nav-item-active {
+.tab-item-active {
   @apply bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-primary-500;
 }
-/* 文字延后挂载 + 淡入，减少同帧重排 */
+.tab-label {
+  @apply flex-1 min-w-0 text-left;
+}
+.tab-close {
+  margin-left: auto;
+}
 .nav-label-enter-active {
   transition: opacity 0.14s ease-out;
 }

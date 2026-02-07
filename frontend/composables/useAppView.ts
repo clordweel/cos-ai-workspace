@@ -1,15 +1,40 @@
 export type AppView = 'home' | 'contacts' | 'bots' | 'settings'
 
-export interface AppCard {
+/** 侧栏「标签」：类似浏览器标签，可多开、切换、关闭 */
+export interface AppTab {
   id: string
   view: AppView
+  title: string
+  appId?: string
 }
 
-const defaultCard: AppCard = { id: 'home', view: 'home' }
+const VIEW_TITLES: Record<AppView, string> = {
+  home: '首页',
+  contacts: '联系人',
+  bots: '机器人',
+  settings: '设置',
+}
 
-/** 应用卡片栈，栈顶为当前展示；空栈时视为仅有一张 home 卡 */
-const appStack = ref<AppCard[]>([])
-/** 应用区是否展示；默认展示并打开导航页（导航页视作一种应用） */
+const APP_TITLES: Record<string, string> = {
+  material: '物料助手',
+  order: '订单进度',
+  bom: 'BOM 状态',
+  inventory: '库存概览',
+}
+
+function tabTitle(view: AppView, appId?: string): string {
+  if (appId && APP_TITLES[appId]) return APP_TITLES[appId]
+  return VIEW_TITLES[view]
+}
+
+const defaultHomeTab: AppTab = { id: 'tab-home-default', view: 'home', title: '首页' }
+
+/** 已打开的标签列表（侧栏展示顺序）；默认一个首页标签 */
+const tabs = ref<AppTab[]>([defaultHomeTab])
+/** 当前选中的标签 id；null 表示无标签（面板可关闭） */
+const activeTabId = ref<string | null>(defaultHomeTab.id)
+
+/** 应用区是否展示 */
 const isPanelOpen = ref(true)
 /** 右侧应用内容区是否展示；为 false 时仅保留侧边栏 */
 const isContentVisible = ref(true)
@@ -28,61 +53,96 @@ let lastExpandTime = 0
 const SIDEBAR_LEAVE_GRACE_MS = 280
 
 const currentView = computed<AppView>(() => {
-  const stack = appStack.value
-  return stack.length > 0 ? stack[stack.length - 1].view : defaultCard.view
+  const id = activeTabId.value
+  if (!id) return 'home'
+  const tab = tabs.value.find((t) => t.id === id)
+  return tab?.view ?? 'home'
 })
 
-const canGoBack = computed(() => appStack.value.length > 1)
+/** 当前选中的标签（只读） */
+const activeTab = computed(() => {
+  const id = activeTabId.value
+  return id ? tabs.value.find((t) => t.id === id) ?? null : null
+})
+
+const canGoBack = computed(() => tabs.value.length > 1)
 
 export function useAppView() {
-  const maxStackSize = 3
+  function genId(): string {
+    return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  }
 
-  function pushCard(view: AppView) {
-    const id = `${view}-${Date.now()}`
-    appStack.value = [...appStack.value, { id, view }].slice(-maxStackSize)
+  /** 新增一个标签并选中（不复用同 view 的标签，类似浏览器新开） */
+  function addTab(view: AppView, appId?: string) {
+    const id = genId()
+    const title = tabTitle(view, appId)
+    const newTab: AppTab = { id, view, title, appId }
+    tabs.value = [...tabs.value, newTab]
+    activeTabId.value = id
+    isPanelOpen.value = true
+    isContentVisible.value = true
+    return id
   }
-  function goBack() {
-    if (appStack.value.length <= 1) return
-    appStack.value = appStack.value.slice(0, -1)
-  }
-  /** 移除指定索引的卡片；若为栈顶则展示下一张 */
-  function removeCard(index: number) {
-    const next = appStack.value.filter((_, i) => i !== index)
-    if (next.length === 0) {
+
+  /** 关闭指定标签；若为当前标签则切换到相邻标签 */
+  function closeTab(id: string) {
+    const list = tabs.value
+    const index = list.findIndex((t) => t.id === id)
+    if (index === -1) return
+    const nextList = list.filter((t) => t.id !== id)
+    if (nextList.length === 0) {
       isPanelOpen.value = false
-      appStack.value = []
-    } else {
-      appStack.value = next
+      tabs.value = []
+      activeTabId.value = null
+      return
+    }
+    tabs.value = nextList
+    if (activeTabId.value === id) {
+      const nextIndex = Math.min(index, nextList.length - 1)
+      activeTabId.value = nextList[nextIndex].id
     }
   }
+
+  /** 切换到指定标签 */
+  function switchTab(id: string) {
+    if (tabs.value.some((t) => t.id === id)) {
+      activeTabId.value = id
+      isPanelOpen.value = true
+      isContentVisible.value = true
+    }
+  }
+
+  /** 兼容旧 API：在标签模型中「打开」某视图 = 新增标签并选中 */
   function setView(view: AppView) {
-    if (view === 'home' && appStack.value.length > 1) {
-      goBack()
-      return
-    }
-    if (view === 'home') {
-      appStack.value = []
-      return
-    }
-    pushCard(view)
+    addTab(view)
   }
+
   function openPanel(view?: AppView) {
     isPanelOpen.value = true
     isContentVisible.value = true
-    if (view) pushCard(view)
-    else if (appStack.value.length === 0) {
-      appStack.value = [defaultCard] // 默认打开导航页（home）
+    if (view) {
+      addTab(view)
+    } else if (tabs.value.length === 0) {
+      addTab('home')
     }
   }
-  /** 切换到导航页（视作一种应用） */
+
+  /** 打开/切换到「首页」标签：若已有首页标签则选中，否则新建 */
   function openNavPage() {
     isPanelOpen.value = true
     isContentVisible.value = true
-    appStack.value = [defaultCard]
+    const homeTab = tabs.value.find((t) => t.view === 'home' && !t.appId)
+    if (homeTab) {
+      activeTabId.value = homeTab.id
+    } else {
+      addTab('home')
+    }
   }
+
   function closePanel() {
     isPanelOpen.value = false
-    appStack.value = []
+    tabs.value = []
+    activeTabId.value = null
   }
   function toggleContentPanel() {
     isContentVisible.value = !isContentVisible.value
@@ -141,8 +201,19 @@ export function useAppView() {
       sidebarLeaveTimer = null
     }
   }
+  /** 切换到「上一个」标签（按列表顺序） */
+  function goBack() {
+    const list = tabs.value
+    if (list.length <= 1) return
+    const idx = list.findIndex((t) => t.id === activeTabId.value)
+    if (idx <= 0) return
+    activeTabId.value = list[idx - 1].id
+  }
+
   return {
-    appStack: readonly(appStack),
+    tabs: readonly(tabs),
+    activeTabId: readonly(activeTabId),
+    activeTab,
     currentView,
     canGoBack,
     isPanelOpen: readonly(isPanelOpen),
@@ -156,9 +227,10 @@ export function useAppView() {
     toggleContentPanel,
     toggleSidebarPinned,
     setView,
-    pushCard,
+    addTab,
+    closeTab,
+    switchTab,
     goBack,
-    removeCard,
     openPanel,
     openNavPage,
     closePanel,
