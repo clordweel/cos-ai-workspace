@@ -10,13 +10,20 @@ import { config } from './config.js';
 import { healthRoutes } from './routes/health.js';
 import { chatRoutes } from './routes/chat.js';
 import { materialRoutes } from './routes/material.js';
+import { diagnosticsRoutes } from './routes/diagnostics.js';
 
-const app = Fastify({ logger: true });
+const isDev = process.env.NODE_ENV === 'development';
+const app = Fastify({
+  logger: {
+    level: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+  },
+});
 await app.register(cors, { origin: true });
 
 await app.register(healthRoutes);
 await app.register(chatRoutes);
 await app.register(materialRoutes);
+await app.register(diagnosticsRoutes);
 
 await app.listen({ port: config.port, host: '0.0.0.0' });
 console.log(`Middleware listening on http://0.0.0.0:${config.port}`);

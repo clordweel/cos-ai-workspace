@@ -20,10 +20,15 @@ export const config = {
     apiKey: process.env.DIFY_API_KEY || '',
   },
 
+  /** ERPNext / cos 业务接口（物料、订单、库存、BOM 等） */
   cos: {
-    /** cos/ERPNext API 根地址，例如 https://erp.example.com */
+    /** API 根地址，例如 https://erp.example.com/api（勿带末尾斜杠） */
     baseUrl: (process.env.COS_ERP_BASE || '').replace(/\/$/, ''),
-    /** 调用 cos 时的认证：Bearer Token 或 API Key（由 cos 侧约定） */
+    /** 认证：Bearer Token 或 API Key（由 Frappe/cos 侧约定） */
     apiKey: process.env.COS_ERP_API_KEY || '',
+    /** 若使用 API Key + Secret 认证时使用（由 cos 侧约定） */
+    apiSecret: process.env.COS_ERP_API_SECRET || '',
+    /** 请求超时毫秒数，默认 15000 */
+    timeoutMs: Number(process.env.COS_ERP_TIMEOUT_MS) || 15_000,
   },
 };

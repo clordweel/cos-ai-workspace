@@ -24,5 +24,5 @@
 
 ## 与本工作区联调
 
-- 中间层（middleware）通过环境变量 `COS_ERP_BASE`、`COS_API_KEY` 调用 cos 接口。
+- 中间层（middleware）通过环境变量 `COS_ERP_BASE`、`COS_ERP_API_KEY`（及可选的 `COS_ERP_API_SECRET`、`COS_ERP_TIMEOUT_MS`）调用 cos 接口，见根目录 `.env.example`。
 - 可将 cos 源码通过 git submodule 或复制方式放到本目录下，便于与 frontend、middleware 同仓管理。

@@ -12,7 +12,7 @@ const COS_METHOD = '/method/cos.api.material.create_from_draft';
  * @returns {Promise<{ item_code?: string, item_name?: string, name?: string } | { error: string, exc?: string, message?: string }>}
  */
 export async function createFromDraft(payload) {
-  const { baseUrl, apiKey } = config.cos;
+  const { baseUrl, apiKey, timeoutMs } = config.cos;
   if (!baseUrl) {
     return { error: 'COS_ERP_BASE 未配置', message: '请在 .env 中设置 COS_ERP_BASE' };
   }
@@ -23,14 +23,28 @@ export async function createFromDraft(payload) {
     ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      draft_id: payload.draft_id,
-      confirmed_by: payload.confirmed_by,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  let res;
+  try {
+    res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        draft_id: payload.draft_id,
+        confirmed_by: payload.confirmed_by,
+      }),
+      signal: controller.signal,
+    });
+  } catch (e) {
+    if (e?.name === 'AbortError') {
+      return { error: '请求超时', message: `ERPNext 接口在 ${timeoutMs}ms 内未响应` };
+    }
+    throw e;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {

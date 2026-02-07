@@ -66,6 +66,9 @@ importers:
       fastify:
         specifier: ^5.x
         version: 5.7.4
+      frappe-js-sdk:
+        specifier: ^1.12.0
+        version: 1.12.0
       http-graceful-shutdown:
         specifier: ^3.1.15
         version: 3.1.15
@@ -2349,6 +2352,9 @@ packages:
 
   fraction.js@5.3.4:
     resolution: {integrity: sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==}
+
+  frappe-js-sdk@1.12.0:
+    resolution: {integrity: sha512-5I0PBqeqhd5WYdTfN6qS/OvzM7TBXt1JRT6S+L5/TgKZFQy55hQH6oJVURyNQ+/qFeNSf2LjKwV1v5Huhwg+Rw==}
 
   fresh@0.5.2:
     resolution: {integrity: sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==}
@@ -6508,6 +6514,12 @@ snapshots:
       mime-types: 2.1.35
 
   fraction.js@5.3.4: {}
+
+  frappe-js-sdk@1.12.0:
+    dependencies:
+      axios: 1.13.4
+    transitivePeerDependencies:
+      - debug
 
   fresh@0.5.2: {}
 
