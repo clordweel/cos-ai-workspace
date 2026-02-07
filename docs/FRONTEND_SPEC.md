@@ -23,12 +23,14 @@
 ### 应用区内部
 
 - **WorkspaceAppNav（应用侧栏）**  
-  - 宽度可折叠：展开 `w-44`，折叠 `w-12`，带过渡。  
+  - 宽度可折叠：展开 `w-44`，折叠 `w-12`；宽度过渡 200ms，用 `contain: layout style` 限制布局影响。  
+  - **悬停展开**（`useAppView`）：鼠标进入 nav 后**悬停 500ms** 才展开；移出后 180ms 延迟收起；若在 180ms 内移入顶部工具栏则取消收起（便于点击固定）。展开后约 280ms 内忽略误触的 mouseleave，避免宽度动画导致抖动。  
+  - **固定态**：顶部工具栏有「固定侧栏」按钮，固定后侧栏常开、不随鼠标收起。  
   - **自上而下**：  
-    1. **内容区显隐**：图标按钮（展开/折叠右侧内容区）；侧栏展开时居左，折叠时居中。  
-    2. **设置**：跳转应用内容区「设置」视图。  
-    3. **导航列表**（可滚动）：导航（首页）、联系人、机器人、以及扩展应用入口（如物料助手、订单进度、BOM 状态、库存概览）。  
-  - 右侧缘有**折叠/展开侧栏**的悬浮按钮（相对整条侧栏垂直居中）。
+    1. **设置**：跳转应用内容区「设置」视图。  
+    2. **导航列表**（可滚动）：导航（首页）、联系人、机器人、以及扩展应用入口（如物料助手、订单进度、BOM 状态、库存概览）。  
+  - **文字与布局**：列表项文字在展开后**延后 140ms** 再挂载并淡入，减轻与宽度动画同帧造成的卡顿。收起时按钮保持「展开布局」（图标居左）约 200ms，再切换为居中，避免图标在宽条时瞬间回中的不良观感。  
+  - 固定/展开按钮在 **workspace 布局**的顶部工具栏（侧栏上方），不在 nav 内。
 
 - **应用内容区**  
   - 当 `isContentVisible` 为 true 时显示：内层容器圆角 `rounded-xl`、浅底 `bg-zinc-50/50`、内阴影 + 边框外阴影。  
@@ -50,7 +52,11 @@
 
 ### 状态与注入
 
-- **useAppView**：`isPanelOpen`、`isContentVisible`、`currentView`、`openPanel`、`openNavPage`、`toggleContentPanel` 等。  
+- **useAppView**：  
+  - 面板与内容：`isPanelOpen`、`isContentVisible`、`currentView`、`openPanel`、`openNavPage`、`closePanel`、`toggleContentPanel`。  
+  - 侧栏悬浮/固定：`isSidebarPinned`、`isSidebarHovered`、`toggleSidebarPinned`、`setSidebarHovered`；  
+  - 侧栏延迟逻辑：`scheduleSidebarExpand()`（nav mouseenter 时调用）、`scheduleSidebarLeave()`（nav/工具栏 mouseleave）、`cancelSidebarLeave()`（工具栏 mouseenter，取消延迟收起）。  
+  - 卡片栈：`appStack`、`pushCard`、`goBack`、`removeCard`、`canGoBack`。  
 - Layout 向子组件 provide **`isSessionExpanded`**（computed：当应用区关闭或应用内容区折叠时为 true），用于 space 页切换列表/聊天布局。
 
 ## UX 原则（De-ERP）
