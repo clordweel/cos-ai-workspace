@@ -1,6 +1,6 @@
 <template>
   <nav
-    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg transition-[width] duration-200"
+    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg transition-[width] duration-200 pt-1 pb-1"
     :class="showExpanded ? 'w-44' : 'w-12'"
     aria-label="应用"
     @mouseenter="setSidebarHovered(true)"
