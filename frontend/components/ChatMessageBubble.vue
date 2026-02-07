@@ -1,6 +1,6 @@
 <template>
   <!-- 用户：气泡容器，无工具栏 -->
-  <div v-if="message.role === 'user'" class="max-w-[85%] rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-emerald-100 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100">
+  <div v-if="message.role === 'user'" class="max-w-[85%] rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
     <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
   </div>
   <!-- 左侧消息：标准宽度容器，保证短消息时工具栏与头像右对齐一致 -->
@@ -46,7 +46,7 @@
         >{{ chunk }}</span>
       </template>
       <template v-else>{{ message.content }}</template>
-      <span v-if="streaming" class="streaming-cursor ml-0.5 align-middle" aria-hidden />
+      <span v-if="streaming" class="streaming-cursor bg-primary-500 dark:bg-primary-400 ml-0.5 align-middle" aria-hidden />
     </p>
     <!-- 消息工具栏：左侧按钮 + 右侧堆叠来源头像 -->
     <div class="mt-1.5 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-500">
@@ -191,11 +191,7 @@ function onCopy() {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: rgb(16 185 129);
   animation: streaming-blink 1s ease-in-out infinite;
-}
-.dark .streaming-cursor {
-  background: rgb(52 211 153);
 }
 @keyframes streaming-blink {
   0%,

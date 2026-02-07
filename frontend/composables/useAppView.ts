@@ -20,6 +20,12 @@ const isSidebarHovered = ref(false)
 /** 延迟收起侧栏的 timer，便于从 nav 移到工具栏时不立即折叠 */
 let sidebarLeaveTimer: ReturnType<typeof setTimeout> | null = null
 const SIDEBAR_LEAVE_DELAY_MS = 180
+/** 延迟展开侧栏的 timer：悬停超过此时间才展开 */
+let sidebarExpandTimer: ReturnType<typeof setTimeout> | null = null
+const SIDEBAR_EXPAND_DELAY_MS = 500
+/** 展开后在此时间内忽略收起，避免宽度动画导致 mouseleave 误触发而抖动 */
+let lastExpandTime = 0
+const SIDEBAR_LEAVE_GRACE_MS = 280
 
 const currentView = computed<AppView>(() => {
   const stack = appStack.value
@@ -85,14 +91,43 @@ export function useAppView() {
     isSidebarPinned.value = !isSidebarPinned.value
   }
   function setSidebarHovered(value: boolean) {
+    if (sidebarExpandTimer) {
+      clearTimeout(sidebarExpandTimer)
+      sidebarExpandTimer = null
+    }
     if (sidebarLeaveTimer) {
       clearTimeout(sidebarLeaveTimer)
       sidebarLeaveTimer = null
     }
     isSidebarHovered.value = value
   }
+  /** 延迟展开侧栏：鼠标进入 nav 后悬停超过 500ms 才展开 */
+  function scheduleSidebarExpand() {
+    if (isSidebarHovered.value || isSidebarPinned.value) return
+    if (sidebarExpandTimer) return
+    if (sidebarLeaveTimer) {
+      clearTimeout(sidebarLeaveTimer)
+      sidebarLeaveTimer = null
+    }
+    sidebarExpandTimer = setTimeout(() => {
+      isSidebarHovered.value = true
+      sidebarExpandTimer = null
+      lastExpandTime = Date.now()
+    }, SIDEBAR_EXPAND_DELAY_MS)
+  }
   /** 延迟收起侧栏（从 nav 移出时调用，若在延迟内进入工具栏则取消） */
   function scheduleSidebarLeave() {
+    if (sidebarExpandTimer) {
+      clearTimeout(sidebarExpandTimer)
+      sidebarExpandTimer = null
+    }
+    if (Date.now() - lastExpandTime < SIDEBAR_LEAVE_GRACE_MS) {
+      if (sidebarLeaveTimer) {
+        clearTimeout(sidebarLeaveTimer)
+        sidebarLeaveTimer = null
+      }
+      return
+    }
     if (sidebarLeaveTimer) clearTimeout(sidebarLeaveTimer)
     sidebarLeaveTimer = setTimeout(() => {
       isSidebarHovered.value = false
@@ -115,6 +150,7 @@ export function useAppView() {
     isSidebarPinned: readonly(isSidebarPinned),
     isSidebarHovered: readonly(isSidebarHovered),
     setSidebarHovered,
+    scheduleSidebarExpand,
     scheduleSidebarLeave,
     cancelSidebarLeave,
     toggleContentPanel,

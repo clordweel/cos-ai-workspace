@@ -22,7 +22,7 @@
               <div
                 v-if="showPinButton"
                 class="flex items-center shrink-0"
-                :class="isContentVisible ? 'pl-3.5' : 'pl-2'"
+                :class="isContentVisible ? 'pl-2.5' : 'pl-2'"
               >
                 <button
                   type="button"
@@ -52,7 +52,7 @@
             </div>
             <div class="flex flex-1 min-h-0 min-w-0">
               <WorkspaceAppNav />
-              <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2">
+              <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2 pl-0">
                 <div class="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-800/50 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
                   <AppPanel />
                 </div>

@@ -13,6 +13,9 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss'],
   compatibilityDate: '2025-02-01',
   devServer: { port: 3001, host: '0.0.0.0' },
+  build: {
+    transpile: ['radix-vue'],
+  },
   app: {
     head: {
       title: 'AI COS 工作台',

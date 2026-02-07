@@ -8,12 +8,12 @@
                 :key="app.id"
                 role="button"
                 tabindex="0"
-                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2"
+                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2"
                 @click="app.action"
                 @keydown.enter.prevent="app.action()"
               >
                 <div class="flex items-center gap-2.5">
-                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400">
                     <component :is="app.icon" class="h-4 w-4" />
                   </span>
                   <div class="min-w-0">
@@ -50,7 +50,7 @@
                 class="flex items-center gap-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 rounded-md transition-colors -mx-0.5 px-0.5"
                 @click="openChat('bot', b.id, b.name)"
               >
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400">
                   <Bot class="h-4 w-4" />
                 </span>
                 <div class="min-w-0 flex-1">

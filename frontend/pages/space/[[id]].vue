@@ -57,9 +57,9 @@
                 :key="c.id"
                 role="button"
                 tabindex="0"
-                class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2 rounded-md"
+                class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
                 :class="[
-                  c.id === chatId && isSessionExpanded ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
+                  c.id === chatId && isSessionExpanded ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
                 ]"
                 @click="goToChat(c.id)"
                 @keydown.enter.prevent="goToChat(c.id)"
@@ -93,104 +93,80 @@
         <template v-if="chatId">
           <!-- 顶部导航：半透明亚克力 -->
           <header
-            class="absolute top-0 left-0 right-0 z-20 flex h-12 shrink-0 items-center gap-2 px-3 py-2 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
+            class="absolute top-0 left-0 right-0 z-20 grid h-12 shrink-0 grid-cols-[1fr_1fr_1fr] items-center gap-2 px-3 py-2 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
             aria-label="会话标题"
           >
-            <NuxtLink
-              v-if="!isSessionExpanded"
-              to="/space"
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-              aria-label="返回会话列表"
-            >
-              <ChevronLeft class="h-4 w-4" />
-            </NuxtLink>
-            <DropdownMenuRoot>
-              <DropdownMenuTrigger
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2"
-                aria-label="更多操作"
+            <div class="flex min-w-0 items-center gap-2">
+              <NuxtLink
+                v-if="!isSessionExpanded"
+                to="/space"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
+                aria-label="返回会话列表"
               >
-                <Menu class="h-4 w-4" />
-              </DropdownMenuTrigger>
-              <DropdownMenuPortal to="body">
-                <DropdownMenuContent
-                  class="z-[100] min-w-[200px] rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-1 shadow-lg"
-                  :side-offset="6"
-                  align="end"
-                >
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger
-                      class="flex cursor-default select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none data-[highlighted]:bg-zinc-100 dark:data-[highlighted]:bg-zinc-700 data-[state=open]:bg-zinc-100 dark:data-[state=open]:bg-zinc-700"
-                      text-value="导出聊天"
-                    >
-                      <Download class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                      导出聊天
-                      <ChevronRight class="ml-auto h-3.5 w-3.5 opacity-60" />
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuPortal to="body">
-                      <DropdownMenuSubContent
-                        class="z-[100] min-w-[180px] rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-1 shadow-lg"
-                        :side-offset="4"
-                      >
-                        <DropdownMenuItem
-                          class="flex cursor-pointer select-none items-center rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                          text-value="当前屏"
-                          @select="onExportCurrentScreen"
-                        >
-                          当前屏
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          class="flex cursor-pointer select-none items-center rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                          text-value="长屏截图"
-                          @select="onExportLongScreenshot"
-                        >
-                          长屏截图
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          class="flex cursor-pointer select-none items-center rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                          text-value="导出 markdown"
-                          @select="onExportMarkdown"
-                        >
-                          导出 Markdown
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuPortal>
-                  </DropdownMenuSub>
-                  <DropdownMenuItem
-                    class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                    text-value="分享"
-                    @select="onShareConversation"
-                  >
-                    <Share2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    分享
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator class="my-1 h-px bg-zinc-200 dark:bg-zinc-600" />
-                  <DropdownMenuItem
-                    class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                    text-value="重命名会话"
-                    @select="onRenameChat"
-                  >
+                <ChevronLeft class="h-4 w-4" />
+              </NuxtLink>
+            </div>
+            <div class="flex min-w-0 items-center justify-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger class="max-w-[14rem]" aria-label="会话菜单">
+                  <span class="truncate">{{ chatTitle }}</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" side="top" :side-offset="4">
+                  <DropdownMenuItem text-value="重命名会话" @select="onRenameChat">
                     <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
                     重命名会话
                   </DropdownMenuItem>
+                  <DropdownMenuItem text-value="分享此会话" @select="onShareConversation">
+                    <Share2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    分享此会话
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="复制会话链接" @select="onCopySessionLink">
+                    <Link class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    复制会话链接
+                  </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger text-value="导出为...">
+                      <Download class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                      导出为…
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem text-value="当前屏" @select="onExportCurrentScreen">
+                        当前屏
+                      </DropdownMenuItem>
+                      <DropdownMenuItem text-value="长屏截图" @select="onExportLongScreenshot">
+                        长屏截图
+                      </DropdownMenuItem>
+                      <DropdownMenuItem text-value="导出 markdown" @select="onExportMarkdown">
+                        导出 Markdown
+                      </DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem text-value="归档会话" @select="onArchiveChat">
+                    <Archive class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    归档会话
+                  </DropdownMenuItem>
                   <DropdownMenuItem
-                    class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-red-600 dark:text-red-400 outline-none hover:bg-red-50 dark:hover:bg-red-900/20"
                     text-value="删除会话"
+                    class="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                     @select="onDeleteChat"
                   >
                     <Trash2 class="h-3.5 w-3.5 shrink-0 opacity-80" />
                     删除会话
                   </DropdownMenuItem>
                 </DropdownMenuContent>
-              </DropdownMenuPortal>
-            </DropdownMenuRoot>
-            <span class="flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate min-w-0">{{ chatTitle }}</span>
-            <span class="shrink-0 text-sm text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="chatUserName">{{ chatUserName }}</span>
+              </DropdownMenu>
+            </div>
+            <div class="flex min-w-0 items-center justify-end gap-1.5">
+            <span class="shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="chatUserName">{{ chatUserName }}</span>
             <span
-              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
+              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 text-xs font-medium"
               aria-hidden
             >
-              <User class="h-3.5 w-3.5" />
+              <template v-if="chatUserName?.trim()">{{ chatUserName.trim().slice(0, 1) }}</template>
+              <User v-else class="h-3.5 w-3.5" />
             </span>
+            </div>
           </header>
           <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表以显示调试占位 -->
           <div
@@ -310,7 +286,7 @@
                 <textarea
                   v-model="input"
                   rows="2"
-                  placeholder="添加追问"
+                  placeholder="说点什么？"
                   class="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
                   :disabled="streaming"
                   @keydown.enter.exact.prevent="send()"
@@ -349,7 +325,7 @@
                       title="联网"
                       aria-label="联网"
                     >
-                      <Globe class="h-4 w-4 text-blue-500" />
+                      <Globe class="h-4 w-4 text-primary-500" />
                     </button>
                     <button
                       type="button"
@@ -392,7 +368,7 @@
           <p class="text-sm">选择左侧会话或新建会话</p>
           <button
             type="button"
-            class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-500 transition-colors"
+            class="rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-500 transition-colors"
             @click="startNewChat"
           >
             新会话
@@ -408,17 +384,16 @@ import type { ChatMessage } from '~/composables/useChatSessions'
 import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import {
+  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuRoot,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from 'radix-vue'
-import { ChevronLeft, ChevronDown, ChevronRight, Download, Globe, Image, Infinity, Loader2, Menu, Pencil, Search, Send, Share2, Square, Trash2, User, X } from 'lucide-vue-next'
+} from '~/lib/dropdown-menu'
+import { Archive, ChevronDown, ChevronLeft, ChevronRight, Download, Globe, Image, Infinity, Link, Loader2, Pencil, Search, Send, Share2, Square, Trash2, User, X } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -507,8 +482,16 @@ async function onExportMarkdown() {
 function onShareConversation() {
   // TODO: 分享会话
 }
+function onCopySessionLink() {
+  if (!chatId.value) return
+  const url = `${window.location.origin}${route.fullPath}`
+  navigator.clipboard.writeText(url).catch(() => {})
+}
 function onRenameChat() {
   // TODO: 重命名会话
+}
+function onArchiveChat() {
+  // TODO: 归档会话
 }
 function onDeleteChat() {
   // TODO: 删除会话
