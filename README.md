@@ -20,8 +20,8 @@
 
 ## 环境准备
 
-1. **Node.js** 18+（frontend、middleware）
-2. **pnpm** 或 **npm**（推荐 pnpm）
+1. **Node.js** 18+ 与 **npm**（frontend、middleware）
+2. **pnpm** 无需全局安装：根目录已把 pnpm 列为 devDependency，脚本会使用项目内的 pnpm（[pnpm workspace](https://pnpm.io/workspaces)）
 3. **ERPNext v16 + cos** 部署在可访问的服务器或本地 bench
 4. **Dify** 实例（API Key 用于对话流）
 
@@ -39,10 +39,10 @@ cp .env.example .env
 ### 方式一：根目录脚本（推荐）
 
 ```bash
-# 安装根依赖 + 各子项目依赖
+# 安装全仓库依赖（先 npm 装根依赖含 pnpm，再 pnpm 装 workspace）
 npm run install:all
 
-# 并行启动中间层 + 前端（开发）
+# 并行启动中间层 + 前端（开发，无需全局 pnpm）
 npm run dev
 ```
 
@@ -50,10 +50,10 @@ npm run dev
 
 ```bash
 # 中间层（默认 http://localhost:3000）
-cd middleware && npm install && npm run dev
+npm run dev:middleware
 
 # 前端（默认 http://localhost:3001；需配置 NUXT_PUBLIC_API_BASE 或代理到中间层）
-cd frontend && npm install && npm run dev
+npm run dev:frontend
 ```
 
 **cos** 为 Frappe App，需在 ERPNext bench 环境中安装与运行，见 [cos/README.md](./cos/README.md)。

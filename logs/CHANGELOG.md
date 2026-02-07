@@ -6,6 +6,13 @@
 
 ## 2026-02-07
 
+### 根仓库：pnpm workspace 改造
+
+- **pnpm workspace**：新增 `pnpm-workspace.yaml`，将 `frontend`、`middleware` 纳入统一 workspace；根目录一条 `pnpm install` 安装全仓库依赖，生成单一 `pnpm-lock.yaml`。
+- **根 package.json**：`install:all` 改为 `pnpm install`；`dev:middleware` / `dev:frontend` / `build:*` 改为通过 `pnpm --filter <包名> run <script>` 执行，不再 `cd` 子目录。
+- **锁文件**：移除根与子项目中的 `package-lock.json`，`.gitignore` 增加 `package-lock.json` 避免误提交；后续统一使用 pnpm。
+- **README**：环境准备与启动说明更新为 pnpm 与 filter 用法。
+
 ### 前端：Shadcn 风格组件与源码清理
 
 - **UI 组件**：新增 `components/ui/checkbox/Checkbox.vue`（基于 radix-vue CheckboxRoot + CheckboxIndicator），与现有 Select 风格一致；设置页「通知」由原生 `<input type="checkbox">` 改为该 Checkbox 组件。

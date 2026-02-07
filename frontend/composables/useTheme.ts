@@ -5,7 +5,7 @@ const STORAGE_KEY = 'app-theme'
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 function getStored(): ThemeMode {
-  if (import.meta.server) return 'light'
+  if (typeof window === 'undefined') return 'light'
   try {
     const v = localStorage.getItem(STORAGE_KEY)
     if (v === 'dark' || v === 'light' || v === 'system') return v
@@ -14,12 +14,12 @@ function getStored(): ThemeMode {
 }
 
 function getSystemDark(): boolean {
-  if (import.meta.server) return false
+  if (typeof window === 'undefined') return false
   return window.matchMedia('(prefers-color-scheme: dark)').matches
 }
 
 function applyEffective(isDark: boolean) {
-  if (import.meta.server) return
+  if (typeof window === 'undefined') return
   const html = document.documentElement
   if (isDark) {
     html.classList.add('dark')

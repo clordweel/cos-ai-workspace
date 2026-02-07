@@ -3,14 +3,15 @@
   "private": true,
   "description": "AI 驱动交互工作台 — 多项目根",
   "scripts": {
-    "install:all": "npm install && cd middleware && npm install && cd ../frontend && npm install",
-    "dev": "concurrently \"pnpm run dev:middleware\" \"pnpm run dev:frontend\"",
-    "dev:middleware": "cd middleware && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev",
-    "build:frontend": "cd frontend && npm run build",
-    "build:middleware": "cd middleware && npm run start"
+    "install:all": "npm install && pnpm install",
+    "dev": "concurrently \"npm run dev:middleware\" \"npm run dev:frontend\"",
+    "dev:middleware": "pnpm --filter ai-workbench-middleware run dev",
+    "dev:frontend": "pnpm --filter ai-workbench-frontend run dev",
+    "build:frontend": "pnpm --filter ai-workbench-frontend run build",
+    "build:middleware": "pnpm --filter ai-workbench-middleware run start"
   },
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.0.0",
+    "pnpm": "^9.0.0"
   }
 }
