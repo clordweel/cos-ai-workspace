@@ -1,6 +1,6 @@
 <template>
   <nav
-    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg pt-1 pb-1 nav-width-transition"
+    class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg nav-width-transition"
     :class="[
       showExpanded ? 'w-48' : 'w-12',
       labelsVisible && 'labels-visible'

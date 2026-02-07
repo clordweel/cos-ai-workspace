@@ -14,7 +14,7 @@
           <section v-if="isPanelOpen" key="panel" class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-sm" :class="isContentVisible ? 'flex-1 min-w-0' : ''">
             <!-- 顶部工具条：左区块=固定按钮（侧栏+内容都折叠时隐藏），右区块=折叠按钮；鼠标进入工具栏时取消侧栏延迟折叠 -->
             <div
-              class="shrink-0 flex items-center py-1 border-b border-zinc-100 dark:border-zinc-700"
+              class="shrink-0 flex items-center py-1"
               @mouseenter="cancelSidebarLeave()"
               @mouseleave="scheduleSidebarLeave()"
             >
@@ -56,7 +56,7 @@
             </div>
             <div class="flex flex-1 min-h-0 min-w-0">
               <WorkspaceAppNav />
-              <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2 pl-0">
+              <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2 pl-0 pt-0">
                 <div class="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-800/50 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
                   <AppPanel />
                 </div>

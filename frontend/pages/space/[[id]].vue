@@ -123,7 +123,7 @@
             </div>
             <div class="flex min-w-0 items-center justify-center">
               <DropdownMenu>
-                <DropdownMenuTrigger class="max-w-[14rem]" aria-label="会话菜单">
+                <DropdownMenuTrigger class="max-w-[14rem] !bg-white dark:!bg-zinc-800 border border-zinc-200/80 dark:border-zinc-600/80" aria-label="会话菜单">
                   <span class="truncate">{{ chatTitle }}</span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="center" side="top" :side-offset="4">
