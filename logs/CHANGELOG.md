@@ -4,6 +4,16 @@
 
 ---
 
+## 2026-02-07
+
+### 前端：Shadcn 风格组件与源码清理
+
+- **UI 组件**：新增 `components/ui/checkbox/Checkbox.vue`（基于 radix-vue CheckboxRoot + CheckboxIndicator），与现有 Select 风格一致；设置页「通知」由原生 `<input type="checkbox">` 改为该 Checkbox 组件。
+- **废弃与移除**：删除未再引用的 `ChatFlow.vue`、`WorkspaceSessionList.vue`；删除冗余页面 `pages/list.vue`（由 `index.vue` 的 `?app=` query 处理跳转）。
+- **文档与结构**：`README.md` 与 `docs/FRONTEND_SPEC.md` 更新为当前目录与命名约定；FRONTEND_SPEC 增补「命名与组织约定」与「废弃与清理」说明。
+
+---
+
 ## 2026-02-06
 
 ### 前端：完全移除悬浮胶囊

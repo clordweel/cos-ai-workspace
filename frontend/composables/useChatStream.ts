@@ -1,3 +1,5 @@
+import { useRuntimeConfig } from 'nuxt/app'
+
 /**
  * SSE 流式对话封装
  * 调用中间层 POST /api/chat/stream，解析 SSE 实现打字机效果

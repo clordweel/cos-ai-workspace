@@ -1,3 +1,5 @@
+import { ref } from 'vue'
+
 export type ChatMessage = { role: 'user' | 'assistant'; content: string; thinking?: string }
 
 const chats = ref<Array<{ id: string; title: string }>>([

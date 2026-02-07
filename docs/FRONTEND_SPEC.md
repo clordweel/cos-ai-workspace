@@ -78,16 +78,19 @@ const decoder = new TextDecoder();
 // 解析 SSE 行，根据 event 类型更新 UI：message → 追加文本；tool_result → 渲染任务卡片
 ```
 
-## 目录建议（Nuxt 3）
+## 目录与源码组织（Nuxt 3）
 
 ```
 frontend/
 ├── app.vue
+├── app.config.ts
 ├── nuxt.config.ts
+├── tailwind.config.ts
 ├── layouts/
+│   ├── default.vue        # 备用布局（无会话区时）
 │   └── workspace.vue     # 工作台布局：会话区 + 应用区
 ├── pages/
-│   ├── index.vue          # 入口（可重定向至 space）
+│   ├── index.vue          # 入口，重定向至 /space（可带 app、with 等 query）
 │   └── space/
 │       └── [[id]].vue     # 会话页（列表 + 聊天），layout: workspace
 ├── components/
@@ -95,16 +98,31 @@ frontend/
 │   ├── WorkspaceAppNav.vue     # 应用侧栏（导航、设置、应用入口、折叠）
 │   ├── AppPanel.vue            # 应用内容区（home/contacts/bots/settings）
 │   ├── ChatMessageBubble.vue   # 单条消息（含打字机）
-│   └── TaskCard/
-│       ├── OrderProgress.vue
-│       ├── InventorySummary.vue
-│       ├── BomStatus.vue
-│       └── MaterialConfirm.vue  # 待确认物料 + 确认按钮
+│   ├── Logo.vue
+│   ├── TaskCard/               # 任务卡片（订单、库存、BOM、物料确认）
+│   │   ├── OrderProgress.vue
+│   │   ├── InventorySummary.vue
+│   │   ├── BomStatus.vue
+│   │   └── MaterialConfirm.vue
+│   └── ui/                     # 通用 UI（Shadcn 风格，基于 radix-vue）
+│       ├── select/             # Select, SelectTrigger, SelectValue, SelectContent, SelectItem
+│       └── checkbox/           # Checkbox（CheckboxRoot + CheckboxIndicator）
 ├── composables/
-│   ├── useAppView.ts      # 应用区视图状态（面板开关、内容区、currentView）
-│   └── useChatStream.ts   # SSE 封装
-└── tailwind.config.js / shadcn 配置
+│   ├── useAppView.ts      # 应用区视图状态（面板、内容区、currentView）
+│   ├── useChatSessions.ts # 会话与消息列表
+│   ├── useChatStream.ts   # SSE 流式对话
+│   ├── useContactsAndBots.ts
+│   └── useTheme.ts
+└── plugins/
+    └── theme.client.ts
 ```
+
+### 命名与组织约定
+
+- **组件**：大驼峰（PascalCase），语义清晰（SessionListHeader、WorkspaceAppNav、ChatMessageBubble）。通用 UI 放在 `components/ui/` 下按原子组件分子目录（如 `ui/select/`、`ui/checkbox/`）。
+- **页面**：`pages/` 下按路由划分；入口用 `index.vue`，动态路由用 `[[id]].vue` 等，避免冗余中间页（如已删除的 `list.vue` 由 index 的 query 处理）。
+- **Composables**：`use` 前缀 + 功能名（useAppView、useChatSessions），单文件单职责。
+- **废弃与清理**：未再被引用的组件或页面应及时移除，避免死代码（如已移除的 ChatFlow.vue、WorkspaceSessionList.vue）。
 
 ## 主题
 

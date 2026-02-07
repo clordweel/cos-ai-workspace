@@ -14,7 +14,11 @@ npm run dev
 
 ## 结构
 
-- `pages/index.vue` — 主对话页
-- `composables/useChatStream.ts` — SSE 流式对话
-- `components/ChatMessageBubble.vue`、`ChatFlow.vue` — 对话 UI
+- `pages/index.vue` — 入口，重定向至 `/space`（可带 `app`、`with` 等 query）
+- `pages/space/[[id]].vue` — 会话页（列表 + 聊天），主对话区
+- `layouts/workspace.vue` — 工作台布局（会话区 + 应用区）
+- `composables/useChatStream.ts` — SSE 流式对话；`useAppView.ts` — 应用区状态；`useChatSessions.ts` — 会话与消息
+- `components/ChatMessageBubble.vue` — 单条消息气泡
+- `components/SessionListHeader.vue`、`WorkspaceAppNav.vue`、`AppPanel.vue` — 会话顶栏、应用侧栏、应用内容
 - `components/TaskCard/*` — 订单进度、库存、BOM、物料确认卡片
+- `components/ui/` — 通用 UI（Select、Checkbox，基于 radix-vue）

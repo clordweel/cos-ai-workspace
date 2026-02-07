@@ -86,9 +86,9 @@
               <section>
                 <h3 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">通用</h3>
                 <div class="rounded-md border border-zinc-200 dark:border-zinc-600 divide-y divide-zinc-100 dark:divide-zinc-600">
-                  <label class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
+                  <label class="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
                     <span class="text-sm text-zinc-800 dark:text-zinc-200">通知</span>
-                    <input type="checkbox" class="rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500" checked />
+                    <Checkbox id="settings-notify" :checked="notificationsEnabled" @update:checked="notificationsEnabled = $event" />
                   </label>
                 </div>
               </section>
@@ -123,6 +123,7 @@ import SelectTrigger from '~/components/ui/select/SelectTrigger.vue'
 import SelectValue from '~/components/ui/select/SelectValue.vue'
 import SelectContent from '~/components/ui/select/SelectContent.vue'
 import SelectItem from '~/components/ui/select/SelectItem.vue'
+import Checkbox from '~/components/ui/checkbox/Checkbox.vue'
 import { Bot, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -130,6 +131,8 @@ const { currentView } = useAppView()
 const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
 const { ensureChat } = useChatSessions()
+
+const notificationsEnabled = ref(true)
 
 function openChat(type: 'contact' | 'bot', id: string, name: string) {
   const chatId = type === 'contact' ? `contact-${id}` : `bot-${id}`
