@@ -2,12 +2,15 @@
   <div class="h-full flex flex-col overflow-hidden bg-white dark:bg-zinc-800 rounded-[inherit]">
     <div class="flex-1 overflow-y-auto p-3 min-h-0">
           <template v-if="currentView === 'home'">
-            <div class="grid gap-2 sm:grid-cols-2">
+            <div class="grid gap-3 sm:grid-cols-2">
               <div
                 v-for="app in placeholderApps"
                 :key="app.id"
-                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-3 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 transition-colors cursor-pointer"
+                role="button"
+                tabindex="0"
+                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2"
                 @click="app.action"
+                @keydown.enter.prevent="app.action()"
               >
                 <div class="flex items-center gap-2.5">
                   <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400">
@@ -15,7 +18,7 @@
                   </span>
                   <div class="min-w-0">
                     <p class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ app.title }}</p>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 truncate">{{ app.desc }}</p>
+                    <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate">{{ app.desc }}</p>
                   </div>
                 </div>
               </div>

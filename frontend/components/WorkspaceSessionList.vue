@@ -42,10 +42,10 @@ const currentId = computed(() => (route.params.id as string) ?? '')
 
 function lastPreview(chatId: string): string {
   const list = getMessages(chatId)
-  if (list.length === 0) return '暂无消息'
+  if (list.length === 0) return '点击开始对话'
   const last = list[list.length - 1]
   const text = last.content.trim()
-  return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '暂无消息'
+  return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '点击开始对话'
 }
 
 function goToChat(id: string) {

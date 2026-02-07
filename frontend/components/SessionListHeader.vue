@@ -6,7 +6,7 @@
   >
     <div class="flex items-center gap-2 min-w-0">
       <Logo class="h-7 w-7 shrink-0 text-zinc-800 dark:text-zinc-100" />
-      <h1 class="m-0 text-xs font-semibold leading-none tracking-tight text-zinc-800 dark:text-zinc-200 truncate">AI COS 工作台</h1>
+      <h1 class="m-0 text-sm font-semibold leading-none tracking-tight text-zinc-800 dark:text-zinc-200 truncate">AI COS 工作台</h1>
     </div>
     <div class="flex items-center gap-1 shrink-0">
     <button

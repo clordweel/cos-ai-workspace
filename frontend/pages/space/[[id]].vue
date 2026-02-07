@@ -55,12 +55,15 @@
               <li
                 v-for="c in filteredChats"
                 :key="c.id"
-              class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors"
-              :class="[
-                c.id === chatId && isSessionExpanded ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
-              ]"
-              @click="goToChat(c.id)"
-            >
+                role="button"
+                tabindex="0"
+                class="flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30 focus-visible:ring-offset-2 rounded-md"
+                :class="[
+                  c.id === chatId && isSessionExpanded ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
+                ]"
+                @click="goToChat(c.id)"
+                @keydown.enter.prevent="goToChat(c.id)"
+              >
               <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
                 {{ c.title.charAt(0) }}
               </span>
@@ -291,10 +294,10 @@ const chatTitle = computed(() => {
 
 function lastPreview(chatId: string): string {
   const list = getMessages(chatId)
-  if (list.length === 0) return '暂无消息'
+  if (list.length === 0) return '点击开始对话'
   const last = list[list.length - 1]
   const text = last.content.trim()
-  return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '暂无消息'
+  return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '点击开始对话'
 }
 
 function goToChat(id: string) {
