@@ -9,6 +9,7 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@tanstack/vue-virtual": "^3.13.18",
     "lucide-vue-next": "^0.563.0",
     "nuxt": "^3.14.0",
     "radix-vue": "^1.9.17",
@@ -16,6 +17,7 @@
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
+    "dotenv": "^16.4.5",
     "@nuxtjs/tailwindcss": "^6.12.0",
     "@types/node": "^25.2.1",
     "imagetracerjs": "^1.2.6",

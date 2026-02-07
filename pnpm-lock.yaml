@@ -11,9 +11,15 @@ importers:
       concurrently:
         specifier: ^9.0.0
         version: 9.2.1
+      pnpm:
+        specifier: ^9.0.0
+        version: 9.15.9
 
   frontend:
     dependencies:
+      '@tanstack/vue-virtual':
+        specifier: ^3.13.18
+        version: 3.13.18(vue@3.5.27)
       lucide-vue-next:
         specifier: ^0.563.0
         version: 0.563.0(vue@3.5.27)
@@ -36,6 +42,9 @@ importers:
       '@types/node':
         specifier: ^25.2.1
         version: 25.2.1
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.6.1
       imagetracerjs:
         specifier: ^1.2.6
         version: 1.2.6
@@ -3139,6 +3148,11 @@ packages:
 
   pkg-types@2.3.0:
     resolution: {integrity: sha512-SIqCzDRg0s9npO5XQ3tNZioRY1uK06lA41ynBC1YmFTmnY6FjUjVt6s4LoADmwoig1qqD0oK8h1p/8mlMx8Oig==}
+
+  pnpm@9.15.9:
+    resolution: {integrity: sha512-aARhQYk8ZvrQHAeSMRKOmvuJ74fiaR1p5NQO7iKJiClf1GghgbrlW1hBjDolO95lpQXsfF+UA+zlzDzTfc8lMQ==}
+    engines: {node: '>=18.12'}
+    hasBin: true
 
   portfinder@1.0.38:
     resolution: {integrity: sha512-rEwq/ZHlJIKw++XtLAO8PPuOQA/zaPJOZJ37BVuN97nLpMJeuDVLVGRwbFoBgLudgdTMP2hdRJP++H+8QOA3vg==}
@@ -7561,6 +7575,8 @@ snapshots:
       confbox: 0.2.4
       exsolve: 1.0.8
       pathe: 2.0.3
+
+  pnpm@9.15.9: {}
 
   portfinder@1.0.38:
     dependencies:
