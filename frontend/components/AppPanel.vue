@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden bg-white dark:bg-zinc-800 rounded-[inherit]">
-    <div class="flex-1 overflow-y-auto p-3 min-h-0">
+    <div class="app-panel-scroll flex-1 overflow-y-auto p-3 min-h-0">
           <template v-if="currentView === 'home'">
             <div class="grid gap-3 sm:grid-cols-2">
               <div
@@ -92,6 +92,50 @@
                   </label>
                 </div>
               </section>
+              <section>
+                <h3 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">系统诊断</h3>
+                <div class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-3">
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    通过 Frappe SDK 检测 ERPNext 连接与基础信息，无需业务权限。
+                  </p>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50"
+                    :disabled="diagnosticsLoading"
+                    @click="runDiagnostics"
+                  >
+                    <component :is="diagnosticsLoading ? Loader2 : Stethoscope" class="h-3.5 w-3.5 shrink-0" :class="diagnosticsLoading ? 'animate-spin' : ''" />
+                    {{ diagnosticsLoading ? '检测中…' : '运行诊断' }}
+                  </button>
+                  <div v-if="diagnosticsResult" class="space-y-2 pt-1 border-t border-zinc-200 dark:border-zinc-600">
+                    <div
+                      v-for="c in diagnosticsResult.checks"
+                      :key="c.id"
+                      class="flex items-start gap-2 text-xs"
+                    >
+                      <span
+                        class="shrink-0 mt-0.5 rounded-full p-0.5"
+                        :class="c.ok ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'"
+                        :title="c.ok ? '通过' : '未通过'"
+                      >
+                        <CheckCircle2 v-if="c.ok" class="h-3.5 w-3.5" />
+                        <AlertCircle v-else class="h-3.5 w-3.5" />
+                      </span>
+                      <div class="min-w-0 flex-1">
+                        <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ c.name }}</span>
+                        <template v-if="c.value != null && c.value !== ''">
+                          <span class="text-zinc-500 dark:text-zinc-400"> — </span>
+                          <span class="text-zinc-600 dark:text-zinc-300 break-all">{{ c.value }}</span>
+                        </template>
+                        <p v-if="c.error" class="mt-0.5 text-amber-600 dark:text-amber-400">{{ c.error }}</p>
+                      </div>
+                    </div>
+                    <p v-if="diagnosticsResult.error" class="text-xs text-red-600 dark:text-red-400">
+                      {{ diagnosticsResult.error }}
+                    </p>
+                  </div>
+                </div>
+              </section>
               <section class="space-y-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">关于</h3>
                 <div class="rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-3">
@@ -124,9 +168,36 @@ import SelectValue from '~/components/ui/select/SelectValue.vue'
 import SelectContent from '~/components/ui/select/SelectContent.vue'
 import SelectItem from '~/components/ui/select/SelectItem.vue'
 import Checkbox from '~/components/ui/checkbox/Checkbox.vue'
-import { Bot, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
+import { Bot, Package, ClipboardList, Layers, PackageOpen, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 
 const router = useRouter()
+const config = useRuntimeConfig()
+const apiBase = (config.public.apiBase as string) || ''
+
+const diagnosticsLoading = ref(false)
+const diagnosticsResult = ref<{
+  ok: boolean
+  checks: Array<{ id: string; name: string; ok: boolean; value?: string; error?: string }>
+  error?: string
+} | null>(null)
+
+async function runDiagnostics() {
+  diagnosticsLoading.value = true
+  diagnosticsResult.value = null
+  try {
+    const res = await fetch(`${apiBase}/api/diagnostics`)
+    const data = await res.json().catch(() => ({}))
+    diagnosticsResult.value = data
+  } catch (e) {
+    diagnosticsResult.value = {
+      ok: false,
+      checks: [],
+      error: e instanceof Error ? e.message : String(e),
+    }
+  } finally {
+    diagnosticsLoading.value = false
+  }
+}
 const { currentView } = useAppView()
 const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
@@ -147,3 +218,36 @@ const placeholderApps = [
   { id: 'inventory', title: '库存概览', desc: '球磨机零件库存', icon: PackageOpen, action: () => {} },
 ]
 </script>
+
+<style scoped>
+/* 应用内容区：最细滚动条（与侧栏一致） */
+.app-panel-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+.dark .app-panel-scroll {
+  scrollbar-color: rgb(82 82 91) transparent;
+}
+.app-panel-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.app-panel-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.app-panel-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 9999px;
+}
+.dark .app-panel-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
+}
+.app-panel-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(161 161 170);
+}
+.dark .app-panel-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(113 113 122);
+}
+.app-panel-scroll::-webkit-scrollbar-button {
+  display: none;
+}
+</style>

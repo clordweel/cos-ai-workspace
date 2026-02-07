@@ -89,7 +89,7 @@
 import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen, X, Plus } from 'lucide-vue-next'
 import type { AppTab } from '~/composables/useAppView'
 
-const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
+const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
 
 function openSettingsTab() {
   const settingsTab = tabs.value.find((t) => t.view === 'settings')
@@ -97,7 +97,7 @@ function openSettingsTab() {
   else addTab('settings')
 }
 
-const showExpanded = computed(() => isSidebarPinned.value || isSidebarHovered.value)
+const showExpanded = computed(() => isSidebarPinned.value ? sidebarPinnedExpanded.value : isSidebarHovered.value)
 
 /** 按钮布局（图标左/中）：收起后保持「展开布局」直到宽度动画结束，避免图标瞬间回中 */
 const layoutExpanded = ref(false)

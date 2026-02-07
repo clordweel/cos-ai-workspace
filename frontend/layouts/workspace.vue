@@ -18,26 +18,30 @@
               @mouseenter="cancelSidebarLeave()"
               @mouseleave="scheduleSidebarLeave()"
             >
-              <!-- 左区块：侧栏折叠且内容区折叠时隐藏 -->
+              <!-- 左区块：侧栏折叠且内容区折叠时隐藏；悬停固定按钮不触发展开 -->
               <div
                 v-if="showPinButton"
                 class="flex items-center shrink-0"
                 :class="isContentVisible ? 'pl-2.5' : 'pl-2'"
+                @mouseenter="cancelSidebarExpand()"
               >
                 <button
                   type="button"
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
                   :class="isSidebarPinned ? 'bg-zinc-100 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200'"
-                  :title="isSidebarPinned ? '取消固定侧栏' : '固定侧栏展开'"
-                  aria-label="固定侧栏展开状态"
+                  :title="isSidebarPinned ? '取消固定侧栏' : '固定侧栏当前状态'"
+                  aria-label="固定侧栏坍缩/展开状态"
                   @click="toggleSidebarPinned"
                 >
                   <PinOff v-if="isSidebarPinned" class="h-3.5 w-3.5" />
                   <Pin v-else class="h-3.5 w-3.5" />
                 </button>
               </div>
-              <!-- 右区块：折叠按钮 -->
-              <div class="flex items-center shrink-0 ml-auto pr-2">
+              <!-- 右区块：折叠按钮；侧栏+内容都折叠时居中 -->
+              <div
+                class="flex items-center shrink-0 pr-2"
+                :class="showPinButton ? 'ml-auto' : 'toolbar-fold-btn-centered'"
+              >
                 <button
                   type="button"
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
@@ -69,13 +73,19 @@
 import { PanelRightOpen, PanelRightClose, Pin, PinOff } from 'lucide-vue-next'
 
 useTheme()
-const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, scheduleSidebarLeave } = useAppView()
+const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave } = useAppView()
 /** 侧边栏和应用内容区都折叠时隐藏左区块（固定按钮）；任一展开或侧栏悬浮/固定则显示 */
 const showPinButton = computed(() => isContentVisible.value || isSidebarPinned.value || isSidebarHovered.value)
 provide('isSessionExpanded', computed(() => !isPanelOpen.value || !isContentVisible.value))
 </script>
 
 <style scoped>
+/* 侧栏与内容区都折叠时，折叠按钮居中 */
+.toolbar-fold-btn-centered {
+  margin: auto;
+  padding-right: 0;
+}
+
 .app-panel-enter-active,
 .app-panel-leave-active {
   transition: opacity 0.22s ease, transform 0.22s ease;

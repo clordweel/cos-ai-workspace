@@ -38,8 +38,10 @@ const activeTabId = ref<string | null>(defaultHomeTab.id)
 const isPanelOpen = ref(true)
 /** 右侧应用内容区是否展示；为 false 时仅保留侧边栏 */
 const isContentVisible = ref(true)
-/** 侧边栏是否固定为展开（不随鼠标移出收起） */
+/** 侧边栏是否固定（锁定当前坍缩/展开状态，不随悬停变化） */
 const isSidebarPinned = ref(false)
+/** 固定时的展开状态：true=锁定展开，false=锁定坍缩（仅 isSidebarPinned 为 true 时有效） */
+const sidebarPinnedExpanded = ref(true)
 /** 侧边栏是否因鼠标悬浮而展开（由 WorkspaceAppNav 同步） */
 const isSidebarHovered = ref(false)
 /** 延迟收起侧栏的 timer，便于从 nav 移到工具栏时不立即折叠 */
@@ -148,7 +150,19 @@ export function useAppView() {
     isContentVisible.value = !isContentVisible.value
   }
   function toggleSidebarPinned() {
-    isSidebarPinned.value = !isSidebarPinned.value
+    if (isSidebarPinned.value) {
+      isSidebarPinned.value = false
+    } else {
+      isSidebarPinned.value = true
+      sidebarPinnedExpanded.value = isSidebarHovered.value
+    }
+  }
+  /** 取消延迟展开（如悬停固定按钮时调用，避免触发展开） */
+  function cancelSidebarExpand() {
+    if (sidebarExpandTimer) {
+      clearTimeout(sidebarExpandTimer)
+      sidebarExpandTimer = null
+    }
   }
   function setSidebarHovered(value: boolean) {
     if (sidebarExpandTimer) {
@@ -161,7 +175,7 @@ export function useAppView() {
     }
     isSidebarHovered.value = value
   }
-  /** 延迟展开侧栏：鼠标进入 nav 后悬停超过 500ms 才展开 */
+  /** 延迟展开侧栏：鼠标进入 nav 后悬停超过 500ms 才展开；已固定时不响应悬停 */
   function scheduleSidebarExpand() {
     if (isSidebarHovered.value || isSidebarPinned.value) return
     if (sidebarExpandTimer) return
@@ -219,11 +233,13 @@ export function useAppView() {
     isPanelOpen: readonly(isPanelOpen),
     isContentVisible: readonly(isContentVisible),
     isSidebarPinned: readonly(isSidebarPinned),
+    sidebarPinnedExpanded: readonly(sidebarPinnedExpanded),
     isSidebarHovered: readonly(isSidebarHovered),
     setSidebarHovered,
     scheduleSidebarExpand,
     scheduleSidebarLeave,
     cancelSidebarLeave,
+    cancelSidebarExpand,
     toggleContentPanel,
     toggleSidebarPinned,
     setView,
