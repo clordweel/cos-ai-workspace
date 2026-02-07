@@ -3,8 +3,8 @@
     class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg transition-[width] duration-200"
     :class="showExpanded ? 'w-44' : 'w-12'"
     aria-label="应用"
-    @mouseenter="isHovered = true"
-    @mouseleave="isHovered = false"
+    @mouseenter="setSidebarHovered(true)"
+    @mouseleave="scheduleSidebarLeave()"
   >
     <!-- 设置：置于导航列表上方 -->
     <div class="shrink-0 flex flex-col gap-px px-1 pb-0.5">
@@ -79,10 +79,9 @@
 <script setup lang="ts">
 import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen } from 'lucide-vue-next'
 
-const { openPanel, openNavPage, isSidebarPinned } = useAppView()
+const { openPanel, openNavPage, isSidebarPinned, isSidebarHovered, setSidebarHovered, scheduleSidebarLeave } = useAppView()
 
-const isHovered = ref(false)
-const showExpanded = computed(() => isSidebarPinned.value || isHovered.value)
+const showExpanded = computed(() => isSidebarPinned.value || isSidebarHovered.value)
 
 const appEntries = [
   { id: 'material', title: '物料助手', icon: Package },

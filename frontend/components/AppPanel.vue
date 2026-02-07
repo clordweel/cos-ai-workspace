@@ -89,9 +89,23 @@
                   </label>
                 </div>
               </section>
-              <section>
-                <h3 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">关于</h3>
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">AI COS 工作台</p>
+              <section class="space-y-3">
+                <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">关于</h3>
+                <div class="rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-3">
+                  <h4 class="text-base font-semibold text-zinc-800 dark:text-zinc-100">AI COS 工作台</h4>
+                  <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
+                    基于对话流的智能协作工作台，支持物料、订单、BOM 等业务查询与操作，并与 Dify 等 AI 能力打通。
+                  </p>
+                  <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+                    <dt class="text-zinc-500 dark:text-zinc-400">版本</dt>
+                    <dd class="text-zinc-700 dark:text-zinc-300">1.0.0</dd>
+                    <dt class="text-zinc-500 dark:text-zinc-400">环境</dt>
+                    <dd class="text-zinc-700 dark:text-zinc-300">开发 / 测试</dd>
+                  </dl>
+                  <p class="text-xs text-zinc-400 dark:text-zinc-500 pt-1 border-t border-zinc-200 dark:border-zinc-600">
+                    更多说明与更新日志请参见项目文档。
+                  </p>
+                </div>
               </section>
             </div>
           </template>

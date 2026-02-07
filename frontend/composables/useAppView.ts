@@ -15,6 +15,11 @@ const isPanelOpen = ref(true)
 const isContentVisible = ref(true)
 /** 侧边栏是否固定为展开（不随鼠标移出收起） */
 const isSidebarPinned = ref(false)
+/** 侧边栏是否因鼠标悬浮而展开（由 WorkspaceAppNav 同步） */
+const isSidebarHovered = ref(false)
+/** 延迟收起侧栏的 timer，便于从 nav 移到工具栏时不立即折叠 */
+let sidebarLeaveTimer: ReturnType<typeof setTimeout> | null = null
+const SIDEBAR_LEAVE_DELAY_MS = 180
 
 const currentView = computed<AppView>(() => {
   const stack = appStack.value
@@ -79,6 +84,28 @@ export function useAppView() {
   function toggleSidebarPinned() {
     isSidebarPinned.value = !isSidebarPinned.value
   }
+  function setSidebarHovered(value: boolean) {
+    if (sidebarLeaveTimer) {
+      clearTimeout(sidebarLeaveTimer)
+      sidebarLeaveTimer = null
+    }
+    isSidebarHovered.value = value
+  }
+  /** 延迟收起侧栏（从 nav 移出时调用，若在延迟内进入工具栏则取消） */
+  function scheduleSidebarLeave() {
+    if (sidebarLeaveTimer) clearTimeout(sidebarLeaveTimer)
+    sidebarLeaveTimer = setTimeout(() => {
+      isSidebarHovered.value = false
+      sidebarLeaveTimer = null
+    }, SIDEBAR_LEAVE_DELAY_MS)
+  }
+  /** 取消延迟收起（鼠标进入顶部工具栏时调用，保持侧栏展开以便点击固定） */
+  function cancelSidebarLeave() {
+    if (sidebarLeaveTimer) {
+      clearTimeout(sidebarLeaveTimer)
+      sidebarLeaveTimer = null
+    }
+  }
   return {
     appStack: readonly(appStack),
     currentView,
@@ -86,6 +113,10 @@ export function useAppView() {
     isPanelOpen: readonly(isPanelOpen),
     isContentVisible: readonly(isContentVisible),
     isSidebarPinned: readonly(isSidebarPinned),
+    isSidebarHovered: readonly(isSidebarHovered),
+    setSidebarHovered,
+    scheduleSidebarLeave,
+    cancelSidebarLeave,
     toggleContentPanel,
     toggleSidebarPinned,
     setView,
