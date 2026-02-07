@@ -1,6 +1,6 @@
 <template>
   <header
-    class="session-list-header h-12 shrink-0 flex items-center justify-between gap-1 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75 px-3"
+    class="session-list-header h-12 shrink-0 flex items-center justify-between gap-1 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75 px-2"
     role="banner"
     aria-label="会话列表"
   >
