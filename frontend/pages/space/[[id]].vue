@@ -137,7 +137,7 @@
             @archive="onArchiveChat"
             @delete="onDeleteChat"
           />
-          <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表 -->
+          <!-- 滚动区：虚拟列表 + 可定制滚动条；仅消息行有右键菜单，其它为系统菜单 -->
           <div
             ref="scrollRef"
             class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pt-16 pb-52"
@@ -177,6 +177,7 @@
                   <ChatMessageBubble
                     v-if="displayMessages[virtualRow.index]"
                     :message="displayMessages[virtualRow.index]"
+                    :message-index="virtualRow.index"
                     :streaming="
                       messages.length > 0 &&
                       displayMessages[virtualRow.index]?.role === 'assistant' &&
@@ -187,6 +188,14 @@
                     @retry="retryMessage(virtualRow.index)"
                     @edit="onEditMessage(virtualRow.index)"
                     @view-edit-history="onViewEditHistory(virtualRow.index)"
+                    @edit-user-message="onEditUserMessage(virtualRow.index)"
+                    @retry-user-message="onRetryUserMessage(virtualRow.index)"
+                    @recall-message="onRecallMessage(virtualRow.index)"
+                    @delete-message="onDeleteMessage(virtualRow.index)"
+                    @copy-message="onCopyMessage(virtualRow.index)"
+                    @favorite="onFavoriteMessage(virtualRow.index)"
+                    @export-markdown="onExportMarkdown()"
+                    @listen-reply="onListenReply(virtualRow.index)"
                   />
                 </div>
               </div>
@@ -201,6 +210,7 @@
               >
                 <ChatMessageBubble
                   :message="msg"
+                  :message-index="i"
                   :streaming="
                     messages.length > 0 &&
                     msg.role === 'assistant' &&
@@ -211,6 +221,14 @@
                   @retry="retryMessage(i)"
                   @edit="onEditMessage(i)"
                   @view-edit-history="onViewEditHistory(i)"
+                  @edit-user-message="onEditUserMessage(i)"
+                  @retry-user-message="onRetryUserMessage(i)"
+                  @recall-message="onRecallMessage(i)"
+                  @delete-message="onDeleteMessage(i)"
+                  @copy-message="onCopyMessage(i)"
+                  @favorite="onFavoriteMessage(i)"
+                  @export-markdown="onExportMarkdown()"
+                  @listen-reply="onListenReply(i)"
                 />
               </div>
             </div>
@@ -234,7 +252,19 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, Bot, ChevronDown, ChevronRight, Home, Inbox, LogIn, Pin, Search, Settings, Users } from 'lucide-vue-next'
+import {
+  Archive,
+  Bot,
+  ChevronDown,
+  ChevronRight,
+  Home,
+  Inbox,
+  LogIn,
+  Pin,
+  Search,
+  Settings,
+  Users,
+} from 'lucide-vue-next'
 
 definePageMeta({ layout: 'workspace' })
 
@@ -586,20 +616,22 @@ function stopStream() {
   streaming.value = false
 }
 
-function scrollToLastMessage() {
+/** 滚动到底部，使最后一条消息可见。behavior 为 'auto' 时立即滚动（用于流式打字跟随） */
+function scrollToLastMessage(behavior: ScrollBehavior = 'smooth') {
   const n = displayMessages.value.length
   if (n === 0) return
   if (virtualRows.value.length > 0) {
-    rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
+    rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior })
   } else {
     const el = scrollRef.value
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior })
   }
 }
 
 /** 仅追加助手占位并流式回复，不追加用户消息（供 send / retry 复用） */
 async function streamReply(id: string, text: string) {
   appendMessage(id, { role: 'assistant', content: '', thinking: '' })
+  nextTick(() => scrollToLastMessage())
   streaming.value = true
   streamAbortRef.value = new AbortController()
   streamContentBuffer.value = ''
@@ -621,6 +653,7 @@ async function streamReply(id: string, text: string) {
         if (!m.contentChunks) m.contentChunks = []
         m.contentChunks.push(take)
       })
+      scrollToLastMessage('auto')
     }
 
     if (buf === '' && streamEnded) {
@@ -709,6 +742,7 @@ async function send() {
   if (!id || !text || streaming.value) return
   input.value = ''
   appendMessage(id, { role: 'user', content: text })
+  nextTick(() => scrollToLastMessage())
   await streamReply(id, text)
 }
 
@@ -741,6 +775,59 @@ function onViewEditHistory(index: number) {
   const msg = list[index]
   if (msg.role !== 'assistant') return
   // TODO: 打开编辑历史弹窗，拉取该条消息的编辑历史并展示
+}
+
+function onEditUserMessage(index: number) {
+  const id = chatId.value
+  if (!id) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  const msg = list[index]
+  if (msg.role !== 'user') return
+  // TODO: 将本条内容回填到输入框或打开编辑态，支持修改后重发
+}
+
+function onRetryUserMessage(index: number) {
+  const id = chatId.value
+  if (!id || streaming.value) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  const msg = list[index]
+  if (msg.role !== 'user' || msg.receiptStatus !== 'failed') return
+  // TODO: 重新发送该条用户消息（调发送接口并更新 receiptStatus）
+}
+
+function onRecallMessage(index: number) {
+  const id = chatId.value
+  if (!id) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  // TODO: 调用撤回接口后从 list 移除该条
+  const next = list.filter((_, i) => i !== index)
+  setMessages(id, next)
+}
+
+function onDeleteMessage(index: number) {
+  const id = chatId.value
+  if (!id) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  const next = list.filter((_, i) => i !== index)
+  setMessages(id, next)
+}
+
+function onCopyMessage(index: number) {
+  const list = chatId.value ? getMessages(chatId.value) : []
+  const msg = list[index]
+  if (msg?.content) navigator.clipboard.writeText(msg.content).catch(() => {})
+}
+
+function onFavoriteMessage(_index: number) {
+  // TODO: 收藏该条消息
+}
+
+function onListenReply(_index: number) {
+  // TODO: 朗读该条回复
 }
 
 function retryMessage(index: number) {
