@@ -10,6 +10,9 @@ import type { MockSessionItem } from './types'
 const MOCK_SEED = 42
 faker.seed(MOCK_SEED)
 
+/** 全情景调试会话 id：覆盖所有消息与状态组合，便于 UI 调试 */
+export const MOCK_DEBUG_SESSION_ID = 'mock-debug-scenarios'
+
 const USER_PHRASES = [
   '下周一的会议材料能先发一版吗？',
   '合同条款里交付周期那块再对一下。',
@@ -57,13 +60,132 @@ function buildPrivateSessions(): MockSessionItem[] {
   const names = ['张三', '李四', '王五', 'AI 助手', '物料助手', '订单助手']
   const ids = ['mock-private-zhangsan', 'mock-private-lisi', 'mock-private-wangwu', 'mock-private-assistant', 'mock-private-material', 'mock-private-order']
   const now = Date.now()
-  return ids.map((id, i) => ({
+  const list = ids.map((id, i) => ({
     id,
     title: names[i]!,
     type: 'private' as const,
     updatedAt: now - faker.number.int({ min: 1, max: 72 }) * 60 * 60 * 1000,
     participants: [{ name: names[i]! }],
   }))
+  return list
+}
+
+/** 全情景调试会话：覆盖用户/助手、收发状态、已读头像、思考、多来源、点赞、编辑、流式占位等 */
+function buildDebugSession(): MockSessionItem {
+  return {
+    id: MOCK_DEBUG_SESSION_ID,
+    title: '【调试】全情景',
+    type: 'private',
+    updatedAt: Date.now(),
+    participants: [{ name: 'AI 助手', kind: 'bot' }],
+  }
+}
+
+/** 全情景调试消息：每条对应一种可展示状态，便于调试气泡、已读、工具栏等 */
+function buildDebugScenarioMessages(): ChatMessage[] {
+  const now = Date.now()
+  return [
+    // ---- 用户消息：各种 receipt 状态 ----
+    { role: 'user', content: '这条是发送中', receiptStatus: 'sending' },
+    { role: 'user', content: '这条是已发送', receiptStatus: 'sent' },
+    { role: 'user', content: '这条是已送达', receiptStatus: 'delivered' },
+    {
+      role: 'user',
+      content: '这条是已读（气泡外对方头像）',
+      receiptStatus: 'read',
+      readBy: [{ type: 'bot', label: 'AI 助手' }],
+    },
+    {
+      role: 'user',
+      content: '已读且多人已读',
+      receiptStatus: 'read',
+      readBy: [
+        { type: 'bot', label: 'AI 助手' },
+        { type: 'other_user', label: '李四' },
+      ],
+    },
+    { role: 'user', content: '这条是发送失败', receiptStatus: 'failed' },
+    // ---- 助手消息：无思考、单来源 ----
+    {
+      role: 'assistant',
+      content: '这是普通回复，单来源 bot，无思考过程。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+    },
+    // ---- 助手消息：带思考过程 ----
+    {
+      role: 'assistant',
+      content: '根据文档内容，三个要点如下：\n1. 项目周期与里程碑\n2. 资源与预算分配\n3. 风险与应对措施。',
+      thinking: '用户要求总结文档要点。从上下文中提取并分条列出，保持简洁。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+    },
+    // ---- 助手消息：思考中占位（流式前） ----
+    {
+      role: 'assistant',
+      content: '思考中…',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+    },
+    // ---- 助手消息：多来源（协作） ----
+    {
+      role: 'assistant',
+      content: '这条由机器人与用户协作生成，展示多来源头像堆叠。',
+      sources: [
+        { type: 'bot', label: 'AI 助手' },
+        { type: 'other_user', label: '张三' },
+      ],
+    },
+    // ---- 助手消息：系统来源 ----
+    {
+      role: 'assistant',
+      content: '这是一条系统/外部程序触发的回复。',
+      sources: [{ type: 'system', label: '定时任务' }],
+    },
+    // ---- 助手消息：点赞 ----
+    {
+      role: 'assistant',
+      content: '有人点赞这条消息时，会显示「觉得很赞」。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+      reactions: [
+        { type: 'like', by: { type: 'other_user', label: '王五' } },
+        { type: 'like', by: { type: 'other_user', label: '李四' } },
+      ],
+    },
+    // ---- 助手消息：已编辑 ----
+    {
+      role: 'assistant',
+      content: '这条消息已被编辑过，会显示「已编辑」及编辑者。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+      editedAt: now - 120_000,
+      editedBy: { type: 'other_user', label: '张三' },
+    },
+    // ---- 助手消息：未读（用于会话角标） ----
+    {
+      role: 'assistant',
+      content: '这是未读的助手消息，会话列表会显示未读角标。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+      receiptStatus: 'unread',
+    },
+    // ---- 助手消息：已读 ----
+    {
+      role: 'assistant',
+      content: '这是已读的助手消息。',
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+      receiptStatus: 'read',
+    },
+    // ---- 助手消息：对方为更高权限者，当前用户不可编辑 ----
+    {
+      role: 'assistant',
+      content: '这条来自组织更高权限者，当前用户不可编辑，底部不显示编辑按钮。',
+      sources: [{ type: 'other_user', label: '管理员' }],
+      editableByCurrentUser: false,
+    },
+    // ---- 流式展示：contentChunks 分段（可选） ----
+    {
+      role: 'assistant',
+      content: '流式输出的完整内容在这里。',
+      contentChunks: ['流式', '输出的', '完整', '内容', '在这里。'],
+      sources: [{ type: 'bot', label: 'AI 助手' }],
+    },
+  ]
 }
 
 /** 群组内可 @ 拉入的机器人，与用户一起作为参与者 */
@@ -136,9 +258,18 @@ function buildMessagesForSession(session: MockSessionItem): ChatMessage[] {
   return list
 }
 
-const sessionList: MockSessionItem[] = [...buildPrivateSessions(), ...buildGroupSessions()]
+const sessionList: MockSessionItem[] = [
+  buildDebugSession(),
+  ...buildPrivateSessions(),
+  ...buildGroupSessions(),
+]
 const messagesBySessionId = new Map<string, ChatMessage[]>()
-sessionList.forEach((s) => messagesBySessionId.set(s.id, buildMessagesForSession(s)))
+sessionList.forEach((s) => {
+  messagesBySessionId.set(
+    s.id,
+    s.id === MOCK_DEBUG_SESSION_ID ? buildDebugScenarioMessages() : buildMessagesForSession(s),
+  )
+})
 
 export function getSessionList(): MockSessionItem[] {
   return sessionList

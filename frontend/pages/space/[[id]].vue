@@ -183,7 +183,10 @@
                       virtualRow.index === displayMessages.length - 1 &&
                       streaming
                     "
+                    :can-edit-other-message="displayMessages[virtualRow.index] && canEditMessage(displayMessages[virtualRow.index])"
                     @retry="retryMessage(virtualRow.index)"
+                    @edit="onEditMessage(virtualRow.index)"
+                    @view-edit-history="onViewEditHistory(virtualRow.index)"
                   />
                 </div>
               </div>
@@ -204,7 +207,10 @@
                     i === displayMessages.length - 1 &&
                     streaming
                   "
+                  :can-edit-other-message="canEditMessage(msg)"
                   @retry="retryMessage(i)"
+                  @edit="onEditMessage(i)"
+                  @view-edit-history="onViewEditHistory(i)"
                 />
               </div>
             </div>
@@ -216,6 +222,7 @@
             @stop="stopStream"
             @clear="input = ''"
             @scroll-to-last="scrollToLastMessage"
+            @add-participant="openAddParticipant"
           />
         </template>
         <ChatEmptyState v-else @new-chat="startNewChat" />
@@ -506,6 +513,11 @@ function startNewChat() {
 const { getWithTitle } = useContactsAndBots()
 const { openPanel, openNavPage, currentView, addTab, activeTab } = useAppView()
 
+/** 向当前会话加人/机器人：打开应用区并进入联系人，后续可扩展为专属「加人」面板 */
+function openAddParticipant() {
+  openPanel('contacts')
+}
+
 function drawerAppActive(app: DrawerAppItem): boolean {
   if ('view' in app && app.view) return currentView.value === app.view
   if ('appId' in app && app.appId) return activeTab.value?.view === 'app' && activeTab.value?.appId === app.appId
@@ -701,6 +713,36 @@ async function send() {
 }
 
 /** 重试该条助手消息：移除当前助手回复，用上一条用户消息重新请求 */
+/** 是否拥有编辑对方消息的全局权限；后续可改为从权限/角色或接口获取 */
+const canEditOtherMessage = ref(true)
+
+/** 当前用户是否可编辑该条消息：有全局权限且该条未被标记为不可编辑（如对方为更高权限者） */
+function canEditMessage(msg: ChatMessage): boolean {
+  if (msg.role !== 'assistant') return false
+  if (!canEditOtherMessage.value) return false
+  return msg.editableByCurrentUser !== false
+}
+
+function onEditMessage(index: number) {
+  const id = chatId.value
+  if (!id) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  const msg = list[index]
+  if (msg.role !== 'assistant') return
+  // TODO: 打开编辑态或弹窗，提交后调用接口更新该条消息
+}
+
+function onViewEditHistory(index: number) {
+  const id = chatId.value
+  if (!id) return
+  const list = getMessages(id)
+  if (index < 0 || index >= list.length) return
+  const msg = list[index]
+  if (msg.role !== 'assistant') return
+  // TODO: 打开编辑历史弹窗，拉取该条消息的编辑历史并展示
+}
+
 function retryMessage(index: number) {
   const id = chatId.value
   if (!id || streaming.value) return

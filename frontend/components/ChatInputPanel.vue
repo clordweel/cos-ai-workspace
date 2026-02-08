@@ -50,7 +50,8 @@
         <form class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="$emit('submit')">
           <div
             ref="textareaWrapRef"
-            class="chat-input-inner-scroll overflow-y-auto overflow-x-hidden"
+            class="chat-input-inner-scroll overflow-x-hidden"
+            :class="modelValue.trim() ? 'overflow-y-auto' : 'overflow-y-hidden'"
             :style="{ height: `${editHeightPx}px` }"
           >
             <textarea
@@ -58,7 +59,7 @@
               :value="modelValue"
               rows="2"
               placeholder="说点什么？"
-              class="chat-input-textarea min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
+              class="chat-input-textarea min-h-[72px] w-full resize-none border-0 bg-transparent pl-3 pr-1 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
               :disabled="streaming"
               @input="onTextareaInput"
               @keydown.enter.exact.prevent="$emit('submit')"
@@ -94,10 +95,11 @@
               <button
                 type="button"
                 class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                title="联网"
-                aria-label="联网"
+                title="向当前会话加人/机器人"
+                aria-label="向当前会话加人/机器人"
+                @click="$emit('add-participant')"
               >
-                <Globe class="h-4 w-4 text-primary-500" />
+                <AtSign class="h-4 w-4 text-primary-500" />
               </button>
               <button
                 type="button"
@@ -137,7 +139,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronDown, Globe, GripHorizontal, Image as ImageIcon, Infinity, Loader2, Send, Square, X } from 'lucide-vue-next'
+import { AtSign, ChevronDown, GripHorizontal, Image as ImageIcon, Infinity, Loader2, Send, Square, X } from 'lucide-vue-next'
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
 const props = defineProps<{
@@ -150,6 +152,7 @@ const emit = defineEmits<{
   (e: 'stop'): void
   (e: 'clear'): void
   (e: 'scroll-to-last'): void
+  (e: 'add-participant'): void
 }>()
 
 const MIN_EDIT_HEIGHT = 72
@@ -169,6 +172,10 @@ function adjustTextareaHeight() {
     const h = Math.max(MIN_EDIT_HEIGHT, el.scrollHeight)
     el.style.height = `${h}px`
     el.style.overflow = 'hidden'
+    // 空内容时让外层高度与 textarea 一致，避免出现滚动条
+    if (!props.modelValue.trim()) {
+      editHeightPx.value = h
+    }
   })
 }
 
@@ -211,6 +218,10 @@ onUnmounted(() => {
 <style scoped>
 .chat-input-inner-scroll {
   scrollbar-gutter: stable;
+}
+/* 空内容时不预留滚动条、不显示滚动条 */
+.chat-input-inner-scroll.overflow-y-hidden {
+  scrollbar-gutter: auto;
 }
 .chat-input-inner-scroll::-webkit-scrollbar {
   width: 2px;

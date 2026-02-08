@@ -1,14 +1,41 @@
 <template>
-  <!-- 用户：气泡容器 + 发送状态 -->
-  <div v-if="message.role === 'user'" class="max-w-[85%] flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
-    <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
-    <span v-if="userReceiptStatus" class="shrink-0 self-center" :title="userReceiptStatusLabel" aria-hidden>
-      <Clock v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-pulse" />
-      <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
-      <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
-      <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
-      <CheckCheck v-else class="h-3.5 w-3.5 text-primary-500 dark:text-primary-400" />
-    </span>
+  <!-- 用户：发送状态在气泡左侧外侧，已读时顶部外侧对方头像 -->
+  <div v-if="message.role === 'user'" class="max-w-[85%] flex flex-col items-end gap-1">
+    <!-- 已读：气泡顶部外侧，向右对齐、向左排列的对方头像 -->
+    <div
+      v-if="userReceiptStatus === 'read' && readBySources.length > 0"
+      class="flex shrink-0 flex-row-reverse items-center gap-0 -space-x-2"
+      :title="userReceiptStatusLabel"
+    >
+      <span
+        v-for="(src, idx) in readBySources"
+        :key="idx"
+        class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-white dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+        :class="idx > 0 ? '-ml-2' : ''"
+        :title="sourceLabel(src)"
+      >
+        <User v-if="src.type === 'other_user'" class="h-2.5 w-2.5" />
+        <Bot v-else-if="src.type === 'bot'" class="h-2.5 w-2.5" />
+        <Cog v-else class="h-2.5 w-2.5" />
+      </span>
+    </div>
+    <div class="flex items-end gap-1.5">
+      <!-- 发送状态：气泡左侧外侧 -->
+      <span
+        v-if="userReceiptStatus && userReceiptStatus !== 'read'"
+        class="flex h-6 w-6 shrink-0 items-center justify-center self-center"
+        :title="userReceiptStatusLabel"
+        aria-hidden
+      >
+        <Loader2 v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-spin" />
+        <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
+        <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
+        <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
+      </span>
+      <div class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
+        <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+      </div>
+    </div>
   </div>
   <!-- 左侧消息：标准宽度容器，保证短消息时工具栏与头像右对齐一致 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-sm text-zinc-800 dark:text-zinc-200">
@@ -92,6 +119,16 @@
       >
         <Copy class="h-3.5 w-3.5" stroke-width="2" />
       </button>
+      <button
+        v-if="canEditOtherMessage"
+        type="button"
+        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        aria-label="编辑"
+        title="编辑"
+        @click="emit('edit')"
+      >
+        <Pencil class="h-3.5 w-3.5" stroke-width="2" />
+      </button>
       <DropdownMenuRoot>
         <DropdownMenuTrigger
           class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors outline-none"
@@ -132,6 +169,14 @@
             </DropdownMenuItem>
             <DropdownMenuItem
               class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              text-value="查看编辑历史"
+              @select="emit('viewEditHistory')"
+            >
+              <History class="h-3.5 w-3.5 shrink-0 opacity-70" />
+              查看编辑历史
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="听回复"
               @select="emit('listenReply')"
             >
@@ -167,7 +212,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { Bookmark, Bot, Check, CheckCheck, Clock, Cog, Copy, FileDown, MoreVertical, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, User, Volume2, XCircle } from 'lucide-vue-next'
+import { Bookmark, Bot, Check, CheckCheck, Cog, Copy, FileDown, History, Loader2, MoreVertical, Pencil, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, User, Volume2, XCircle } from 'lucide-vue-next'
 
 const THINKING_PLACEHOLDER = '思考中…'
 
@@ -182,12 +227,15 @@ const props = defineProps<{
     editedAt?: number
     editedBy?: MessageSource
     receiptStatus?: import('~/composables/useChatSessions').MessageReceiptStatus
+    readBy?: MessageSource[]
   }
   streaming?: boolean
   /** 当前用户标识，用于高亮“我”的点赞（可选） */
   currentUserLabel?: string
+  /** 是否拥有编辑对方消息权限；为 true 时底部工具条显示编辑按钮 */
+  canEditOtherMessage?: boolean
 }>()
-const emit = defineEmits<{ retry: []; favorite: []; exportMarkdown: []; listenReply: []; reaction: [type: 'like' | 'dislike'] }>()
+const emit = defineEmits<{ retry: []; favorite: []; exportMarkdown: []; listenReply: []; viewEditHistory: []; edit: []; reaction: [type: 'like' | 'dislike'] }>()
 
 const thinkingOpen = ref(true)
 
@@ -224,6 +272,12 @@ const userReceiptStatus = computed(() => {
   if (props.message.role !== 'user') return null
   const s = props.message.receiptStatus
   return s ?? 'sent'
+})
+/** 已读时展示的对方头像来源；无 readBy 时默认展示一个 bot 占位 */
+const readBySources = computed(() => {
+  const r = props.message.readBy
+  if (r && r.length > 0) return r
+  return [{ type: 'bot' as const }]
 })
 const userReceiptStatusLabel = computed(() => {
   const s = userReceiptStatus.value

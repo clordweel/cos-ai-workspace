@@ -36,8 +36,15 @@ export type ChatMessage = {
   editedBy?: MessageSource
   /** 接收/送达状态；未设时：我发的视为 sent，收到的视为 unread */
   receiptStatus?: MessageReceiptStatus
+  /** 可选：已读时展示的读者来源（我发的消息为已读时，对方头像在气泡右上角展示） */
+  readBy?: MessageSource[]
   /** 可选：消息唯一 id，便于更新状态 */
   id?: string
+  /**
+   * 可选：当前用户是否可编辑该条对方消息。
+   * 为 false 时表示发送方为更高权限等，不展示编辑按钮；未设或 true 时依全局编辑权限决定。
+   */
+  editableByCurrentUser?: boolean
 }
 
 const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([

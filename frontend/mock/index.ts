@@ -6,4 +6,4 @@
 export * from './types'
 export { mockSessionList, getMockSessionById } from './sessionList'
 export { getMockSessionMessages } from './sessionMessages'
-export { getSessionList, getSessionById, getMessages } from './db'
+export { getSessionList, getSessionById, getMessages, MOCK_DEBUG_SESSION_ID } from './db'
