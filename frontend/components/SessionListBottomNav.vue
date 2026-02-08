@@ -18,22 +18,22 @@
       ref="tab1Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'favorites' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
-      aria-label="收藏归档"
-      @click="emit('update:modelValue', 'favorites')"
-    >
-      <Archive class="h-4 w-4 shrink-0" :class="modelValue === 'favorites' ? 'drop-shadow-sm' : ''" />
-    </button>
-    <button
-      ref="tab2Ref"
-      type="button"
-      class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
       :class="modelValue === 'pending' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="待处理（未读等状态）"
       @click="emit('update:modelValue', 'pending')"
     >
       <Inbox class="h-4 w-4 shrink-0" :class="modelValue === 'pending' ? 'drop-shadow-sm' : ''" />
       <span v-if="pendingCount > 0" class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">{{ pendingCount > 99 ? '99+' : pendingCount }}</span>
+    </button>
+    <button
+      ref="tab2Ref"
+      type="button"
+      class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+      :class="modelValue === 'favorites' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      aria-label="收藏归档"
+      @click="emit('update:modelValue', 'favorites')"
+    >
+      <Archive class="h-4 w-4 shrink-0" :class="modelValue === 'favorites' ? 'drop-shadow-sm' : ''" />
     </button>
     <button
       ref="tab3Ref"
@@ -81,7 +81,7 @@ const indicatorReady = ref(false)
 const isTransitioning = ref(false)
 
 const tabIndex = computed(() =>
-  props.modelValue === 'active' ? 0 : props.modelValue === 'favorites' ? 1 : props.modelValue === 'pending' ? 2 : 3
+  props.modelValue === 'active' ? 0 : props.modelValue === 'pending' ? 1 : props.modelValue === 'favorites' ? 2 : 3
 )
 
 const INDICATOR_TRANSITION_MS = 250

@@ -26,7 +26,7 @@
         class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
         title="新会话"
         aria-label="新会话"
-        @click="$emit('newChat')"
+        @click="$emit('new-chat')"
       >
         <MessageSquarePlus class="h-4 w-4" />
       </button>
@@ -44,7 +44,7 @@ defineProps<{
 }>()
 
 defineEmits<{
-  newChat: []
+  'new-chat': []
   search: []
   app: []
   'update:searchQuery': [value: string]

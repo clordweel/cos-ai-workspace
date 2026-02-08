@@ -137,7 +137,7 @@
             @archive="onArchiveChat"
             @delete="onDeleteChat"
           />
-          <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表以显示调试占位 -->
+          <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表 -->
           <div
             ref="scrollRef"
             class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pt-16 pb-52"
@@ -188,7 +188,7 @@
                 </div>
               </div>
             </template>
-            <!-- 虚拟未就绪（如首帧 scrollRef 未挂载）或无虚拟行时：普通列表，保证调试占位可见 -->
+            <!-- 虚拟未就绪（如首帧 scrollRef 未挂载）或无虚拟行时：普通列表 -->
             <div v-else class="space-y-3">
               <div
                 v-for="(msg, i) in displayMessages"
@@ -226,11 +226,8 @@
 
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
-import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, Inbox, LogIn, Music, Pin, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
-
-const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
 definePageMeta({ layout: 'workspace' })
 
@@ -367,11 +364,7 @@ function onDeleteChat() {
 
 const messages = computed(() => (chatId.value ? getMessages(chatId.value) : []))
 
-const displayMessages = computed(() => {
-  const list = messages.value
-  if (list.length > 0) return list
-  return chatId.value ? PLACEHOLDER_MESSAGES : []
-})
+const displayMessages = computed(() => messages.value)
 
 const rowVirtualizerRef = useVirtualizer({
   count: computed(() => displayMessages.value.length),
@@ -403,13 +396,13 @@ import {
 
 type DisplayChatItem = { id: string; title: string; type?: MockSessionItem['type']; updatedAt?: number; participants?: MockSessionItem['participants'] }
 const displayChats = computed<DisplayChatItem[]>(() => {
-  if (!MOCK_SESSION_LIST_ENABLED) return filteredChats.value.map((c) => ({ id: c.id, title: c.title }))
   const real = filteredChats.value.map((c) => ({
     id: c.id,
     title: c.title,
     updatedAt: c.updatedAt,
   }))
-  return [...getMockSessionList(), ...real]
+  if (!MOCK_SESSION_LIST_ENABLED) return real
+  return [...real, ...getMockSessionList()]
 })
 
 /** 置顶会话 id 列表（可后续从设置/接口同步） */
@@ -479,6 +472,7 @@ function goToChat(id: string) {
   router.push(`/space/${id}`)
 }
 
+/** 创建新会话：仅走真实会话逻辑（useChatSessions），不创建 mock；新建会话排在列表前 */
 function startNewChat() {
   const id = createNewChat()
   router.push(`/space/${id}`)
