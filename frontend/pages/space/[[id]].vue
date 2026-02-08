@@ -700,6 +700,22 @@ function retryMessage(index: number) {
   opacity: 0;
 }
 
+/* 会话消息区选中：与气泡背景协调，主题色半透明 */
+.chat-scroll-area *::selection {
+  background: rgb(59 130 246 / 0.22);
+  color: inherit;
+}
+.chat-scroll-area *::-moz-selection {
+  background: rgb(59 130 246 / 0.22);
+  color: inherit;
+}
+:global(.dark) .chat-scroll-area *::selection {
+  background: rgb(96 165 250 / 0.28);
+}
+:global(.dark) .chat-scroll-area *::-moz-selection {
+  background: rgb(96 165 250 / 0.28);
+}
+
 /* 可定制滚动条：细条、圆角、悬停显色，千条消息下仍流畅 */
 .chat-scroll-area {
   scrollbar-gutter: stable;
@@ -725,6 +741,22 @@ function retryMessage(index: number) {
     scrollbar-width: thin;
     scrollbar-color: rgb(161 161 170 / 0.5) transparent;
   }
+}
+
+/* 会话列表区选中：略柔和，与列表项悬停风格一致 */
+.session-list-scroll-area *::selection {
+  background: rgb(59 130 246 / 0.18);
+  color: inherit;
+}
+.session-list-scroll-area *::-moz-selection {
+  background: rgb(59 130 246 / 0.18);
+  color: inherit;
+}
+:global(.dark) .session-list-scroll-area *::selection {
+  background: rgb(96 165 250 / 0.22);
+}
+:global(.dark) .session-list-scroll-area *::-moz-selection {
+  background: rgb(96 165 250 / 0.22);
 }
 
 .session-list-scroll-area { scrollbar-gutter: stable; }
