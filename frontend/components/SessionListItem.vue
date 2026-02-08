@@ -10,14 +10,7 @@
     @click="$emit('click')"
     @keydown.enter.prevent="$emit('click')"
   >
-    <span
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300"
-      :class="item.type === 'group' ? 'bg-amber-100 dark:bg-amber-900/40' : 'bg-zinc-200 dark:bg-zinc-600'"
-    >
-      <User v-if="item.type === 'private'" class="h-4 w-4" />
-      <Users v-else-if="item.type === 'group'" class="h-4 w-4" />
-      <span v-else class="text-xs font-medium">{{ item.title.charAt(0) }}</span>
-    </span>
+    <SessionListThumb :type="thumbType" :participants="effectiveParticipants" />
     <p class="min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
       {{ item.title }}
     </p>
@@ -29,15 +22,32 @@
 </template>
 
 <script setup lang="ts">
-import { User, Users } from 'lucide-vue-next'
+import type { SessionParticipant } from '~/components/SessionListThumb.vue'
 
-export type SessionListItemType = { id: string; title: string; type?: 'private' | 'group'; updatedAt?: number }
+export type SessionListItemType = {
+  id: string
+  title: string
+  type?: 'private' | 'group'
+  updatedAt?: number
+  /** 会话对象列表，用于缩略图：一对一为对方，一对多为成员（按排序取前四） */
+  participants?: SessionParticipant[]
+}
 
-defineProps<{
+const props = defineProps<{
   item: SessionListItemType
   isActive: boolean
   isMock: boolean
   dateLabel?: string
 }>()
 defineEmits<{ (e: 'click'): void }>()
+
+const thumbType = computed(() => props.item.type === 'group' ? 'group' : 'private')
+
+const effectiveParticipants = computed((): SessionParticipant[] => {
+  const { item } = props
+  const list = item.participants
+  if (item.type === 'group') return list ?? []
+  if (list?.length) return list
+  return [{ name: item.title }]
+})
 </script>

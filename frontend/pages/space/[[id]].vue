@@ -14,12 +14,20 @@
           <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain pb-24">
             <template v-if="listViewTab === 'active'">
               <div class="min-h-full flex flex-col transition-[padding] duration-200" :style="{ paddingTop: listPaddingTop }">
-                <section class="border-b border-zinc-100 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/70">
-                  <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/40 rounded-md transition-colors" @click="pinnedCollapsed = !pinnedCollapsed">
-                    <component :is="pinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0" />
-                    <span>置顶</span>
+                <section class="session-list-pinned border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
+                  <button
+                    type="button"
+                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
+                    @click="pinnedCollapsed = !pinnedCollapsed"
+                  >
+                    <component :is="pinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <span class="flex-1">置顶</span>
+                    <span v-if="pinnedChats.length > 0" class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums">
+                      {{ pinnedChats.length }}
+                    </span>
                   </button>
-                  <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-zinc-100 dark:divide-zinc-700">
+                  <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
                     <SessionListItem v-for="c in pinnedChats" :key="c.id" :item="c" :is-active="c.id === chatId && isSessionExpanded" :is-mock="isMockSession(c.id)" :date-label="getChatDateLabel(c.id)" @click="onSessionItemClick(c.id)" />
                   </ul>
                 </section>
@@ -185,7 +193,7 @@
 import type { ChatMessage } from '~/composables/useChatSessions'
 import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, Music, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, Music, Pin, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -351,34 +359,36 @@ const filteredChats = computed(() => {
 /** 调试用：mock 会话列表，仿真一对一私聊与一对多群组。设为 false 可关闭。 */
 const MOCK_SESSION_LIST_DEBUG = true
 type MockSessionType = 'private' | 'group'
+type MockParticipant = { name: string; avatar?: string }
 interface MockSessionItem {
   id: string
   title: string
   type: MockSessionType
   updatedAt: number
+  participants?: MockParticipant[]
 }
 /** 一对一私聊：对一个用户 或 对一个机器人 */
 const mockPrivateSessions: MockSessionItem[] = [
-  { id: 'mock-private-zhangsan', title: '张三', type: 'private', updatedAt: Date.now() - 2 * 60 * 60 * 1000 },
-  { id: 'mock-private-lisi', title: '李四', type: 'private', updatedAt: Date.now() - 5 * 60 * 60 * 1000 },
-  { id: 'mock-private-wangwu', title: '王五', type: 'private', updatedAt: Date.now() - 24 * 60 * 60 * 1000 },
-  { id: 'mock-private-assistant', title: 'AI 助手', type: 'private', updatedAt: Date.now() - 30 * 60 * 1000 },
-  { id: 'mock-private-material', title: '物料助手', type: 'private', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
-  { id: 'mock-private-order', title: '订单助手', type: 'private', updatedAt: Date.now() - 3 * 24 * 60 * 60 * 1000 },
+  { id: 'mock-private-zhangsan', title: '张三', type: 'private', updatedAt: Date.now() - 2 * 60 * 60 * 1000, participants: [{ name: '张三' }] },
+  { id: 'mock-private-lisi', title: '李四', type: 'private', updatedAt: Date.now() - 5 * 60 * 60 * 1000, participants: [{ name: '李四' }] },
+  { id: 'mock-private-wangwu', title: '王五', type: 'private', updatedAt: Date.now() - 24 * 60 * 60 * 1000, participants: [{ name: '王五' }] },
+  { id: 'mock-private-assistant', title: 'AI 助手', type: 'private', updatedAt: Date.now() - 30 * 60 * 1000, participants: [{ name: 'AI 助手' }] },
+  { id: 'mock-private-material', title: '物料助手', type: 'private', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000, participants: [{ name: '物料助手' }] },
+  { id: 'mock-private-order', title: '订单助手', type: 'private', updatedAt: Date.now() - 3 * 24 * 60 * 60 * 1000, participants: [{ name: '订单助手' }] },
 ]
 /** 一对多群组：对一个以上用户 或 机器人 */
 const mockGroupSessions: MockSessionItem[] = [
-  { id: 'mock-group-product', title: '产品组 (3人)', type: 'group', updatedAt: Date.now() - 15 * 60 * 1000 },
-  { id: 'mock-group-tech', title: '技术讨论 (5人)', type: 'group', updatedAt: Date.now() - 1 * 60 * 60 * 1000 },
-  { id: 'mock-group-design', title: '设计评审 (4人)', type: 'group', updatedAt: Date.now() - 6 * 60 * 60 * 1000 },
-  { id: 'mock-group-customer', title: '客户对接 (6人)', type: 'group', updatedAt: Date.now() - 24 * 60 * 60 * 1000 },
-  { id: 'mock-group-ai', title: 'AI 协作群 (4人)', type: 'group', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+  { id: 'mock-group-product', title: '产品组 (3人)', type: 'group', updatedAt: Date.now() - 15 * 60 * 1000, participants: [{ name: '小甲' }, { name: '小乙' }, { name: '小丙' }] },
+  { id: 'mock-group-tech', title: '技术讨论 (5人)', type: 'group', updatedAt: Date.now() - 1 * 60 * 60 * 1000, participants: [{ name: '小明' }, { name: '小红' }, { name: '小刚' }, { name: '小丽' }] },
+  { id: 'mock-group-design', title: '设计评审 (4人)', type: 'group', updatedAt: Date.now() - 6 * 60 * 60 * 1000, participants: [{ name: '设计A' }, { name: '设计B' }, { name: '设计C' }, { name: '设计D' }] },
+  { id: 'mock-group-customer', title: '客户对接 (6人)', type: 'group', updatedAt: Date.now() - 24 * 60 * 60 * 1000, participants: [{ name: '客户甲' }, { name: '客户乙' }, { name: '客户丙' }, { name: '客户丁' }] },
+  { id: 'mock-group-ai', title: 'AI 协作群 (4人)', type: 'group', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000, participants: [{ name: '助手' }, { name: '张三' }, { name: '李四' }, { name: '王五' }] },
 ]
 const mockSessionList: MockSessionItem[] = [...mockPrivateSessions, ...mockGroupSessions]
 const mockSessionById = (id: string): MockSessionItem | undefined =>
   mockSessionList.find((s) => s.id === id)
 
-type DisplayChatItem = { id: string; title: string; type?: MockSessionType; updatedAt?: number }
+type DisplayChatItem = { id: string; title: string; type?: MockSessionType; updatedAt?: number; participants?: MockParticipant[] }
 const displayChats = computed<DisplayChatItem[]>(() => {
   if (!MOCK_SESSION_LIST_DEBUG) return filteredChats.value.map((c) => ({ id: c.id, title: c.title }))
   const real = filteredChats.value.map((c) => ({
