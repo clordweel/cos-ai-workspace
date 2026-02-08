@@ -5,99 +5,86 @@
       class="flex min-h-0 min-w-0 flex-1"
       :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
     >
-      <!-- 列表：展开时始终显示，否则仅无 chat 时显示 -->
       <aside
         v-show="isSessionExpanded || !chatId"
         class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
         :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
       >
-        <div class="relative flex-1 min-h-0 flex flex-col">
-          <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain">
-            <template v-if="displayChats.length > 0">
-              <ul
-                class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full transition-[padding] duration-200"
-                :style="{ paddingTop: listPaddingTop }"
-              >
-              <li
-                v-for="c in displayChats"
-                :key="c.id"
-                role="button"
-                tabindex="0"
-                class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
-                :class="[
-                  c.id === chatId && isSessionExpanded ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
-                  isMockSession(c.id) ? 'opacity-80' : '',
-                ]"
-                @click="onSessionItemClick(c.id)"
-                @keydown.enter.prevent="onSessionItemClick(c.id)"
-              >
-              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
-                {{ c.title.charAt(0) }}
-              </span>
-              <p class="min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
-              <span v-if="getChatDateLabel(c.id)" class="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">{{ getChatDateLabel(c.id) }}</span>
-              <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
-            </li>
-              </ul>
+        <div class="relative flex-1 min-h-0 flex flex-col min-w-0">
+          <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain pb-24">
+            <template v-if="listViewTab === 'active'">
+              <div class="min-h-full flex flex-col transition-[padding] duration-200" :style="{ paddingTop: listPaddingTop }">
+                <section class="border-b border-zinc-100 dark:border-zinc-700/80 bg-zinc-50 dark:bg-zinc-800/70">
+                  <button type="button" class="flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-700/40 rounded-md transition-colors" @click="pinnedCollapsed = !pinnedCollapsed">
+                    <component :is="pinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0" />
+                    <span>置顶</span>
+                  </button>
+                  <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-zinc-100 dark:divide-zinc-700">
+                    <SessionListItem v-for="c in pinnedChats" :key="c.id" :item="c" :is-active="c.id === chatId && isSessionExpanded" :is-mock="isMockSession(c.id)" :date-label="getChatDateLabel(c.id)" @click="onSessionItemClick(c.id)" />
+                  </ul>
+                </section>
+                <section class="flex-1 min-h-0 flex flex-col">
+                  <template v-if="activeChats.length !== 0">
+                    <ul class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full">
+                      <SessionListItem v-for="c in activeChats" :key="c.id" :item="c" :is-active="c.id === chatId && isSessionExpanded" :is-mock="isMockSession(c.id)" :date-label="getChatDateLabel(c.id)" @click="onSessionItemClick(c.id)" />
+                    </ul>
+                  </template>
+                  <div v-else-if="searchQuery" class="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-4 text-center">
+                    <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+                    <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
+                    <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
+                  </div>
+                </section>
+              </div>
             </template>
-            <div
-              v-else-if="searchQuery"
-              class="flex flex-col items-center justify-center py-12 px-4 text-center min-h-full transition-[padding] duration-200"
-              :style="{ paddingTop: listPaddingTop }"
-            >
-              <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-              <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
-              <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
-            </div>
+            <template v-else-if="listViewTab === 'favorites'">
+              <div class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center" :style="{ paddingTop: listPaddingTop }">
+                <Archive class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">收藏与归档</p>
+                <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">暂无收藏或归档会话</p>
+              </div>
+            </template>
+            <template v-else-if="listViewTab === 'settings'">
+              <div class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center" :style="{ paddingTop: listPaddingTop }">
+                <Settings class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+                <p class="text-sm text-zinc-500 dark:text-zinc-400">会话设置</p>
+                <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">通知、提醒等（占位）</p>
+              </div>
+            </template>
           </div>
-          <!-- 应用抽屉：整块可滚动（含「应用 / 更多」行 + 网格），展开时顶栏下移 -->
           <Transition name="fade">
-            <div
-              v-show="showAppList"
-              class="app-drawer absolute left-0 right-0 z-20 flex max-h-[16rem] w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg transition-all duration-200 isolate"
-              :style="{ top: '0' }"
-            >
+            <div v-show="showAppList" class="app-drawer absolute left-0 right-0 z-20 flex max-h-[16rem] w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg transition-all duration-200 isolate" :style="{ top: '0' }">
               <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-8 pr-7 pt-3 pb-8">
-                <!-- 由 logo + COS AI 驱动（跟随滚动） -->
                 <div class="mb-3 flex flex-col items-center gap-0">
                   <Logo :size="22" class="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                   <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
                 </div>
-                <div
-                  class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5"
-                  style="grid-template-columns: repeat(auto-fill, minmax(3.5rem, 1fr));"
-                >
-                <button
-                  v-for="app in drawerApps"
-                  :key="app.id"
-                  type="button"
-                  class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors"
-                  :class="app.view && currentView === app.view ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''"
-                  @click="onDrawerAppClick(app)"
-                >
-                  <span
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700"
-                    :class="app.view && currentView === app.view ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''"
-                  >
-                    <component :is="app.icon" class="h-4 w-4" />
-                  </span>
-                  <span class="text-xs">{{ app.title }}</span>
-                </button>
-              </div>
+                <div class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5" :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }">
+                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="app.view && currentView === app.view ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700" :class="app.view && currentView === app.view ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''">
+                      <component :is="app.icon" class="h-4 w-4" />
+                    </span>
+                    <span class="text-xs">{{ app.title }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </Transition>
-          <!-- 顶栏：随应用展开整体下移，搜索条从搜索按钮向左展开 -->
-          <SessionListHeader
-            class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md"
-            :style="{ top: toolbarTop }"
-            :app-drawer-open="showAppList"
-            :search-bar-open="showSearchBar"
-            v-model:search-query="searchQuery"
-            @new-chat="startNewChat"
-            @search="toggleSearchBar"
-            @app="toggleAppList"
-          />
+          <SessionListHeader class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md" :style="{ top: toolbarTop }" :app-drawer-open="showAppList" :search-bar-open="showSearchBar" v-model:search-query="searchQuery" @new-chat="startNewChat" @search="toggleSearchBar" @app="toggleAppList" />
+          <nav class="session-list-bottom-nav absolute bottom-2 left-1/2 z-10 -translate-x-1/2 flex h-11 w-fit items-center justify-center gap-1 rounded-2xl border border-white/40 dark:border-white/10 bg-white/55 dark:bg-zinc-800/55 px-2 backdrop-blur-xl transition-all duration-300 ease-out" aria-label="会话列表视图">
+            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'active' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="活动聊天" @click="listViewTab = 'active'">
+              <MessageCircle class="h-4 w-4 shrink-0" :class="listViewTab === 'active' ? 'drop-shadow-sm' : ''" />
+              <span v-if="listViewTab === 'active'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
+            </button>
+            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'favorites' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="收藏归档" @click="listViewTab = 'favorites'">
+              <Archive class="h-4 w-4 shrink-0" :class="listViewTab === 'favorites' ? 'drop-shadow-sm' : ''" />
+              <span v-if="listViewTab === 'favorites'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
+            </button>
+            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'settings' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="会话设置" @click="listViewTab = 'settings'">
+              <Settings class="h-4 w-4 shrink-0" :class="listViewTab === 'settings' ? 'drop-shadow-sm' : ''" />
+              <span v-if="listViewTab === 'settings'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
+            </button>
+          </nav>
         </div>
       </aside>
       <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
@@ -106,87 +93,20 @@
         v-show="isSessionExpanded || !!chatId"
       >
         <template v-if="chatId">
-          <!-- 顶部导航：半透明亚克力 -->
-          <header
-            class="absolute top-0 left-0 right-0 z-20 grid h-12 shrink-0 grid-cols-[1fr_1fr_1fr] items-center gap-2 px-3 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
-            aria-label="会话标题"
-          >
-            <div class="flex min-w-0 items-center gap-2">
-              <NuxtLink
-                v-if="!isSessionExpanded"
-                to="/space"
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-700 transition-colors"
-                aria-label="返回会话列表"
-              >
-                <ChevronLeft class="h-4 w-4" />
-              </NuxtLink>
-            </div>
-            <div class="flex min-w-0 items-center justify-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger class="max-w-[14rem] !bg-white dark:!bg-zinc-800 border border-zinc-200/80 dark:border-zinc-600/80" aria-label="会话菜单">
-                  <span class="truncate">{{ chatTitle }}</span>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="center" side="top" :side-offset="4">
-                  <DropdownMenuItem text-value="重命名会话" @select="onRenameChat">
-                    <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    重命名会话
-                  </DropdownMenuItem>
-                  <DropdownMenuItem text-value="分享此会话" @select="onShareConversation">
-                    <Share2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    分享此会话
-                  </DropdownMenuItem>
-                  <DropdownMenuItem text-value="复制会话链接" @select="onCopySessionLink">
-                    <Link class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    复制会话链接
-                  </DropdownMenuItem>
-                  <DropdownMenuItem text-value="关闭会话" @select="onCloseChat">
-                    <X class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    关闭会话
-                  </DropdownMenuItem>
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger text-value="导出为...">
-                      <Download class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                      导出为…
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent>
-                      <DropdownMenuItem text-value="当前屏" @select="onExportCurrentScreen">
-                        当前屏
-                      </DropdownMenuItem>
-                      <DropdownMenuItem text-value="长屏截图" @select="onExportLongScreenshot">
-                        长屏截图
-                      </DropdownMenuItem>
-                      <DropdownMenuItem text-value="导出 markdown" @select="onExportMarkdown">
-                        导出 Markdown
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem text-value="归档会话" @select="onArchiveChat">
-                    <Archive class="h-3.5 w-3.5 shrink-0 opacity-70" />
-                    归档会话
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    text-value="删除会话"
-                    class="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
-                    @select="onDeleteChat"
-                  >
-                    <Trash2 class="h-3.5 w-3.5 shrink-0 opacity-80" />
-                    删除会话
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div class="flex min-w-0 items-center justify-end gap-1.5">
-            <span class="shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="chatUserName">{{ chatUserName }}</span>
-            <span
-              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400 text-xs font-medium"
-              aria-hidden
-            >
-              <template v-if="chatUserName?.trim()">{{ chatUserName.trim().slice(0, 1) }}</template>
-              <User v-else class="h-3.5 w-3.5" />
-            </span>
-            </div>
-          </header>
+          <ChatHeader
+            :title="chatTitle"
+            :user-name="chatUserName"
+            :is-session-expanded="isSessionExpanded"
+            @close="onCloseChat"
+            @rename="onRenameChat"
+            @share="onShareConversation"
+            @copy-link="onCopySessionLink"
+            @export-screen="onExportCurrentScreen"
+            @export-screenshot="onExportLongScreenshot"
+            @export-markdown="onExportMarkdown"
+            @archive="onArchiveChat"
+            @delete="onDeleteChat"
+          />
           <!-- 滚动区：虚拟列表 + 可定制滚动条；虚拟未就绪时回退为普通列表以显示调试占位 -->
           <div
             ref="scrollRef"
@@ -259,149 +179,16 @@
               </div>
             </div>
           </div>
-          <!-- 底部：向上渐变遮盖 + 编辑框 -->
-          <div class="absolute bottom-0 left-0 right-0 z-20 flex flex-col">
-            <div
-              class="h-16 pointer-events-none shrink-0 bg-gradient-to-t from-white to-transparent dark:from-zinc-800 dark:to-transparent"
-              aria-hidden
-            />
-            <div class="shrink-0 p-3 pt-0 bg-white dark:bg-zinc-800">
-            <div class="rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm overflow-hidden">
-              <!-- 顶栏：流式时显示 Stop、快捷键、清空、Review -->
-              <div
-                v-if="streaming"
-                class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-700"
-              >
-                <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  <button
-                    type="button"
-                    class="font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
-                    @click="stopStream"
-                  >
-                    停止
-                  </button>
-                  <span>Ctrl+Shift+Enter 停止</span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <button
-                    type="button"
-                    class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    aria-label="清空输入"
-                    @click="input = ''"
-                  >
-                    <X class="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    class="rounded-lg px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 transition-colors"
-                    @click="scrollToLastMessage"
-                  >
-                    回顾
-                  </button>
-                </div>
-              </div>
-              <!-- 主输入 -->
-              <form @submit.prevent="send" class="flex flex-col">
-                <textarea
-                  v-model="input"
-                  rows="2"
-                  placeholder="说点什么？"
-                  class="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
-                  :disabled="streaming"
-                  @keydown.enter.exact.prevent="send()"
-                  @keydown.enter.shift.exact.prevent="input += '\n'"
-                />
-                <!-- 底栏：Agent / Auto 选择 + 右侧图标与发送 -->
-                <div class="flex items-center justify-between gap-2 px-3 pb-2 pt-0">
-                  <div class="flex items-center gap-2">
-                    <button
-                      type="button"
-                      class="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/50 px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    >
-                      <Infinity class="h-3.5 w-3.5" />
-                      <span>Agent</span>
-                      <ChevronDown class="h-3.5 w-3.5 opacity-60" />
-                    </button>
-                    <button
-                      type="button"
-                      class="flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/50 px-2.5 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                    >
-                      <span>自动</span>
-                      <ChevronDown class="h-3.5 w-3.5 opacity-60" />
-                    </button>
-                  </div>
-                  <div class="flex items-center gap-1">
-                    <span
-                      v-if="streaming"
-                      class="flex h-8 w-8 items-center justify-center text-zinc-400"
-                      aria-hidden
-                    >
-                      <Loader2 class="h-4 w-4 animate-spin" />
-                    </span>
-                    <button
-                      type="button"
-                      class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                      title="联网"
-                      aria-label="联网"
-                    >
-                      <Globe class="h-4 w-4 text-primary-500" />
-                    </button>
-                    <button
-                      type="button"
-                      class="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                      title="图片"
-                      aria-label="上传图片"
-                    >
-                      <ImageIcon class="h-4 w-4" />
-                    </button>
-                    <button
-                      v-if="streaming"
-                      type="button"
-                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
-                      aria-label="停止"
-                      @click="stopStream"
-                    >
-                      <Square class="h-4 w-4" />
-                    </button>
-                    <button
-                      v-else
-                      type="submit"
-                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                      :disabled="!input.trim()"
-                      aria-label="发送"
-                    >
-                      <Send class="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-            <!-- 免责提示 -->
-            <p class="mt-2 flex items-center justify-center gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400 text-center">
-              AI 的回答未必正确无误，请注意核查
-            </p>
-            </div>
-          </div>
+          <ChatInputPanel
+            v-model="input"
+            :streaming="streaming"
+            @submit="send"
+            @stop="stopStream"
+            @clear="input = ''"
+            @scroll-to-last="scrollToLastMessage"
+          />
         </template>
-        <div v-else class="flex-1 flex flex-col items-center justify-center gap-6 p-8 text-center">
-          <div class="flex flex-col items-center gap-3">
-            <div class="rounded-2xl bg-zinc-100 dark:bg-zinc-800 p-5 text-zinc-400 dark:text-zinc-500">
-              <MessageCircle class="h-12 w-12" stroke-width="1.5" />
-            </div>
-            <div class="space-y-1">
-              <p class="text-base font-medium text-zinc-700 dark:text-zinc-300">还没有会话</p>
-              <p class="text-xs text-zinc-500 dark:text-zinc-400 max-w-[240px]">在左侧选择已有会话，或点击下方按钮开始新对话</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm hover:bg-primary-500 hover:shadow transition-colors duration-200"
-            @click="startNewChat"
-          >
-            <Plus class="h-3.5 w-3.5" stroke-width="2.25" />
-            新会话
-          </button>
-        </div>
+        <ChatEmptyState v-else @new-chat="startNewChat" />
       </main>
     </div>
   </div>
@@ -411,17 +198,7 @@
 import type { ChatMessage } from '~/composables/useChatSessions'
 import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from '~/lib/dropdown-menu'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, Cloud, Download, FileText, Globe, Home, Image as ImageIcon, Infinity, Link, Loader2, LogIn, MessageCircle, Music, Pencil, Plus, Search, Send, Settings, Share2, Square, StickyNote, Trash2, User, Users, X } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, MessageCircle, Music, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -437,14 +214,10 @@ const streaming = ref(false)
 const searchQuery = ref('')
 const showAppList = ref(false)
 const showSearchBar = ref(false)
-function toggleAppList() {
-  showAppList.value = !showAppList.value
-}
-function toggleSearchBar() {
-  showSearchBar.value = !showSearchBar.value
-}
-
-/** 应用抽屉列表：前 4 个为真实入口，其余为 mock 填充 */
+function toggleAppList() { showAppList.value = !showAppList.value }
+function toggleSearchBar() { showSearchBar.value = !showSearchBar.value }
+const listViewTab = ref<'active' | 'favorites' | 'settings'>('active')
+const pinnedCollapsed = ref(false)
 const drawerApps = [
   { id: 'home', title: '导航', view: 'home' as const, icon: Home },
   { id: 'auth', title: '认证登录', view: 'auth' as const, icon: LogIn },
@@ -461,24 +234,15 @@ const drawerApps = [
   { id: 'mock-weather', title: '天气', icon: Cloud },
 ]
 function onDrawerAppClick(app: (typeof drawerApps)[number]) {
-  if ('view' in app && app.view) {
-    if (app.view === 'home') openNavPage()
-    else openPanel(app.view)
-  }
+  if ('view' in app && app.view) { if (app.view === 'home') openNavPage(); else openPanel(app.view) }
 }
-
-/** 应用抽屉可见高度固定，内容超出可滚动 */
 const appDrawerHeightRem = 16
-/** 顶栏 top：应用抽屉高度随内容，展开时顶栏整体下移 */
-const toolbarTop = computed(() => {
-  const rem = showAppList.value ? appDrawerHeightRem : 0
-  return `${rem}rem`
-})
-/** 列表内容区顶部留白：顶栏下移量 + 工具栏 3rem，避免被抽屉遮挡 */
-const listPaddingTop = computed(() => {
-  const above = showAppList.value ? appDrawerHeightRem : 0
-  return `${above + 3}rem`
-})
+const toolbarTop = computed(() => (showAppList.value ? `${appDrawerHeightRem}rem` : '0'))
+const listPaddingTop = computed(() => `${showAppList.value ? appDrawerHeightRem + 3 : 3}rem`)
+function onSessionItemClick(id: string) {
+  if (isMockSession(id)) return
+  goToChat(id)
+}
 const streamAbortRef = ref<AbortController | null>(null)
 /** 流式内容缓冲，定时刷新到 UI，避免每 chunk 都触发渲染 */
 const streamContentBuffer = ref('')
@@ -597,21 +361,66 @@ const filteredChats = computed(() => {
   })
 })
 
-/** 调试用：mock 会话列表，便于调试会话列表滚动样式。设为 false 可关闭。 */
+/** 调试用：mock 会话列表，仿真一对一私聊与一对多群组。设为 false 可关闭。 */
 const MOCK_SESSION_LIST_DEBUG = true
-const mockSessionList: Array<{ id: string; title: string }> = Array.from({ length: 18 }, (_, i) => ({
-  id: `mock-session-${i + 1}`,
-  title: `调试会话 ${i + 1} 预览标题`,
-}))
-const displayChats = computed(() =>
-  MOCK_SESSION_LIST_DEBUG ? [...mockSessionList, ...filteredChats.value] : filteredChats.value,
+type MockSessionType = 'private' | 'group'
+interface MockSessionItem {
+  id: string
+  title: string
+  type: MockSessionType
+  updatedAt: number
+}
+/** 一对一私聊：对一个用户 或 对一个机器人 */
+const mockPrivateSessions: MockSessionItem[] = [
+  { id: 'mock-private-zhangsan', title: '张三', type: 'private', updatedAt: Date.now() - 2 * 60 * 60 * 1000 },
+  { id: 'mock-private-lisi', title: '李四', type: 'private', updatedAt: Date.now() - 5 * 60 * 60 * 1000 },
+  { id: 'mock-private-wangwu', title: '王五', type: 'private', updatedAt: Date.now() - 24 * 60 * 60 * 1000 },
+  { id: 'mock-private-assistant', title: 'AI 助手', type: 'private', updatedAt: Date.now() - 30 * 60 * 1000 },
+  { id: 'mock-private-material', title: '物料助手', type: 'private', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+  { id: 'mock-private-order', title: '订单助手', type: 'private', updatedAt: Date.now() - 3 * 24 * 60 * 60 * 1000 },
+]
+/** 一对多群组：对一个以上用户 或 机器人 */
+const mockGroupSessions: MockSessionItem[] = [
+  { id: 'mock-group-product', title: '产品组 (3人)', type: 'group', updatedAt: Date.now() - 15 * 60 * 1000 },
+  { id: 'mock-group-tech', title: '技术讨论 (5人)', type: 'group', updatedAt: Date.now() - 1 * 60 * 60 * 1000 },
+  { id: 'mock-group-design', title: '设计评审 (4人)', type: 'group', updatedAt: Date.now() - 6 * 60 * 60 * 1000 },
+  { id: 'mock-group-customer', title: '客户对接 (6人)', type: 'group', updatedAt: Date.now() - 24 * 60 * 60 * 1000 },
+  { id: 'mock-group-ai', title: 'AI 协作群 (4人)', type: 'group', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 },
+]
+const mockSessionList: MockSessionItem[] = [...mockPrivateSessions, ...mockGroupSessions]
+const mockSessionById = (id: string): MockSessionItem | undefined =>
+  mockSessionList.find((s) => s.id === id)
+
+type DisplayChatItem = { id: string; title: string; type?: MockSessionType; updatedAt?: number }
+const displayChats = computed<DisplayChatItem[]>(() => {
+  if (!MOCK_SESSION_LIST_DEBUG) return filteredChats.value.map((c) => ({ id: c.id, title: c.title }))
+  const real = filteredChats.value.map((c) => ({
+    id: c.id,
+    title: c.title,
+    updatedAt: c.updatedAt,
+  }))
+  return [...mockSessionList, ...real]
+})
+
+/** 置顶会话 id 列表（可后续从设置/接口同步） */
+const pinnedIds = ref<string[]>(['mock-private-zhangsan', 'mock-group-product'])
+/** 置顶区会话（保持 displayChats 中的顺序） */
+const pinnedChats = computed<DisplayChatItem[]>(() =>
+  displayChats.value.filter((c) => pinnedIds.value.includes(c.id)),
 )
+/** 活动区会话：当前会话自动在顶部，其余按原序 */
+const activeChats = computed<DisplayChatItem[]>(() => {
+  const list = displayChats.value.filter((c) => !pinnedIds.value.includes(c.id))
+  const current = chatId.value
+  if (!current) return list
+  const idx = list.findIndex((c) => c.id === current)
+  if (idx <= 0) return list
+  const item = list[idx]
+  return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
+})
+
 function isMockSession(id: string) {
   return id.startsWith('mock-')
-}
-function onSessionItemClick(id: string) {
-  if (isMockSession(id)) return
-  goToChat(id)
 }
 
 function formatChatDate(ts: number): string {
@@ -623,8 +432,10 @@ function formatChatDate(ts: number): string {
   if (d.toDateString() === yesterday.toDateString()) return '昨天'
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
-function getChatDateLabel(chatId: string): string {
-  const c = chats.value.find((x) => x.id === chatId)
+function getChatDateLabel(id: string): string {
+  const mock = mockSessionById(id)
+  if (mock) return formatChatDate(mock.updatedAt)
+  const c = chats.value.find((x) => x.id === id)
   return c?.updatedAt ? formatChatDate(c.updatedAt) : ''
 }
 
@@ -654,7 +465,7 @@ function startNewChat() {
 }
 
 const { getWithTitle } = useContactsAndBots()
-const { isPanelOpen, openPanel, openNavPage, currentView } = useAppView()
+const { openPanel, openNavPage, currentView } = useAppView()
 /** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
 const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
 
@@ -895,40 +706,15 @@ function retryMessage(index: number) {
   }
 }
 
-/* 左侧会话列表滚动条：与聊天区一致 2px */
-.session-list-scroll-area {
-  scrollbar-gutter: stable;
-}
-.session-list-scroll-area::-webkit-scrollbar {
-  width: 2px;
-}
-.session-list-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-.session-list-scroll-area::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgb(161 161 170 / 0.4);
-}
-.session-list-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: rgb(161 161 170 / 0.6);
-}
-.session-list-scroll-area::-webkit-scrollbar-thumb:active {
-  background: rgb(161 161 170 / 0.8);
-}
-@supports (scrollbar-width: thin) {
-  .session-list-scroll-area {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
-  }
-}
-
-/* 应用抽屉滚动区：滚动条隐藏 */
-.app-drawer-scroll {
-  scrollbar-width: none;
-}
-.app-drawer-scroll::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
+.session-list-scroll-area { scrollbar-gutter: stable; }
+.session-list-scroll-area::-webkit-scrollbar { width: 2px; }
+.session-list-scroll-area::-webkit-scrollbar-track { background: transparent; }
+.session-list-scroll-area::-webkit-scrollbar-thumb { border-radius: 4px; background: rgb(161 161 170 / 0.4); }
+.session-list-scroll-area::-webkit-scrollbar-thumb:hover { background: rgb(161 161 170 / 0.6); }
+.session-list-bottom-nav { box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.6) inset; }
+.dark .session-list-bottom-nav { box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08) inset; }
+.app-drawer-scroll { scrollbar-width: none; }
+.app-drawer-scroll::-webkit-scrollbar { display: none; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
