@@ -28,13 +28,37 @@
                     </span>
                   </button>
                   <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
-                    <SessionListItem v-for="c in pinnedChats" :key="c.id" :item="c" :is-active="c.id === chatId && isSessionExpanded" :is-mock="isMockSession(c.id)" :date-label="getChatDateLabel(c.id)" @click="onSessionItemClick(c.id)" />
+                    <SessionListItem
+                      v-for="c in pinnedChats"
+                      :key="c.id"
+                      :item="c"
+                      :is-active="c.id === chatId && isSessionExpanded"
+                      :is-mock="isMockSession(c.id)"
+                      :is-pinned="true"
+                      :date-label="getChatDateLabel(c.id)"
+                      @click="onSessionItemClick(c.id)"
+                      @toggle-pin="togglePin(c.id)"
+                      @rename="onSessionRename(c.id)"
+                      @close="onSessionClose(c.id)"
+                    />
                   </ul>
                 </section>
                 <section class="flex-1 min-h-0 flex flex-col">
                   <template v-if="activeChats.length !== 0">
                     <ul class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full">
-                      <SessionListItem v-for="c in activeChats" :key="c.id" :item="c" :is-active="c.id === chatId && isSessionExpanded" :is-mock="isMockSession(c.id)" :date-label="getChatDateLabel(c.id)" @click="onSessionItemClick(c.id)" />
+                      <SessionListItem
+                        v-for="c in activeChats"
+                        :key="c.id"
+                        :item="c"
+                        :is-active="c.id === chatId && isSessionExpanded"
+                        :is-mock="isMockSession(c.id)"
+                        :is-pinned="pinnedIds.includes(c.id)"
+                        :date-label="getChatDateLabel(c.id)"
+                        @click="onSessionItemClick(c.id)"
+                        @toggle-pin="togglePin(c.id)"
+                        @rename="onSessionRename(c.id)"
+                        @close="onSessionClose(c.id)"
+                      />
                     </ul>
                   </template>
                   <div v-else-if="searchQuery" class="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-4 text-center">
@@ -325,6 +349,43 @@ const listPaddingTop = computed(() => `${showAppList.value ? appDrawerHeightRem 
 function onSessionItemClick(id: string) {
   goToChat(id)
 }
+
+/** 右键菜单：切换置顶 */
+function togglePin(id: string) {
+  const idx = pinnedIds.value.indexOf(id)
+  if (idx >= 0) {
+    pinnedIds.value = pinnedIds.value.filter((x) => x !== id)
+  } else {
+    pinnedIds.value = [...pinnedIds.value, id]
+  }
+}
+
+/** 右键菜单：重命名会话；真实会话走 ensureChat，mock 仅前端覆盖标题预览 */
+function onSessionRename(id: string) {
+  const c = displayChats.value.find((x) => x.id === id)
+  const currentTitle = c?.title ?? ''
+  const next = window.prompt('重命名会话', currentTitle)
+  if (next == null || next.trim() === '') return
+  const title = next.trim()
+  if (isMockSession(id)) {
+    mockTitleOverrides.value = { ...mockTitleOverrides.value, [id]: title }
+    return
+  }
+  ensureChat(id, title)
+}
+
+/** 右键菜单：关闭会话；若当前正在该会话则退出到列表；mock 时并从列表隐藏以作预览 */
+function onSessionClose(id: string) {
+  if (isMockSession(id)) {
+    if (!mockHiddenIds.value.includes(id)) {
+      mockHiddenIds.value = [...mockHiddenIds.value, id]
+    }
+  }
+  if (chatId.value === id) {
+    router.push('/space')
+  }
+}
+
 const streamAbortRef = ref<AbortController | null>(null)
 /** 流式内容缓冲，定时刷新到 UI，避免每 chunk 都触发渲染 */
 const streamContentBuffer = ref('')
@@ -457,6 +518,12 @@ import {
 } from '~/composables/useMockSessions'
 
 type DisplayChatItem = { id: string; title: string; type?: MockSessionItem['type']; updatedAt?: number; participants?: MockSessionItem['participants'] }
+
+/** Mock 预览：会话标题覆盖（右键重命名后展示） */
+const mockTitleOverrides = ref<Record<string, string>>({})
+/** Mock 预览：关闭后从列表隐藏的会话 id */
+const mockHiddenIds = ref<string[]>([])
+
 const displayChats = computed<DisplayChatItem[]>(() => {
   const real = filteredChats.value.map((c) => ({
     id: c.id,
@@ -464,7 +531,13 @@ const displayChats = computed<DisplayChatItem[]>(() => {
     updatedAt: c.updatedAt,
   }))
   if (!MOCK_SESSION_LIST_ENABLED) return real
-  return [...real, ...getMockSessionList()]
+  const mockList = getMockSessionList()
+    .filter((m) => !mockHiddenIds.value.includes(m.id))
+    .map((m) => ({
+      ...m,
+      title: mockTitleOverrides.value[m.id] ?? m.title,
+    }))
+  return [...real, ...mockList]
 })
 
 /** 置顶会话 id 列表（可后续从设置/接口同步） */
