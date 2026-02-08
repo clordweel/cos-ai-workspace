@@ -135,3 +135,5 @@ Dify 提供：
 当前会话后端的核心特点是：**无自建会话与消息存储，依赖 Dify 做多轮上下文**。若只需「会话与历史可持久化展示」，优先用 **Dify 自带会话 API**；若需要完整 IM（已读、多端、群聊等），再评估 **Rocket.Chat、Tinode、Mattermost、Zulip** 等与现有 Fastify + Dify 的集成方式；若需联邦或 E2E，再考虑 **Matrix** 并接受其运维成本。
 
 **标准化与多后端扩展**：若希望将会话消息标准化封装，并将 Dify、Zulip、Matrix 等以可插拔扩展模块接入、降低对单一后端的耦合，见 **SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md**（统一领域模型、适配器接口、能力矩阵与实施顺序）。
+
+**组织内用户沟通**：当前仅 Dify 适配器时，会话为「当前用户 ↔ AI」，**不支持**组织内用户与用户之间的 1:1 或群聊。要实现「用户 A 与用户 B 互相发消息」，需接入支持多用户 IM 的后端（如 Zulip、Matrix、Rocket.Chat），并实现对应适配器；标准化模型与前端已预留 `sources.type: 'other_user'` 等，可扩展。详见 **SESSION_REQUIREMENTS.md** 会话功能需求梳理。

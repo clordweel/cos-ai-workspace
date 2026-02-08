@@ -9,6 +9,7 @@
     "predev": "node scripts/release-port.js",
     "release-port": "node scripts/release-port.js",
     "start": "node src/index.js",
+    "test": "CHAT_PROVIDER=mock node --test test/adapters/mock.test.js test/adapters/getAdapter.test.js test/routes/chat.test.js",
     "dev:debug": "node --watch --inspect src/index.js",
     "dev:debug-brk": "node --watch --inspect-brk src/index.js"
   },

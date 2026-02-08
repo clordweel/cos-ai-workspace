@@ -15,6 +15,11 @@ export const config = {
   port: Number(process.env.PORT) || 3000,
   shutdownTimeoutMs: Number(process.env.SHUTDOWN_TIMEOUT_MS) || 15_000,
 
+  /** 聊天后端：provider 决定使用哪个适配器（mock | dify | zulip | matrix） */
+  chat: {
+    provider: (process.env.CHAT_PROVIDER || 'mock').toLowerCase(),
+  },
+
   dify: {
     apiBase: (process.env.DIFY_API_BASE || 'https://api.dify.ai/v1').replace(/\/$/, ''),
     apiKey: process.env.DIFY_API_KEY || '',

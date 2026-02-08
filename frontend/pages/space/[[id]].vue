@@ -294,6 +294,12 @@ const {
   markChatAsRead,
 } = useChatSessions()
 
+const { loadSessions, loadSessionMessages } = useChatSessionsApi()
+/** 是否像后端会话 id（UUID 或 Mock 适配器的 mock-session-*） */
+function isBackendSessionId(id: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || id.startsWith('mock-session-')
+}
+
 /** 顶栏三点菜单：导出 / 转发等（占位，暂不实现具体功能） */
 function onExportCurrentScreen() {
   // TODO: 当前屏截图
@@ -488,6 +494,13 @@ watch(chatId, (id) => {
   if (id) markChatAsRead(id)
 }, { immediate: true })
 
+/** 进入后端会话且无消息时拉取历史 */
+watch(chatId, (id) => {
+  if (id && isBackendSessionId(id) && getMessages(id).length === 0) {
+    loadSessionMessages(id).catch(() => {})
+  }
+})
+
 onMounted(() => {
   const id = chatId.value
   if (id) {
@@ -497,11 +510,17 @@ onMounted(() => {
         const title = getWithTitle(id) ?? '会话'
         ensureChat(id, title)
       }
+      // 若为后端会话 id 且当前无消息，从 API 拉取历史（可选、静默失败）
+      if (isBackendSessionId(id) && getMessages(id).length === 0) {
+        loadSessionMessages(id).catch(() => {})
+      }
     }
   } else {
     const app = route.query.app as 'contacts' | 'bots' | undefined
     if (app === 'contacts' || app === 'bots') openPanel(app)
   }
+  // 拉取标准化会话列表并合并（当前后端不支持时静默跳过）
+  loadSessions().catch(() => {})
   if (MOCK_SESSION_LIST_ENABLED) seedMockMessages(getMessages, setMessages)
 })
 

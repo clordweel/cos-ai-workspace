@@ -85,6 +85,11 @@ export function useChatSessions() {
     chats.value = chats.value.map((c) => (c.id === id ? { ...c, updatedAt: now } : c))
   }
 
+  /** 设置某会话的 updatedAt（用于从 API 拉取会话列表后保持正确排序） */
+  const setChatUpdatedAt = (id: string, updatedAt: number) => {
+    chats.value = chats.value.map((c) => (c.id === id ? { ...c, updatedAt } : c))
+  }
+
   const getConversationId = (chatId: string) => conversationIds.value[chatId]
   const setConversationId = (chatId: string, cid: string | undefined) => {
     conversationIds.value = { ...conversationIds.value, [chatId]: cid }
@@ -139,6 +144,7 @@ export function useChatSessions() {
     updateLastMessage,
     ensureChat,
     touchChatUpdatedAt,
+    setChatUpdatedAt,
     getConversationId,
     setConversationId,
     createNewChat,

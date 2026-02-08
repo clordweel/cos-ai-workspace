@@ -1,16 +1,18 @@
 # AI 工作台中间层
 
 - **Fastify**：HTTP + SSE，分层结构便于业务扩展
-- **Dify**：使用官方 [dify-client](https://www.npmjs.com/package/dify-client)（ChatClient）做流式对话
-- **职责**：Dify 流式代理、cos/ERPNext 编排、写入前确认与权限校验
+- **聊天后端适配器**：会话/消息标准化，可插拔后端（默认 **mock** 用于功能调试；可扩展 dify、zulip、matrix 等）
+- **职责**：流式对话代理、cos/ERPNext 编排、写入前确认与权限校验
 
 ## 目录结构
 
-- `src/config.js` — 环境与常量（port、dify、cos）
+- `src/config.js` — 环境与常量（port、chat.provider、dify、cos）
+- `src/adapters/` — 聊天后端适配器（types、index、mock）
 - `src/lib/` — 工具（如 thinkingParser）
-- `src/services/` — 业务逻辑（difyStream、cosClient、exportMarkdown）
+- `src/services/` — 业务逻辑（cosClient、exportMarkdown 等）
 - `src/routes/` — 路由（health、chat、material）
 - `src/index.js` — 入口：挂载路由、监听端口、优雅退出
+- `test/` — 自动化测试（适配器与会话 API）
 
 ## 环境变量
 
@@ -19,9 +21,10 @@
 | 变量 | 说明 |
 |------|------|
 | `PORT` | 服务端口，默认 3000 |
+| `CHAT_PROVIDER` | 聊天后端适配器：**mock**（默认，功能调试）\| dify \| zulip \| matrix |
 | `SHUTDOWN_TIMEOUT_MS` | 优雅退出最大等待时间（毫秒），默认 15000 |
-| `DIFY_API_BASE` | Dify API 根地址（如 `https://api.dify.ai/v1`） |
-| `DIFY_API_KEY` | Dify 应用 API Key（必填，否则流式接口返回 502） |
+| `DIFY_API_BASE` | Dify API 根地址（接入 Dify 适配器时使用） |
+| `DIFY_API_KEY` | Dify 应用 API Key（接入 Dify 适配器时使用） |
 | **ERPNext 业务相关** | |
 | `COS_ERP_BASE` | cos/ERPNext API 根地址（如 `https://erp.example.com/api`） |
 | `COS_ERP_API_KEY` | 调用 cos 时的 Bearer Token（可选，按 Frappe/cos 约定） |
@@ -58,3 +61,13 @@ pnpm run dev
 - `POST /api/material/confirm` — 确认创建物料（Body: `draft_id`, `confirmed_by`），转发至 cos `create_from_draft`
 
 详见项目根目录 `docs/FRONTEND_API_REQUIREMENTS.md`、`docs/STREAM_AND_SAFETY.md`、`docs/API_SPEC.md`。
+
+## 测试
+
+会话适配器与聊天路由的自动化测试（依赖 Mock 适配器）：
+
+```bash
+pnpm run test
+```
+
+测试会设置 `CHAT_PROVIDER=mock` 并执行 `test/adapters/*.test.js`、`test/routes/chat.test.js`。新增适配器或修改会话 API 时请保持或补充用例。

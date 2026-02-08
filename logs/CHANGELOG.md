@@ -6,6 +6,22 @@
 
 ## 2026-02-08
 
+### 适配器：移除 Dify 实现、默认 Mock、自动化测试
+
+- **保留适配器模式**：`adapters/types.js`、`adapters/index.js` 与路由的适配器驱动逻辑不变。
+- **移除 Dify 适配器实现**：删除 `adapters/dify.js`，不再注册 `dify` provider；`POST /api/chat/stream` 仅通过适配器处理，无 Dify 直连回退。
+- **默认 Mock 适配器**：新增 `adapters/mock.js`，实现流式发送（模拟逐字回复）、listSessions、listMessages，无外部依赖；`config.chat.provider` 默认改为 `mock`，便于功能调试。
+- **自动化测试**：新增 `test/adapters/mock.test.js`、`test/adapters/getAdapter.test.js`、`test/routes/chat.test.js`，使用 Node 内置 `node:test`；`pnpm run test` 以 `CHAT_PROVIDER=mock` 运行，覆盖 Mock 适配器能力与 GET /api/sessions、GET /api/sessions/:id/messages、POST /api/chat/stream、export-markdown。
+- **文档**：middleware README 补充 CHAT_PROVIDER、adapters、测试说明；.env.example 默认 mock；DIFY_ADAPTER_ACCEPTANCE 注明当前无 Dify 适配器、供后续重新接入时验收。
+
+### 会话消息标准化与 Dify 适配器（多后端扩展）
+
+- **标准化模型与适配器接口**：中间层新增 `adapters/types.js`（NormalizedSession、NormalizedMessage、ChatBackendAdapter 契约）、`adapters/index.js`（getChatAdapter、按 config.chat.provider 选择适配器）。
+- **Dify 适配器**：`adapters/dify.js` 实现流式发送（复用 difyStream.runStreamWithParams）、GET 会话列表（Dify /conversations）、GET 会话历史（Dify /messages），并映射为统一模型；`services/difyStream.js` 抽离 `runStreamWithParams`/`consumeStream` 供适配器与原有路由共用。
+- **配置与路由**：`config.chat.provider`（默认 `dify`，可选 `CHAT_PROVIDER`）；`POST /api/chat/stream` 改为适配器驱动（有适配器则调用 adapter.streamMessage，否则回退到原 runStream）；新增 `GET /api/sessions`、`GET /api/sessions/:id/messages`（501 当后端不支持）。
+- **前端**：`useChatSessions` 增加 `setChatUpdatedAt`；新增 `useChatSessionsApi`（loadSessions、loadSessionMessages），拉取后合并到现有会话状态；会话页进入时拉取会话列表、进入后端会话 id（UUID）且无消息时拉取历史，均静默降级。
+- **文档**：`.env.example` 增加 `CHAT_PROVIDER` 说明；可行性见 `docs/SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md`。
+
 ### 中间层：彻底解决 3000 端口断联后无法复用
 
 - **listen 启用 reuseAddress**：`app.listen()` 增加 `reuseAddress: true`，使端口在进程退出后（含 TIME_WAIT）可被快速复用，减少「Address already in use」。
