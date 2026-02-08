@@ -1,7 +1,14 @@
 <template>
-  <!-- 用户：气泡容器，无工具栏 -->
-  <div v-if="message.role === 'user'" class="max-w-[85%] rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
-    <p class="whitespace-pre-wrap break-words">{{ message.content }}</p>
+  <!-- 用户：气泡容器 + 发送状态 -->
+  <div v-if="message.role === 'user'" class="max-w-[85%] flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
+    <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+    <span v-if="userReceiptStatus" class="shrink-0 self-center" :title="userReceiptStatusLabel" aria-hidden>
+      <Clock v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-pulse" />
+      <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
+      <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
+      <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
+      <CheckCheck v-else class="h-3.5 w-3.5 text-primary-500 dark:text-primary-400" />
+    </span>
   </div>
   <!-- 左侧消息：标准宽度容器，保证短消息时工具栏与头像右对齐一致 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-sm text-zinc-800 dark:text-zinc-200">
@@ -48,11 +55,22 @@
       <template v-else>{{ message.content }}</template>
       <span v-if="streaming" class="streaming-cursor bg-primary-500 dark:bg-primary-400 ml-0.5 align-middle" aria-hidden />
     </p>
+    <!-- 多人参与：点赞/反对、编辑信息 -->
+    <div v-if="likeReactions.length > 0 || message.editedAt" class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-zinc-500 dark:text-zinc-400">
+      <span v-if="likeReactions.length > 0" class="inline-flex items-center gap-1">
+        <ThumbsUp class="h-3 w-3 shrink-0" stroke-width="2" />
+        <span>{{ likeReactionsLabel }}</span>
+      </span>
+      <span v-if="message.editedAt" class="inline-flex items-center gap-1" :title="editedByLabel">
+        已编辑<template v-if="message.editedBy">（{{ message.editedBy.label || (message.editedBy.type === 'bot' ? '机器人' : '用户') }}）</template>
+      </span>
+    </div>
     <!-- 消息工具栏：左侧按钮 + 右侧堆叠来源头像 -->
     <div class="mt-1.5 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-500">
       <button
         type="button"
         class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        :class="userHasLiked ? 'text-primary-500 dark:text-primary-400' : ''"
         aria-label="赞同"
         @click="onLike"
       >
@@ -141,7 +159,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MessageSource } from '~/composables/useChatSessions'
+import type { MessageReaction, MessageSource } from '~/composables/useChatSessions'
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -149,15 +167,27 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { Bookmark, Bot, Cog, Copy, FileDown, MoreVertical, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, User, Volume2 } from 'lucide-vue-next'
+import { Bookmark, Bot, Check, CheckCheck, Clock, Cog, Copy, FileDown, MoreVertical, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, User, Volume2, XCircle } from 'lucide-vue-next'
 
 const THINKING_PLACEHOLDER = '思考中…'
 
 const props = defineProps<{
-  message: { role: string; content: string; thinking?: string; sources?: MessageSource[]; contentChunks?: string[] }
+  message: {
+    role: string
+    content: string
+    thinking?: string
+    sources?: MessageSource[]
+    contentChunks?: string[]
+    reactions?: MessageReaction[]
+    editedAt?: number
+    editedBy?: MessageSource
+    receiptStatus?: import('~/composables/useChatSessions').MessageReceiptStatus
+  }
   streaming?: boolean
+  /** 当前用户标识，用于高亮“我”的点赞（可选） */
+  currentUserLabel?: string
 }>()
-const emit = defineEmits<{ retry: []; favorite: []; exportMarkdown: []; listenReply: [] }>()
+const emit = defineEmits<{ retry: []; favorite: []; exportMarkdown: []; listenReply: []; reaction: [type: 'like' | 'dislike'] }>()
 
 const thinkingOpen = ref(true)
 
@@ -172,13 +202,53 @@ const isThinkingPlaceholder = computed(
   () => props.message.role === 'assistant' && props.message.content === THINKING_PLACEHOLDER
 )
 
+const likeReactions = computed(() => (props.message.reactions ?? []).filter((r) => r.type === 'like'))
+const likeReactionsLabel = computed(() => {
+  const labels = likeReactions.value.map((r) => r.by.label || (r.by.type === 'bot' ? '机器人' : '用户'))
+  if (labels.length === 0) return ''
+  if (labels.length <= 2) return `${labels.join('、')} 觉得很赞`
+  return `${labels.slice(0, 2).join('、')} 等 ${labels.length} 人觉得很赞`
+})
+const editedByLabel = computed(() => {
+  const e = props.message.editedBy
+  if (!e) return ''
+  return e.label || (e.type === 'bot' ? '机器人' : '用户')
+})
+const userHasLiked = computed(() =>
+  props.currentUserLabel
+    ? likeReactions.value.some((r) => r.by.label === props.currentUserLabel)
+    : false,
+)
+
+const userReceiptStatus = computed(() => {
+  if (props.message.role !== 'user') return null
+  const s = props.message.receiptStatus
+  return s ?? 'sent'
+})
+const userReceiptStatusLabel = computed(() => {
+  const s = userReceiptStatus.value
+  if (!s) return ''
+  const map: Record<string, string> = {
+    sending: '发送中',
+    sent: '已发送',
+    delivered: '已送达',
+    read: '已读',
+    failed: '发送失败',
+  }
+  return map[s] ?? ''
+})
+
 function sourceLabel(src: MessageSource) {
   if (src.label) return src.label
   return src.type === 'bot' ? '机器人' : src.type === 'other_user' ? '其它用户' : '系统'
 }
 
-function onLike() {}
-function onDislike() {}
+function onLike() {
+  emit('reaction', 'like')
+}
+function onDislike() {
+  emit('reaction', 'dislike')
+}
 function onCopy() {
   if (props.message.content) {
     navigator.clipboard.writeText(props.message.content)

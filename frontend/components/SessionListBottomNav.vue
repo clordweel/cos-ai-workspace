@@ -28,6 +28,17 @@
       ref="tab2Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
+      :class="modelValue === 'pending' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      aria-label="待处理（未读等状态）"
+      @click="emit('update:modelValue', 'pending')"
+    >
+      <Inbox class="h-4 w-4 shrink-0" :class="modelValue === 'pending' ? 'drop-shadow-sm' : ''" />
+      <span v-if="pendingCount > 0" class="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">{{ pendingCount > 99 ? '99+' : pendingCount }}</span>
+    </button>
+    <button
+      ref="tab3Ref"
+      type="button"
+      class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
       :class="modelValue === 'settings' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="会话设置"
       @click="emit('update:modelValue', 'settings')"
@@ -46,27 +57,31 @@
 </template>
 
 <script setup lang="ts">
-import { Archive, MessageCircle, Settings } from 'lucide-vue-next'
+import { Archive, Inbox, MessageCircle, Settings } from 'lucide-vue-next'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{
-  modelValue: 'active' | 'favorites' | 'settings'
+  modelValue: 'active' | 'favorites' | 'pending' | 'settings'
+  /** 待处理（非已读）消息总数，用于角标 */
+  pendingCount?: number
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [value: 'active' | 'favorites' | 'settings']
+  'update:modelValue': [value: 'active' | 'favorites' | 'pending' | 'settings']
 }>()
 
 const navRef = ref<HTMLElement | null>(null)
 const tab0Ref = ref<HTMLElement | null>(null)
 const tab1Ref = ref<HTMLElement | null>(null)
 const tab2Ref = ref<HTMLElement | null>(null)
+const tab3Ref = ref<HTMLElement | null>(null)
+const pendingCount = computed(() => props.pendingCount ?? 0)
 const indicatorLeft = ref(14)
 const indicatorReady = ref(false)
 const isTransitioning = ref(false)
 
 const tabIndex = computed(() =>
-  props.modelValue === 'active' ? 0 : props.modelValue === 'favorites' ? 1 : 2
+  props.modelValue === 'active' ? 0 : props.modelValue === 'favorites' ? 1 : props.modelValue === 'pending' ? 2 : 3
 )
 
 const INDICATOR_TRANSITION_MS = 250
@@ -87,7 +102,7 @@ function updateIndicatorPosition(options?: {
 }) {
   nextTick(() => {
     const nav = navRef.value
-    const tabs = [tab0Ref.value, tab1Ref.value, tab2Ref.value]
+    const tabs = [tab0Ref.value, tab1Ref.value, tab2Ref.value, tab3Ref.value]
     if (!nav || tabs.some((t) => !t)) return
 
     const phase = options?.phase

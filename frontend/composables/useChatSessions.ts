@@ -3,14 +3,41 @@ import { ref } from 'vue'
 /** 左侧消息来源类型：其它用户、机器人、系统或外部程序 */
 export type MessageSourceType = 'other_user' | 'bot' | 'system'
 export type MessageSource = { type: MessageSourceType; label?: string }
+
+/** 消息互动：点赞/反对，支持多人 */
+export type MessageReactionType = 'like' | 'dislike'
+export type MessageReaction = { type: MessageReactionType; by: MessageSource }
+
+/**
+ * 消息接收/送达状态（已读以外的状态在此管理）
+ * - 我发的消息：sending → sent → delivered → read；失败为 failed
+ * - 收到的消息：unread → read（未设则视为 unread）
+ */
+export type MessageReceiptStatus =
+  | 'sending'   // 发送中
+  | 'sent'     // 已发送
+  | 'delivered' // 已送达
+  | 'read'     // 已读
+  | 'unread'   // 未读（仅收到的消息）
+  | 'failed'   // 发送失败
+
 export type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
   thinking?: string
-  /** 左侧消息可标注多种来源，头像堆叠展示 */
+  /** 左侧消息可标注多种来源（含多机器人协作），头像堆叠展示 */
   sources?: MessageSource[]
   /** 流式输出时按片段推送，用于渐显动画；非流式时由 content 展示 */
   contentChunks?: string[]
+  /** 多人参与：点赞/反对列表 */
+  reactions?: MessageReaction[]
+  /** 有编辑权限者的修改 */
+  editedAt?: number
+  editedBy?: MessageSource
+  /** 接收/送达状态；未设时：我发的视为 sent，收到的视为 unread */
+  receiptStatus?: MessageReceiptStatus
+  /** 可选：消息唯一 id，便于更新状态 */
+  id?: string
 }
 
 const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([
@@ -69,6 +96,41 @@ export function useChatSessions() {
     return id
   }
 
+  /** 更新某条消息的接收状态 */
+  const updateMessageReceipt = (chatId: string, index: number, status: MessageReceiptStatus) => {
+    const list = getMessages(chatId)
+    if (index < 0 || index >= list.length) return
+    const next = [...list]
+    next[index] = { ...next[index]!, receiptStatus: status }
+    setMessages(chatId, next)
+  }
+
+  /** 将会话内所有收到的消息标记为已读 */
+  const markChatAsRead = (chatId: string) => {
+    const list = getMessages(chatId)
+    let changed = false
+    const next = list.map((m) => {
+      if (m.role === 'assistant' && m.receiptStatus !== 'read') {
+        changed = true
+        return { ...m, receiptStatus: 'read' as const }
+      }
+      return m
+    })
+    if (changed) setMessages(chatId, next)
+  }
+
+  /** 是否视为「非已读」：未读、发送中、已发/已送达、失败（我发的消息未设状态时视为已读） */
+  const isNonReadStatus = (msg: ChatMessage): boolean => {
+    const s = msg.receiptStatus
+    if (msg.role === 'user') return s === 'sending' || s === 'sent' || s === 'delivered' || s === 'failed'
+    return s === 'unread' || s === undefined
+  }
+
+  /** 某会话下非已读消息条数 */
+  const getNonReadCount = (chatId: string): number => {
+    return getMessages(chatId).filter(isNonReadStatus).length
+  }
+
   return {
     chats,
     getMessages,
@@ -80,5 +142,9 @@ export function useChatSessions() {
     getConversationId,
     setConversationId,
     createNewChat,
+    updateMessageReceipt,
+    markChatAsRead,
+    isNonReadStatus,
+    getNonReadCount,
   }
 }

@@ -52,6 +52,41 @@
                 <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">暂无收藏或归档会话</p>
               </div>
             </template>
+            <template v-else-if="listViewTab === 'pending'">
+              <div class="min-h-full flex flex-col transition-[padding] duration-200" :style="{ paddingTop: listPaddingTop }">
+                <section class="border-b border-zinc-100 dark:border-zinc-700/80 px-3 py-2">
+                  <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">未读、发送中、已送达等（非已读）</p>
+                </section>
+                <section v-if="pendingChats.length > 0" class="flex-1 min-h-0 overflow-y-auto">
+                  <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
+                    <li
+                      v-for="c in pendingChats"
+                      :key="c.id"
+                      role="button"
+                      tabindex="0"
+                      class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/40 rounded-md"
+                      @click="onSessionItemClick(c.id)"
+                      @keydown.enter.prevent="onSessionItemClick(c.id)"
+                    >
+                      <SessionListThumb :type="c.type === 'group' ? 'group' : 'private'" :participants="c.participants ?? [{ name: c.title }]" />
+                      <div class="min-w-0 flex-1">
+                        <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
+                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ getChatDateLabel(c.id) }}</p>
+                      </div>
+                      <span class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums">
+                        {{ getNonReadCount(c.id) }}
+                      </span>
+                      <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
+                    </li>
+                  </ul>
+                </section>
+                <div v-else class="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+                  <Inbox class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+                  <p class="text-sm text-zinc-500 dark:text-zinc-400">暂无待处理消息</p>
+                  <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">已读以外的消息会出现在这里</p>
+                </div>
+              </div>
+            </template>
             <template v-else-if="listViewTab === 'settings'">
               <div class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center" :style="{ paddingTop: listPaddingTop }">
                 <Settings class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
@@ -79,7 +114,7 @@
             </div>
           </Transition>
           <SessionListHeader class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md" :style="{ top: toolbarTop }" :app-drawer-open="showAppList" :search-bar-open="showSearchBar" v-model:search-query="searchQuery" @new-chat="startNewChat" @search="toggleSearchBar" @app="toggleAppList" />
-          <SessionListBottomNav v-model="listViewTab" />
+          <SessionListBottomNav v-model="listViewTab" :pending-count="totalPendingCount" />
         </div>
       </aside>
       <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
@@ -193,7 +228,7 @@
 import type { ChatMessage } from '~/composables/useChatSessions'
 import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, Music, Pin, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, Inbox, LogIn, Music, Pin, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -211,7 +246,7 @@ const showAppList = ref(false)
 const showSearchBar = ref(false)
 function toggleAppList() { showAppList.value = !showAppList.value }
 function toggleSearchBar() { showSearchBar.value = !showSearchBar.value }
-const listViewTab = ref<'active' | 'favorites' | 'settings'>('active')
+const listViewTab = ref<'active' | 'favorites' | 'pending' | 'settings'>('active')
 const pinnedCollapsed = ref(false)
 const drawerApps = [
   { id: 'home', title: '导航', view: 'home' as const, icon: Home },
@@ -235,7 +270,6 @@ const appDrawerHeightRem = 16
 const toolbarTop = computed(() => (showAppList.value ? `${appDrawerHeightRem}rem` : '0'))
 const listPaddingTop = computed(() => `${showAppList.value ? appDrawerHeightRem + 3 : 3}rem`)
 function onSessionItemClick(id: string) {
-  if (isMockSession(id)) return
   goToChat(id)
 }
 const streamAbortRef = ref<AbortController | null>(null)
@@ -259,6 +293,8 @@ const {
   ensureChat,
   createNewChat,
   getConversationId,
+  getNonReadCount,
+  markChatAsRead,
 } = useChatSessions()
 
 /** 顶栏三点菜单：导出 / 转发等（占位，暂不实现具体功能） */
@@ -356,47 +392,24 @@ const filteredChats = computed(() => {
   })
 })
 
-/** 调试用：mock 会话列表，仿真一对一私聊与一对多群组。设为 false 可关闭。 */
-const MOCK_SESSION_LIST_DEBUG = true
-type MockSessionType = 'private' | 'group'
-type MockParticipant = { name: string; avatar?: string }
-interface MockSessionItem {
-  id: string
-  title: string
-  type: MockSessionType
-  updatedAt: number
-  participants?: MockParticipant[]
-}
-/** 一对一私聊：对一个用户 或 对一个机器人 */
-const mockPrivateSessions: MockSessionItem[] = [
-  { id: 'mock-private-zhangsan', title: '张三', type: 'private', updatedAt: Date.now() - 2 * 60 * 60 * 1000, participants: [{ name: '张三' }] },
-  { id: 'mock-private-lisi', title: '李四', type: 'private', updatedAt: Date.now() - 5 * 60 * 60 * 1000, participants: [{ name: '李四' }] },
-  { id: 'mock-private-wangwu', title: '王五', type: 'private', updatedAt: Date.now() - 24 * 60 * 60 * 1000, participants: [{ name: '王五' }] },
-  { id: 'mock-private-assistant', title: 'AI 助手', type: 'private', updatedAt: Date.now() - 30 * 60 * 1000, participants: [{ name: 'AI 助手' }] },
-  { id: 'mock-private-material', title: '物料助手', type: 'private', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000, participants: [{ name: '物料助手' }] },
-  { id: 'mock-private-order', title: '订单助手', type: 'private', updatedAt: Date.now() - 3 * 24 * 60 * 60 * 1000, participants: [{ name: '订单助手' }] },
-]
-/** 一对多群组：对一个以上用户 或 机器人 */
-const mockGroupSessions: MockSessionItem[] = [
-  { id: 'mock-group-product', title: '产品组 (3人)', type: 'group', updatedAt: Date.now() - 15 * 60 * 1000, participants: [{ name: '小甲' }, { name: '小乙' }, { name: '小丙' }] },
-  { id: 'mock-group-tech', title: '技术讨论 (5人)', type: 'group', updatedAt: Date.now() - 1 * 60 * 60 * 1000, participants: [{ name: '小明' }, { name: '小红' }, { name: '小刚' }, { name: '小丽' }] },
-  { id: 'mock-group-design', title: '设计评审 (4人)', type: 'group', updatedAt: Date.now() - 6 * 60 * 60 * 1000, participants: [{ name: '设计A' }, { name: '设计B' }, { name: '设计C' }, { name: '设计D' }] },
-  { id: 'mock-group-customer', title: '客户对接 (6人)', type: 'group', updatedAt: Date.now() - 24 * 60 * 60 * 1000, participants: [{ name: '客户甲' }, { name: '客户乙' }, { name: '客户丙' }, { name: '客户丁' }] },
-  { id: 'mock-group-ai', title: 'AI 协作群 (4人)', type: 'group', updatedAt: Date.now() - 2 * 24 * 60 * 60 * 1000, participants: [{ name: '助手' }, { name: '张三' }, { name: '李四' }, { name: '王五' }] },
-]
-const mockSessionList: MockSessionItem[] = [...mockPrivateSessions, ...mockGroupSessions]
-const mockSessionById = (id: string): MockSessionItem | undefined =>
-  mockSessionList.find((s) => s.id === id)
+import type { MockSessionItem } from '~/mock'
+import {
+  MOCK_SESSION_LIST_ENABLED,
+  getMockSessionById,
+  getMockSessionList,
+  isMockSession,
+  seedMockMessages,
+} from '~/composables/useMockSessions'
 
-type DisplayChatItem = { id: string; title: string; type?: MockSessionType; updatedAt?: number; participants?: MockParticipant[] }
+type DisplayChatItem = { id: string; title: string; type?: MockSessionItem['type']; updatedAt?: number; participants?: MockSessionItem['participants'] }
 const displayChats = computed<DisplayChatItem[]>(() => {
-  if (!MOCK_SESSION_LIST_DEBUG) return filteredChats.value.map((c) => ({ id: c.id, title: c.title }))
+  if (!MOCK_SESSION_LIST_ENABLED) return filteredChats.value.map((c) => ({ id: c.id, title: c.title }))
   const real = filteredChats.value.map((c) => ({
     id: c.id,
     title: c.title,
     updatedAt: c.updatedAt,
   }))
-  return [...mockSessionList, ...real]
+  return [...getMockSessionList(), ...real]
 })
 
 /** 置顶会话 id 列表（可后续从设置/接口同步） */
@@ -416,6 +429,14 @@ const activeChats = computed<DisplayChatItem[]>(() => {
   return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
 })
 
+/** 待处理：存在非已读消息的会话（未读、发送中、已送达等） */
+const pendingChats = computed<DisplayChatItem[]>(() =>
+  displayChats.value.filter((c) => getNonReadCount(c.id) > 0),
+)
+const totalPendingCount = computed(() =>
+  displayChats.value.reduce((sum, c) => sum + getNonReadCount(c.id), 0),
+)
+
 function isMockSession(id: string) {
   return id.startsWith('mock-')
 }
@@ -430,7 +451,7 @@ function formatChatDate(ts: number): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
 function getChatDateLabel(id: string): string {
-  const mock = mockSessionById(id)
+  const mock = getMockSessionById(id)
   if (mock) return formatChatDate(mock.updatedAt)
   const c = chats.value.find((x) => x.id === id)
   return c?.updatedAt ? formatChatDate(c.updatedAt) : ''
@@ -438,6 +459,8 @@ function getChatDateLabel(id: string): string {
 
 const chatTitle = computed(() => {
   if (!chatId.value) return ''
+  const mock = getMockSessionById(chatId.value)
+  if (mock) return mock.title
   const c = chats.value.find((x) => x.id === chatId.value)
   return c?.title ?? '会话'
 })
@@ -466,19 +489,26 @@ const { openPanel, openNavPage, currentView } = useAppView()
 /** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
 const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
 
+/** 进入会话时将该会话内收到的消息标记为已读 */
+watch(chatId, (id) => {
+  if (id) markChatAsRead(id)
+}, { immediate: true })
 
 onMounted(() => {
   const id = chatId.value
   if (id) {
-    const c = chats.value.find((x) => x.id === id)
-    if (!c) {
-      const title = getWithTitle(id) ?? '会话'
-      ensureChat(id, title)
+    if (!isMockSession(id)) {
+      const c = chats.value.find((x) => x.id === id)
+      if (!c) {
+        const title = getWithTitle(id) ?? '会话'
+        ensureChat(id, title)
+      }
     }
   } else {
     const app = route.query.app as 'contacts' | 'bots' | undefined
     if (app === 'contacts' || app === 'bots') openPanel(app)
   }
+  if (MOCK_SESSION_LIST_ENABLED) seedMockMessages(getMessages, setMessages)
 })
 
 watch(() => route.query.app, (app) => {

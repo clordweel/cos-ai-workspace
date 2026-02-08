@@ -21,7 +21,8 @@
         <span
           v-for="(p, i) in gridSlots"
           :key="i"
-          class="flex items-center justify-center bg-amber-100 dark:bg-amber-900/40 text-[10px] font-medium"
+          class="flex items-center justify-center text-[10px] font-medium"
+          :class="p?.kind === 'bot' ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400' : 'bg-amber-100 dark:bg-amber-900/40'"
         >
           <template v-if="p">
             <img
@@ -30,6 +31,7 @@
               :alt="p.name"
               class="h-full w-full object-cover"
             />
+            <Bot v-else-if="p.kind === 'bot'" class="h-2.5 w-2.5" />
             <span v-else>{{ (p.name || '').trim().charAt(0) || '?' }}</span>
           </template>
         </span>
@@ -39,7 +41,10 @@
 </template>
 
 <script setup lang="ts">
-export type SessionParticipant = { name: string; avatar?: string }
+import { Bot } from 'lucide-vue-next'
+
+/** 与 MockParticipant 对齐：用户或 @ 拉入的机器人 */
+export type SessionParticipant = { name: string; avatar?: string; kind?: 'user' | 'bot' }
 
 const props = withDefaults(
   defineProps<{
