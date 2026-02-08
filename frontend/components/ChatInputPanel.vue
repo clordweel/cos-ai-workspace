@@ -5,7 +5,7 @@
       aria-hidden
     />
     <div class="shrink-0 p-3 pt-0 bg-white dark:bg-zinc-800">
-      <div class="rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm overflow-hidden">
+      <div class="chat-input-card relative rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm overflow-visible">
         <div
           v-if="streaming"
           class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-700"
@@ -38,31 +38,33 @@
             </button>
           </div>
         </div>
-        <form class="flex flex-col" @submit.prevent="$emit('submit')">
+        <!-- 顶部外侧悬浮把手：不占编辑框空间 -->
+        <button
+          type="button"
+          class="chat-input-resize-handle absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-full cursor-n-resize items-center justify-center rounded-t-md rounded-b-none border border-zinc-200 dark:border-zinc-600 border-b-0 bg-white dark:bg-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-600 transition-colors py-px px-3 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          aria-label="拖拽调整输入框高度"
+          @mousedown.prevent="onResizeStart"
+        >
+          <GripHorizontal class="h-2 w-2" />
+        </button>
+        <form class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="$emit('submit')">
           <div
             ref="textareaWrapRef"
             class="chat-input-inner-scroll overflow-y-auto overflow-x-hidden"
             :style="{ height: `${editHeightPx}px` }"
           >
             <textarea
+              ref="textareaRef"
               :value="modelValue"
               rows="2"
               placeholder="说点什么？"
               class="chat-input-textarea min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
               :disabled="streaming"
-              @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+              @input="onTextareaInput"
               @keydown.enter.exact.prevent="$emit('submit')"
               @keydown.enter.shift.exact.prevent="$emit('update:modelValue', modelValue + '\n')"
             />
           </div>
-          <button
-            type="button"
-            class="chat-input-resize-handle flex w-full shrink-0 cursor-ns-resize items-center justify-center border-0 bg-transparent py-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
-            aria-label="拖拽调整输入框高度"
-            @mousedown.prevent="onResizeStart"
-          >
-            <GripHorizontal class="h-4 w-4" />
-          </button>
           <div class="flex items-center justify-between gap-2 px-3 pb-2 pt-0">
             <div class="flex items-center gap-2">
               <button
@@ -136,13 +138,13 @@
 
 <script setup lang="ts">
 import { ChevronDown, Globe, GripHorizontal, Image as ImageIcon, Infinity, Loader2, Send, Square, X } from 'lucide-vue-next'
-import { ref, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   modelValue: string
   streaming: boolean
 }>()
-defineEmits<{
+const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
   (e: 'submit'): void
   (e: 'stop'): void
@@ -155,7 +157,29 @@ const MAX_EDIT_HEIGHT = 280
 const DEFAULT_EDIT_HEIGHT = 72
 
 const textareaWrapRef = ref<HTMLElement | null>(null)
+const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const editHeightPx = ref(DEFAULT_EDIT_HEIGHT)
+
+function adjustTextareaHeight() {
+  nextTick(() => {
+    const el = textareaRef.value
+    if (!el) return
+    el.style.overflow = 'hidden'
+    el.style.height = '0'
+    const h = Math.max(MIN_EDIT_HEIGHT, el.scrollHeight)
+    el.style.height = `${h}px`
+    el.style.overflow = 'hidden'
+  })
+}
+
+function onTextareaInput(e: Event) {
+  const value = (e.target as HTMLTextAreaElement).value
+  emit('update:modelValue', value)
+  adjustTextareaHeight()
+}
+
+watch(() => props.modelValue, adjustTextareaHeight)
+onMounted(adjustTextareaHeight)
 
 let resizeStartY = 0
 let resizeStartHeight = 0
@@ -168,7 +192,7 @@ function onResizeStart(e: MouseEvent) {
 }
 
 function onResizeMove(e: MouseEvent) {
-  const delta = e.clientY - resizeStartY
+  const delta = resizeStartY - e.clientY
   const next = Math.min(MAX_EDIT_HEIGHT, Math.max(MIN_EDIT_HEIGHT, resizeStartHeight + delta))
   editHeightPx.value = next
 }
