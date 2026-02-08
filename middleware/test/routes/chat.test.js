@@ -4,7 +4,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
 import Fastify from 'fastify';
-import { chatRoutes } from '../../src/routes/chat.js';
+import { chatRoutes } from '../../dist/src/routes/chat.js';
 
 describe('Chat routes (mock adapter)', () => {
   let app;

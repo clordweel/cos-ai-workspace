@@ -17,7 +17,7 @@ import { diagnosticsRoutes } from './routes/diagnostics.js';
 const isDev = process.env.NODE_ENV === 'development';
 const app = Fastify({
   logger: {
-    level: process.env.LOG_LEVEL || (isDev ? 'debug' : 'info'),
+    level: (process.env.LOG_LEVEL || (isDev ? 'debug' : 'info')) as 'debug' | 'info' | 'warn' | 'error',
   },
 });
 await app.register(cors, { origin: true, credentials: true });
@@ -32,8 +32,8 @@ await app.register(diagnosticsRoutes);
 await app.listen({
   port: config.port,
   host: '0.0.0.0',
-  reuseAddress: true, // 终端断联等场景下端口可被快速复用，避免 TIME_WAIT 导致启动失败
-});
+  reuseAddress: true,
+} as import('fastify').FastifyListenOptions & { reuseAddress?: boolean });
 console.log(`Middleware listening on http://0.0.0.0:${config.port}`);
 
 gracefulShutdown(app.server, {

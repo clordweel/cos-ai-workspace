@@ -6,13 +6,15 @@
 
 ## 目录结构
 
-- `src/config.js` — 环境与常量（port、chat.provider、dify、cos）
+- **TypeScript 源码**（`src/**/*.ts`）：编译到 `dist/`，运行与测试使用编译产物。
+- `src/config.ts` — 环境与常量（port、chat.provider、dify、cos）
 - `src/adapters/` — 聊天后端适配器（types、index、mock）
 - `src/lib/` — 工具（如 thinkingParser）
 - `src/services/` — 业务逻辑（cosClient、exportMarkdown 等）
 - `src/routes/` — 路由（health、chat、material）
-- `src/index.js` — 入口：挂载路由、监听端口、优雅退出
-- `test/` — 自动化测试（适配器与会话 API）
+- `src/index.ts` — 入口：挂载路由、监听端口、优雅退出
+- `scripts/release-port.ts` — 开发前释放端口（由 predev 调用）
+- `test/` — 自动化测试（适配器与会话 API，引用 `dist/`）
 
 ## 环境变量
 
@@ -35,8 +37,10 @@
 
 ```bash
 pnpm install
-pnpm run dev
+pnpm run dev   # 使用 tsx watch 直接运行 src/index.ts，无需先 build
 ```
+
+- **生产/测试**：`pnpm run build` 编译 TypeScript 到 `dist/`；`pnpm start` 运行 `node dist/src/index.js`；`pnpm test` 会先 build 再运行测试（测试引用 `dist/`）。
 
 ## 调试
 
@@ -70,4 +74,4 @@ pnpm run dev
 pnpm run test
 ```
 
-测试会设置 `CHAT_PROVIDER=mock` 并执行 `test/adapters/*.test.js`、`test/routes/chat.test.js`。新增适配器或修改会话 API 时请保持或补充用例。
+测试会先执行 `pnpm run build`，再设置 `CHAT_PROVIDER=mock` 运行 `test/adapters/*.test.js`、`test/routes/chat.test.js`（用例引用 `dist/` 下的编译产物）。新增适配器或修改会话 API 时请保持或补充用例。

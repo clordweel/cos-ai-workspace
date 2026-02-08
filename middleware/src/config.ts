@@ -11,11 +11,28 @@ const cwdEnv = path.resolve(process.cwd(), '.env');
 dotenv.config({ path: cwdEnv });
 dotenv.config({ path: rootEnv });
 
-export const config = {
+export interface Config {
+  port: number;
+  shutdownTimeoutMs: number;
+  chat: { provider: string };
+  dify: { apiBase: string; apiKey: string };
+  cos: {
+    baseUrl: string;
+    apiKey: string;
+    apiSecret: string;
+    timeoutMs: number;
+  };
+  logto: {
+    endpoint: string;
+    appId: string;
+    appSecret: string;
+  };
+}
+
+export const config: Config = {
   port: Number(process.env.PORT) || 3000,
   shutdownTimeoutMs: Number(process.env.SHUTDOWN_TIMEOUT_MS) || 15_000,
 
-  /** 聊天后端：provider 决定使用哪个适配器（mock | dify | zulip | matrix） */
   chat: {
     provider: (process.env.CHAT_PROVIDER || 'mock').toLowerCase(),
   },
@@ -25,19 +42,13 @@ export const config = {
     apiKey: process.env.DIFY_API_KEY || '',
   },
 
-  /** ERPNext / cos 业务接口（物料、订单、库存、BOM 等） */
   cos: {
-    /** API 根地址，例如 https://erp.example.com/api（勿带末尾斜杠） */
     baseUrl: (process.env.COS_ERP_BASE || '').replace(/\/$/, ''),
-    /** 认证：Bearer Token 或 API Key（由 Frappe/cos 侧约定） */
     apiKey: process.env.COS_ERP_API_KEY || '',
-    /** 若使用 API Key + Secret 认证时使用（由 cos 侧约定） */
     apiSecret: process.env.COS_ERP_API_SECRET || '',
-    /** 请求超时毫秒数，默认 15000 */
     timeoutMs: Number(process.env.COS_ERP_TIMEOUT_MS) || 15_000,
   },
 
-  /** Logto 单点登录（可选） */
   logto: {
     endpoint: (process.env.LOGTO_ENDPOINT || '').replace(/\/$/, ''),
     appId: process.env.LOGTO_APP_ID || '',

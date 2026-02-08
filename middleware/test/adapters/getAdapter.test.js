@@ -7,7 +7,7 @@ import assert from 'node:assert';
 
 describe('getChatAdapter', () => {
   it('returns mock adapter when CHAT_PROVIDER is mock (default)', async () => {
-    const { getChatAdapter } = await import('../../src/adapters/index.js');
+    const { getChatAdapter } = await import('../../dist/src/adapters/index.js');
     const adapter = getChatAdapter();
     assert(adapter !== null, 'adapter should be defined when provider is mock');
     assert.strictEqual(adapter.name, 'mock');

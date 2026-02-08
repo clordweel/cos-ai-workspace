@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { createMockAdapter } from '../../src/adapters/mock.js';
+import { createMockAdapter } from '../../dist/src/adapters/mock.js';
 
 describe('Mock adapter', () => {
   it('has name mock', () => {

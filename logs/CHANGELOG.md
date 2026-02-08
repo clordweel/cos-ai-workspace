@@ -6,6 +6,14 @@
 
 ## 2026-02-08
 
+### 中间层：TypeScript 重构
+
+- **全量 TypeScript**：middleware 源码由 JavaScript 迁移为 TypeScript（`src/**/*.ts`、`scripts/release-port.ts`），新增 `tsconfig.json`（target ES2022、module NodeNext、strict）。
+- **类型与契约**：`adapters/types.ts` 定义 `NormalizedSession`、`NormalizedMessage`、`ChatBackendAdapter` 等接口；config、services、routes 补充入参与返回值类型。
+- **构建与脚本**：`pnpm run build` 输出到 `dist/`；`pnpm run dev` 使用 `tsx watch` 直接运行 `src/index.ts`；`pnpm start` 运行 `node dist/src/index.js`；`predev`/`release-port` 使用 `tsx scripts/release-port.ts`。
+- **测试**：`pnpm test` 先 build 再运行，用例改为引用 `dist/` 下编译产物；所有既有测试通过。
+- **依赖**：devDependencies 增加 `typescript`、`tsx`、`@types/node`。
+
 ### 适配器：移除 Dify 实现、默认 Mock、自动化测试
 
 - **保留适配器模式**：`adapters/types.js`、`adapters/index.js` 与路由的适配器驱动逻辑不变。

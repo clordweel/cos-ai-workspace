@@ -2,17 +2,24 @@
  * 从 Dify 流式数据中提取文本；将 <think>...</think> 与正文分离
  * 兼容大小写、可选空格、HTML 实体
  */
-export function extractText(data) {
+
+export function extractText(data: string | Record<string, unknown> | null | undefined): string {
   if (typeof data === 'string') return data;
   if (!data || typeof data !== 'object') return '';
-  return data.answer ?? data.text ?? data.delta ?? data.content ?? '';
+  const obj = data as Record<string, unknown>;
+  return (obj.answer ?? obj.text ?? obj.delta ?? obj.content ?? '') as string;
+}
+
+export interface ThinkingAndAnswer {
+  thinking: string;
+  answer: string;
 }
 
 /**
  * 仿 Gemini：分离 <think>...</think> 与 answer，分别下发 thinking / message
  */
-export function splitThinkingAndAnswer(text) {
-  const result = { thinking: '', answer: '' };
+export function splitThinkingAndAnswer(text: string): ThinkingAndAnswer {
+  const result: ThinkingAndAnswer = { thinking: '', answer: '' };
   if (typeof text !== 'string' || !text) return result;
   const normalized = text
     .replace(/&lt;/gi, '<')

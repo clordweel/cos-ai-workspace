@@ -3,25 +3,46 @@
  */
 import { config } from '../config.js';
 import { getFrappeAuthForSession } from './auth.js';
+import type { Session } from './auth.js';
 
-/** cos Base 为 <host>/api，方法路径为 /method/... */
 const COS_METHOD = '/method/cos.api.material.create_from_draft';
+
+export interface CreateFromDraftPayload {
+  draft_id: string;
+  confirmed_by: string;
+}
+
+export interface CreateFromDraftSuccess {
+  item_code?: string;
+  item_name?: string;
+  name?: string;
+}
+
+export interface CreateFromDraftError {
+  error: string;
+  message?: string;
+  exc?: string;
+}
 
 /**
  * 确认创建物料（权限校验由 cos 侧负责，中间层仅转发并带认证）
- * @param {{ draft_id: string, confirmed_by: string }} payload
- * @param {object} [session] 当前登录会话，有则用其 Frappe 认证
- * @returns {Promise<{ item_code?: string, item_name?: string, name?: string } | { error: string, exc?: string, message?: string }>}
  */
-export async function createFromDraft(payload, session) {
+export async function createFromDraft(
+  payload: CreateFromDraftPayload,
+  session: Session | null | undefined
+): Promise<CreateFromDraftSuccess | (CreateFromDraftError & { statusCode?: number })> {
   const { baseUrl, apiKey, timeoutMs } = config.cos;
   if (!baseUrl) {
     return { error: 'COS_ERP_BASE 未配置', message: '请在 .env 中设置 COS_ERP_BASE' };
   }
 
   const url = baseUrl.replace(/\/$/, '') + COS_METHOD;
-  const authHeaders = session ? getFrappeAuthForSession(session) : (apiKey ? { Authorization: `Bearer ${apiKey}` } : {});
-  const headers = {
+  const authHeaders = session
+    ? getFrappeAuthForSession(session)
+    : apiKey
+      ? { Authorization: `Bearer ${apiKey}` }
+      : {};
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...authHeaders,
   };
@@ -29,7 +50,7 @@ export async function createFromDraft(payload, session) {
   const controller = new AbortController();
   const timeoutId = timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
 
-  let res;
+  let res: Response;
   try {
     res = await fetch(url, {
       method: 'POST',
@@ -41,7 +62,7 @@ export async function createFromDraft(payload, session) {
       signal: controller.signal,
     });
   } catch (e) {
-    if (e?.name === 'AbortError') {
+    if (e instanceof Error && e?.name === 'AbortError') {
       return { error: '请求超时', message: `ERPNext 接口在 ${timeoutMs}ms 内未响应` };
     }
     throw e;
@@ -49,12 +70,13 @@ export async function createFromDraft(payload, session) {
     if (timeoutId) clearTimeout(timeoutId);
   }
 
-  const body = await res.json().catch(() => ({}));
+  const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
-    return {
-      error: body.exc || body.message || `HTTP ${res.status}`,
-      ...(body.message && { message: body.message }),
+    const err: CreateFromDraftError & { statusCode?: number } = {
+      error: (body.exc ?? body.message ?? `HTTP ${res.status}`) as string,
     };
+    if (body.message) err.message = body.message as string;
+    return err;
   }
-  return body;
+  return body as CreateFromDraftSuccess;
 }

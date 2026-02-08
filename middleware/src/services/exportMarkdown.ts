@@ -1,10 +1,14 @@
 /**
  * 将会话消息列表转为 Markdown 文本
- * @param {{ role: 'user' | 'assistant', content: string, thinking?: string }[]} messages
- * @returns {string}
  */
-export function messagesToMarkdown(messages) {
-  const lines = [];
+export interface MessageForExport {
+  role: 'user' | 'assistant';
+  content?: string;
+  thinking?: string;
+}
+
+export function messagesToMarkdown(messages: MessageForExport[]): string {
+  const lines: string[] = [];
   for (const msg of messages || []) {
     const roleLabel = msg.role === 'user' ? '用户' : '助手';
     lines.push(`## ${roleLabel}\n`);

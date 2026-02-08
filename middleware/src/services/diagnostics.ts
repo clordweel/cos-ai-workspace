@@ -4,21 +4,37 @@
 import { FrappeApp } from 'frappe-js-sdk';
 import { config } from '../config.js';
 
-/** 从 SDK 抛出的错误中安全取出可读信息（SDK 在 error.response 为空时可能抛 TypeError） */
-function errorMessage(e) {
+export interface DiagnosticCheck {
+  id: string;
+  name: string;
+  ok: boolean;
+  value?: string;
+  error?: string;
+}
+
+export interface DiagnosticsResult {
+  ok: boolean;
+  checks: DiagnosticCheck[];
+}
+
+function errorMessage(e: unknown): string {
   if (!e) return '未知错误';
-  if (typeof e?.message === 'string' && e.message) return e.message;
-  if (e?.httpStatus && e?.message) return `${e.httpStatus} ${e.message}`;
-  if (e?.exception) return e.exception;
+  if (typeof (e as Error)?.message === 'string' && (e as Error).message) return (e as Error).message;
+  const err = e as { httpStatus?: number; message?: string; exception?: string };
+  if (err?.httpStatus && err?.message) return `${err.httpStatus} ${err.message}`;
+  if (err?.exception) return err.exception;
   return String(e);
 }
 
-/** 带超时的 Promise 包装 */
-function withTimeout(promise, ms, label = '请求') {
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  label = '请求'
+): Promise<T> {
   if (!ms || ms <= 0) return promise;
   return Promise.race([
     promise,
-    new Promise((_, reject) =>
+    new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`${label}超时（${ms}ms）`)), ms)
     ),
   ]);
@@ -26,11 +42,10 @@ function withTimeout(promise, ms, label = '请求') {
 
 /**
  * 运行诊断项列表，返回各检查项结果（不抛错）
- * @returns {{ ok: boolean, checks: Array<{ id: string, name: string, ok: boolean, value?: string, error?: string }> }}
  */
-export async function runDiagnostics() {
+export async function runDiagnostics(): Promise<DiagnosticsResult> {
   const { baseUrl, apiKey, timeoutMs } = config.cos;
-  const checks = [];
+  const checks: DiagnosticCheck[] = [];
 
   const baseConfigured = Boolean(baseUrl && baseUrl.trim());
   checks.push({
@@ -45,11 +60,10 @@ export async function runDiagnostics() {
     return { ok: false, checks };
   }
 
-  // SDK 期望站点根 URL（不含 /api），内部会请求 /api/method/...
   const sdkBase = baseUrl.replace(/\/api\/?$/, '') || baseUrl;
   const timeout = timeoutMs || 15_000;
 
-  let frappe;
+  let frappe: InstanceType<typeof FrappeApp>;
   try {
     frappe = new FrappeApp(sdkBase, {
       useToken: true,
@@ -66,14 +80,14 @@ export async function runDiagnostics() {
     return { ok: false, checks };
   }
 
-  // 2. 连通性 + 当前用户（frappe.auth.get_logged_user）
   try {
     const user = await withTimeout(
       frappe.auth().getLoggedInUser(),
       timeout,
       'get_logged_user'
     );
-    const loggedUser = typeof user === 'string' ? user : (user?.message ?? String(user ?? ''));
+    const loggedUser =
+      typeof user === 'string' ? user : (user as { message?: string })?.message ?? String(user ?? '');
     checks.push({
       id: 'erp_reach',
       name: 'ERPNext 连接与认证',
@@ -107,17 +121,19 @@ export async function runDiagnostics() {
     });
   }
 
-  // 3. Frappe 版本（frappe.get_version，若站点未开放会失败）
   try {
     const res = await withTimeout(
       frappe.call().get('frappe.get_version'),
       timeout,
       'get_version'
     );
+    const resMsg = res as { message?: string | { version?: string }; version?: string };
     const version =
-      typeof res?.message !== 'undefined'
-        ? (typeof res.message === 'string' ? res.message : res.message?.version ?? String(res.message))
-        : res?.version ?? String(res ?? '—');
+      typeof resMsg?.message !== 'undefined'
+        ? typeof resMsg.message === 'string'
+          ? resMsg.message
+          : (resMsg.message as { version?: string })?.version ?? String(resMsg.message)
+        : resMsg?.version ?? String(res ?? '—');
     checks.push({
       id: 'frappe_version',
       name: 'Frappe 版本',
