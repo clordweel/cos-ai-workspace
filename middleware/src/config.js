@@ -31,4 +31,11 @@ export const config = {
     /** 请求超时毫秒数，默认 15000 */
     timeoutMs: Number(process.env.COS_ERP_TIMEOUT_MS) || 15_000,
   },
+
+  /** Logto 单点登录（可选） */
+  logto: {
+    endpoint: (process.env.LOGTO_ENDPOINT || '').replace(/\/$/, ''),
+    appId: process.env.LOGTO_APP_ID || '',
+    appSecret: process.env.LOGTO_APP_SECRET || '',
+  },
 };

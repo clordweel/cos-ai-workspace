@@ -4,7 +4,25 @@
 
 ---
 
+## 2026-02-08
+
+### 中间层：彻底解决 3000 端口断联后无法复用
+
+- **listen 启用 reuseAddress**：`app.listen()` 增加 `reuseAddress: true`，使端口在进程退出后（含 TIME_WAIT）可被快速复用，减少「Address already in use」。
+- **启动前自动释放端口**：新增 `scripts/release-port.js`，读取与中间层相同的 `PORT`/.env，用 `lsof -ti :PORT` 查找并 SIGTERM 占用进程；`predev` 钩子在执行 `pnpm run dev` 前自动运行该脚本，确保每次开发启动前 3000 端口已释放。
+- **手动释放**：需要单独释放端口时可执行 `pnpm run release-port` 或 `node scripts/release-port.js`（支持 `PORT=3000`）。
+
+---
+
 ## 2026-02-07
+
+### 前端 + 中间层：认证登录
+
+- **应用区认证登录应用**：新增「认证登录」视图（`auth`），支持三种方式：用户名与密码、Token（api_key:api_secret）、Logto 单点登录；认证信息由中间层 Cookie 保持（httpOnly，3 天）。
+- **认证前不可关闭**：未登录时自动打开认证标签且该标签不可关闭；登录后或从抽屉主动打开的认证标签可关闭。`useAppView` 增加 `openAuthTab()`、标签 `isAuthRequired`，`WorkspaceAppNav` 在未登录时对认证标签隐藏关闭按钮。
+- **需认证时跳转**：对话流、系统诊断、物料确认等接口需登录；未带有效 Cookie 时中间层返回 401，前端 `useAuth().requireAuth()` 打开认证应用。所有相关 fetch 增加 `credentials: 'include'`。
+- **中间层**：`@fastify/cookie`、`routes/auth.js`（POST /api/auth/login、/api/auth/token，GET /api/auth/me、/api/auth/logto、/api/auth/logto/callback，POST /api/auth/logout）；`services/auth.js` 实现 Frappe 用户名密码登录、Token 校验、Logto OAuth 回调与会话存储；诊断/聊天/物料路由校验 Cookie，无会话则 401；物料确认使用当前会话的 Frappe 认证调用 cos。
+- **前端**：`composables/useAuth.ts`（fetchUser、loginWithPassword、loginWithToken、loginWithLogto、logout、requireAuth）；布局 workspace 挂载时拉取当前用户，未登录则打开认证标签；处理 `?auth=ok` / `?auth_error`（Logto 回调）。应用抽屉增加「认证登录」入口。
 
 ### 前端：应用侧边栏改为浏览器标签式
 

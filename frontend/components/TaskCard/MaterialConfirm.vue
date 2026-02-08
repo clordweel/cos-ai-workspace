@@ -17,8 +17,7 @@
 const props = defineProps<{ draftId: string; itemName?: string }>()
 const emit = defineEmits<{ (e: 'confirmed'): void }>()
 const loading = ref(false)
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase as string
+const apiBase = useApiBase()
 
 async function confirm() {
   if (loading.value || !props.draftId) return
@@ -28,7 +27,12 @@ async function confirm() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ draft_id: props.draftId, confirmed_by: 'current-user' }),
+      credentials: 'include',
     })
+    if (res.status === 401) {
+      useAuth().requireAuth()
+      return
+    }
     if (res.ok) emit('confirmed')
   } finally {
     loading.value = false

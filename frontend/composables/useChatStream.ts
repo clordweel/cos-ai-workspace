@@ -5,8 +5,7 @@ import { useRuntimeConfig } from 'nuxt/app'
  * 调用中间层 POST /api/chat/stream，解析 SSE 实现打字机效果
  */
 export function useChatStream() {
-  const config = useRuntimeConfig()
-  const apiBase = config.public.apiBase as string
+  const apiBase = useApiBase()
 
   async function streamChat(
     message: string,
@@ -29,8 +28,13 @@ export function useChatStream() {
         conversation_id: options?.conversationId,
         user_id: options?.userId ?? 'default',
       }),
+      credentials: 'include',
       signal: options?.signal,
     })
+    if (res.status === 401) {
+      useAuth().requireAuth()
+      throw new Error('需要登录')
+    }
     if (!res.ok || !res.body) throw new Error('Stream request failed')
     const reader = res.body.getReader()
     const decoder = new TextDecoder()

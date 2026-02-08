@@ -57,7 +57,7 @@
             <div class="flex flex-1 min-h-0 min-w-0">
               <WorkspaceAppNav />
               <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2 pl-0 pt-0">
-                <div class="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/50 dark:bg-zinc-800/50 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
+                <div class="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
                   <AppPanel />
                 </div>
               </div>
@@ -72,11 +72,34 @@
 <script setup lang="ts">
 import { PanelRightOpen, PanelRightClose, Pin, PinOff } from 'lucide-vue-next'
 
+const route = useRoute()
+const router = useRouter()
 useTheme()
-const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave } = useAppView()
+const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave, openAuthTab } = useAppView()
+const { fetchUser, isAuthenticated, authLoading } = useAuth()
+
 /** 侧边栏和应用内容区都折叠时隐藏左区块（固定按钮）；任一展开或侧栏悬浮/固定则显示 */
 const showPinButton = computed(() => isContentVisible.value || isSidebarPinned.value || isSidebarHovered.value)
 provide('isSessionExpanded', computed(() => !isPanelOpen.value || !isContentVisible.value))
+
+onMounted(async () => {
+  await fetchUser()
+  if (!authLoading.value && !isAuthenticated.value) openAuthTab()
+})
+
+watch(() => route.query?.auth, (auth) => {
+  if (auth === 'ok') {
+    fetchUser().then(() => {
+      const q = { ...route.query }
+      delete q.auth
+      delete q.auth_error
+      router.replace({ path: route.path, query: q })
+    })
+  }
+})
+watch(() => route.query?.auth_error, (authError) => {
+  if (authError) openAuthTab()
+})
 </script>
 
 <style scoped>

@@ -2,6 +2,7 @@
  * 调用 cos/ERPNext API：确认创建物料 create_from_draft
  */
 import { config } from '../config.js';
+import { getFrappeAuthForSession } from './auth.js';
 
 /** cos Base 为 <host>/api，方法路径为 /method/... */
 const COS_METHOD = '/method/cos.api.material.create_from_draft';
@@ -9,18 +10,20 @@ const COS_METHOD = '/method/cos.api.material.create_from_draft';
 /**
  * 确认创建物料（权限校验由 cos 侧负责，中间层仅转发并带认证）
  * @param {{ draft_id: string, confirmed_by: string }} payload
+ * @param {object} [session] 当前登录会话，有则用其 Frappe 认证
  * @returns {Promise<{ item_code?: string, item_name?: string, name?: string } | { error: string, exc?: string, message?: string }>}
  */
-export async function createFromDraft(payload) {
+export async function createFromDraft(payload, session) {
   const { baseUrl, apiKey, timeoutMs } = config.cos;
   if (!baseUrl) {
     return { error: 'COS_ERP_BASE 未配置', message: '请在 .env 中设置 COS_ERP_BASE' };
   }
 
   const url = baseUrl.replace(/\/$/, '') + COS_METHOD;
+  const authHeaders = session ? getFrappeAuthForSession(session) : (apiKey ? { Authorization: `Bearer ${apiKey}` } : {});
   const headers = {
     'Content-Type': 'application/json',
-    ...(apiKey && { Authorization: `Bearer ${apiKey}` }),
+    ...authHeaders,
   };
 
   const controller = new AbortController();

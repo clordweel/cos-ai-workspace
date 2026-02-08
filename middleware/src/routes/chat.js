@@ -1,5 +1,5 @@
 /**
- * 对话相关：流式 SSE、导出 Markdown
+ * 对话相关：流式 SSE、导出 Markdown（未登录也可会话）
  */
 import { config } from '../config.js';
 import { runStream } from '../services/difyStream.js';

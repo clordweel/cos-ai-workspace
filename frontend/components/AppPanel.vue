@@ -1,6 +1,7 @@
 <template>
   <div class="h-full flex flex-col overflow-hidden bg-white dark:bg-zinc-800 rounded-[inherit]">
-    <div class="app-panel-scroll flex-1 overflow-y-auto p-3 min-h-0">
+    <div class="app-panel-scroll flex-1 overflow-y-auto p-4 sm:p-5 min-h-0 flex flex-col items-center">
+      <div class="w-full max-w-[48%] my-auto">
           <template v-if="currentView === 'home'">
             <div class="grid gap-3 sm:grid-cols-2">
               <div
@@ -59,6 +60,117 @@
                 </div>
               </li>
             </ul>
+          </template>
+          <template v-else-if="currentView === 'auth'">
+            <div class="auth-panel space-y-4">
+              <div v-if="isAuthenticated" class="rounded-xl bg-emerald-50/80 dark:bg-emerald-900/20 p-4">
+                <p class="text-sm font-medium text-emerald-800 dark:text-emerald-200">已登录</p>
+                <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">{{ user }}</p>
+                <button
+                  type="button"
+                  class="mt-3 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                  @click="logout"
+                >
+                  退出登录
+                </button>
+              </div>
+              <template v-else>
+              <p class="text-[11px] text-zinc-500 dark:text-zinc-400 text-center">
+                请选择一种方式登录，认证信息由 Cookie 保持。
+              </p>
+              <div class="flex gap-1 p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-700/80">
+                <button
+                  type="button"
+                  class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
+                  :class="authMode === 'password' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  @click="authMode = 'password'"
+                >
+                  账号密码
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
+                  :class="authMode === 'token' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  @click="authMode = 'token'"
+                >
+                  Token
+                </button>
+                <button
+                  type="button"
+                  class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
+                  :class="authMode === 'logto' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  @click="authMode = 'logto'"
+                >
+                  单点登录
+                </button>
+              </div>
+              <div class="min-h-[220px]">
+              <div v-if="authMode === 'password'" class="space-y-3 p-4">
+                <div>
+                  <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">用户名</label>
+                  <input
+                    v-model="authUsername"
+                    type="text"
+                    class="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                    placeholder="例如 Administrator"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">密码</label>
+                  <input
+                    v-model="authPassword"
+                    type="password"
+                    class="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+                    placeholder="密码"
+                  />
+                </div>
+                <p v-if="authError" class="text-xs text-red-600 dark:text-red-400">{{ authError }}</p>
+                <button
+                  type="button"
+                  class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2 px-3 disabled:opacity-50"
+                  :disabled="authSubmitting || !authUsername || !authPassword"
+                  @click="submitPasswordAuth"
+                >
+                  <span v-if="authSubmitting">登录中…</span>
+                  <span v-else>登录</span>
+                </button>
+              </div>
+              <div v-else-if="authMode === 'token'" class="space-y-3 p-4">
+                <div>
+                  <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">API Token</label>
+                  <input
+                    v-model="authToken"
+                    type="password"
+                    class="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30 font-mono"
+                    placeholder="api_key:api_secret 或 Bearer token"
+                  />
+                  <p class="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">在 ERPNext 用户设置中生成 API 密钥，格式为 api_key:api_secret</p>
+                </div>
+                <p v-if="authError" class="text-xs text-red-600 dark:text-red-400">{{ authError }}</p>
+                <button
+                  type="button"
+                  class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2 px-3 disabled:opacity-50"
+                  :disabled="authSubmitting || !authToken"
+                  @click="submitTokenAuth"
+                >
+                  <span v-if="authSubmitting">验证中…</span>
+                  <span v-else>使用 Token 登录</span>
+                </button>
+              </div>
+              <div v-else-if="authMode === 'logto'" class="space-y-3 p-4">
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">通过 Logto 单点登录，将跳转至登录页，完成后返回本工作台。</p>
+                <p v-if="authError || logtoQueryError" class="text-xs text-red-600 dark:text-red-400">{{ authError || logtoQueryError }}</p>
+                <button
+                  type="button"
+                  class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2 px-3"
+                  @click="submitLogtoAuth"
+                >
+                  使用 Logto 登录
+                </button>
+              </div>
+              </div>
+              </template>
+            </div>
           </template>
           <template v-else-if="currentView === 'settings'">
             <div class="space-y-4">
@@ -156,6 +268,7 @@
               </section>
             </div>
           </template>
+      </div>
     </div>
   </div>
 </template>
@@ -171,8 +284,7 @@ import Checkbox from '~/components/ui/checkbox/Checkbox.vue'
 import { Bot, Package, ClipboardList, Layers, PackageOpen, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 
 const router = useRouter()
-const config = useRuntimeConfig()
-const apiBase = (config.public.apiBase as string) || ''
+const apiBase = useApiBase()
 
 const diagnosticsLoading = ref(false)
 const diagnosticsResult = ref<{
@@ -185,7 +297,12 @@ async function runDiagnostics() {
   diagnosticsLoading.value = true
   diagnosticsResult.value = null
   try {
-    const res = await fetch(`${apiBase}/api/diagnostics`)
+    const res = await fetch(`${apiBase}/api/diagnostics`, { credentials: 'include' })
+    if (res.status === 401) {
+      useAuth().requireAuth()
+      diagnosticsResult.value = { ok: false, checks: [], error: '请先登录' }
+      return
+    }
     const data = await res.json().catch(() => ({}))
     diagnosticsResult.value = data
   } catch (e) {
@@ -202,8 +319,60 @@ const { currentView } = useAppView()
 const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
 const { ensureChat } = useChatSessions()
+const {
+  loginWithPassword,
+  loginWithToken,
+  loginWithLogto,
+  logout,
+  isAuthenticated,
+  user,
+} = useAuth()
+const route = useRoute()
+const logtoQueryError = computed(() => (route.query?.auth_error ? decodeURIComponent(String(route.query.auth_error)) : ''))
 
 const notificationsEnabled = ref(true)
+
+// 认证登录面板状态
+type AuthMode = 'password' | 'token' | 'logto'
+const authMode = ref<AuthMode>('password')
+const authUsername = ref('')
+const authPassword = ref('')
+const authToken = ref('')
+const authError = ref('')
+const authSubmitting = ref(false)
+
+function clearAuthError() {
+  authError.value = ''
+}
+
+async function submitPasswordAuth() {
+  clearAuthError()
+  authSubmitting.value = true
+  try {
+    const result = await loginWithPassword(authUsername.value, authPassword.value)
+    if (result.ok) authPassword.value = ''
+    else authError.value = result.error || '登录失败'
+  } finally {
+    authSubmitting.value = false
+  }
+}
+
+async function submitTokenAuth() {
+  clearAuthError()
+  authSubmitting.value = true
+  try {
+    const result = await loginWithToken(authToken.value)
+    if (result.ok) authToken.value = ''
+    else authError.value = result.error || 'Token 无效'
+  } finally {
+    authSubmitting.value = false
+  }
+}
+
+function submitLogtoAuth() {
+  clearAuthError()
+  loginWithLogto()
+}
 
 function openChat(type: 'contact' | 'bot', id: string, name: string) {
   const chatId = type === 'contact' ? `contact-${id}` : `bot-${id}`

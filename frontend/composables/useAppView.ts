@@ -1,4 +1,4 @@
-export type AppView = 'home' | 'contacts' | 'bots' | 'settings'
+export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth'
 
 /** 侧栏「标签」：类似浏览器标签，可多开、切换、关闭 */
 export interface AppTab {
@@ -6,6 +6,8 @@ export interface AppTab {
   view: AppView
   title: string
   appId?: string
+  /** 认证标签：未登录时不可关闭 */
+  isAuthRequired?: boolean
 }
 
 const VIEW_TITLES: Record<AppView, string> = {
@@ -13,6 +15,7 @@ const VIEW_TITLES: Record<AppView, string> = {
   contacts: '联系人',
   bots: '机器人',
   settings: '设置',
+  auth: '认证登录',
 }
 
 const APP_TITLES: Record<string, string> = {
@@ -75,10 +78,10 @@ export function useAppView() {
   }
 
   /** 新增一个标签并选中（不复用同 view 的标签，类似浏览器新开） */
-  function addTab(view: AppView, appId?: string) {
+  function addTab(view: AppView, appId?: string, opts?: { isAuthRequired?: boolean }) {
     const id = genId()
     const title = tabTitle(view, appId)
-    const newTab: AppTab = { id, view, title, appId }
+    const newTab: AppTab = { id, view, title, appId, isAuthRequired: opts?.isAuthRequired }
     tabs.value = [...tabs.value, newTab]
     activeTabId.value = id
     isPanelOpen.value = true
@@ -86,11 +89,25 @@ export function useAppView() {
     return id
   }
 
-  /** 关闭指定标签；若为当前标签则切换到相邻标签 */
-  function closeTab(id: string) {
+  /** 打开认证登录标签（未登录时不可关闭）；若已有认证标签则切换过去 */
+  function openAuthTab() {
+    isPanelOpen.value = true
+    isContentVisible.value = true
+    const authTab = tabs.value.find((t) => t.view === 'auth')
+    if (authTab) {
+      activeTabId.value = authTab.id
+      return authTab.id
+    }
+    return addTab('auth', undefined, { isAuthRequired: true })
+  }
+
+  /** 关闭指定标签；若为当前标签则切换到相邻标签。认证标签（isAuthRequired）在未登录时不可关闭。 */
+  function closeTab(id: string, options?: { force?: boolean }) {
     const list = tabs.value
+    const tab = list.find((t) => t.id === id)
+    if (!tab) return
+    if (tab.isAuthRequired && !options?.force) return
     const index = list.findIndex((t) => t.id === id)
-    if (index === -1) return
     const nextList = list.filter((t) => t.id !== id)
     if (nextList.length === 0) {
       isPanelOpen.value = false
@@ -249,6 +266,7 @@ export function useAppView() {
     goBack,
     openPanel,
     openNavPage,
+    openAuthTab,
     closePanel,
   }
 }

@@ -6,11 +6,14 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",
+    "predev": "node scripts/release-port.js",
+    "release-port": "node scripts/release-port.js",
     "start": "node src/index.js",
     "dev:debug": "node --watch --inspect src/index.js",
     "dev:debug-brk": "node --watch --inspect-brk src/index.js"
   },
   "dependencies": {
+    "@fastify/cookie": "^10.x",
     "@fastify/cors": "^10.x",
     "dify-client": "^3.0.0",
     "dotenv": "^16.6.1",

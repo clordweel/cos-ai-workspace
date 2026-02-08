@@ -38,7 +38,7 @@
         </Transition>
         <Transition name="nav-label">
           <button
-            v-if="labelsVisible && tabs.length > 1"
+            v-if="labelsVisible && canCloseTab(tab)"
             type="button"
             class="tab-close shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-opacity focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800"
             :aria-label="`关闭 ${tab.title}`"
@@ -86,10 +86,11 @@
 </template>
 
 <script setup lang="ts">
-import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen, X, Plus } from 'lucide-vue-next'
+import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen, X, Plus, LogIn } from 'lucide-vue-next'
 import type { AppTab } from '~/composables/useAppView'
 
 const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
+const { isAuthenticated } = useAuth()
 
 function openSettingsTab() {
   const settingsTab = tabs.value.find((t) => t.view === 'settings')
@@ -156,6 +157,14 @@ const VIEW_ICONS: Record<string, typeof Home> = {
   contacts: Users,
   bots: Bot,
   settings: Settings,
+  auth: LogIn,
+}
+
+/** 认证标签在未登录时不可关闭 */
+function canCloseTab(tab: AppTab) {
+  if (tabs.value.length <= 1) return false
+  if (tab.isAuthRequired && !isAuthenticated.value) return false
+  return true
 }
 
 function tabIcon(tab: AppTab) {

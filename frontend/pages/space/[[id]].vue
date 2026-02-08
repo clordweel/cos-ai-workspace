@@ -421,7 +421,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '~/lib/dropdown-menu'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, Cloud, Download, FileText, Globe, Home, Image as ImageIcon, Infinity, Link, Loader2, MessageCircle, Music, Pencil, Plus, Search, Send, Settings, Share2, Square, StickyNote, Trash2, User, Users, X } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronLeft, ChevronRight, Cloud, Download, FileText, Globe, Home, Image as ImageIcon, Infinity, Link, Loader2, LogIn, MessageCircle, Music, Pencil, Plus, Search, Send, Settings, Share2, Square, StickyNote, Trash2, User, Users, X } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -447,6 +447,7 @@ function toggleSearchBar() {
 /** 应用抽屉列表：前 4 个为真实入口，其余为 mock 填充 */
 const drawerApps = [
   { id: 'home', title: '导航', view: 'home' as const, icon: Home },
+  { id: 'auth', title: '认证登录', view: 'auth' as const, icon: LogIn },
   { id: 'contacts', title: '联系人', view: 'contacts' as const, icon: Users },
   { id: 'bots', title: '机器人', view: 'bots' as const, icon: Bot },
   { id: 'settings', title: '设置', view: 'settings' as const, icon: Settings },
@@ -788,8 +789,12 @@ async function streamReply(id: string, text: string) {
     )
     streamEnded = true
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    const friendly = /failed to fetch|networkerror|network error/i.test(msg)
+      ? '网络错误，请确认中间层已启动且可访问（检查 NUXT_PUBLIC_API_BASE 或代理）'
+      : msg
     updateLastMessage(id, (m) => {
-      m.content = `请求失败：${e instanceof Error ? e.message : String(e)}`
+      m.content = `请求失败：${friendly}`
     })
   } finally {
     if (!streamEnded) {
