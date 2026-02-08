@@ -20,7 +20,7 @@
     </div>
     <button
       type="button"
-      class="flex shrink-0 items-center justify-center rounded-full bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-[color,width,height] duration-200 ml-[2px] mr-[2px]"
+      class="flex shrink-0 items-center justify-center rounded-full bg-white dark:bg-zinc-800 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-[color,width,height] duration-200 ml-[2px] mr-[2px]"
       :class="open ? 'h-7 w-7' : 'h-8 w-8'"
       :title="open ? '收起搜索' : '搜索'"
       aria-label="搜索"

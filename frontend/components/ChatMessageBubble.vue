@@ -35,7 +35,7 @@
       <ContextMenuRoot v-if="messageIndex !== undefined">
         <ContextMenuTrigger as-child>
           <div
-            class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
+            class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
           >
             <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
           </div>
@@ -46,7 +46,7 @@
             :side-offset="4"
           >
             <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="编辑"
               @select="emit('editUserMessage')"
             >
@@ -55,7 +55,7 @@
             </ContextMenuItem>
             <ContextMenuItem
               v-if="message.receiptStatus === 'failed'"
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="重试"
               @select="emit('retryUserMessage')"
             >
@@ -63,7 +63,7 @@
               重试
             </ContextMenuItem>
             <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="撤回"
               @select="emit('recallMessage')"
             >
@@ -71,7 +71,7 @@
               撤回
             </ContextMenuItem>
             <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="删除"
               @select="emit('deleteMessage')"
             >
@@ -79,7 +79,7 @@
               删除
             </ContextMenuItem>
             <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="更多"
               disabled
             >
@@ -90,14 +90,14 @@
         </ContextMenuPortal>
       </ContextMenuRoot>
       <template v-else>
-        <div class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-sm bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
+        <div class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
           <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
         </div>
       </template>
     </div>
   </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
-  <div v-else class="min-w-[20rem] max-w-[85%] text-sm text-zinc-800 dark:text-zinc-200">
+  <div v-else class="min-w-[20rem] max-w-[85%] text-xs text-zinc-800 dark:text-zinc-200">
     <ContextMenuRoot v-if="messageIndex !== undefined">
       <ContextMenuTrigger as-child>
         <div class="w-full">
@@ -161,7 +161,7 @@
         >
           <ContextMenuItem
             v-if="hasBotSource"
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="重试"
             @select="emit('retry')"
           >
@@ -169,7 +169,7 @@
             重试
           </ContextMenuItem>
           <ContextMenuItem
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="复制"
             @select="emit('copyMessage')"
           >
@@ -177,7 +177,7 @@
             复制
           </ContextMenuItem>
           <ContextMenuItem
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="收藏"
             @select="emit('favorite')"
           >
@@ -185,7 +185,7 @@
             收藏
           </ContextMenuItem>
           <ContextMenuItem
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="导出 Markdown"
             @select="emit('exportMarkdown')"
           >
@@ -193,7 +193,7 @@
             导出 Markdown
           </ContextMenuItem>
           <ContextMenuItem
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="查看编辑历史"
             @select="emit('viewEditHistory')"
           >
@@ -201,7 +201,7 @@
             查看编辑历史
           </ContextMenuItem>
           <ContextMenuItem
-            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="听回复"
             @select="emit('listenReply')"
           >
@@ -268,8 +268,8 @@
     <div class="mt-1.5 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-500">
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-        :class="userHasLiked ? 'text-primary-500 dark:text-primary-400' : ''"
+        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
+        :class="userHasLiked ? 'text-black dark:text-white' : ''"
         aria-label="赞同"
         @click="onLike"
       >
@@ -277,7 +277,7 @@
       </button>
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
         aria-label="反对"
         @click="onDislike"
       >
@@ -285,7 +285,7 @@
       </button>
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
         aria-label="复制"
         @click="onCopy"
       >
@@ -294,7 +294,7 @@
       <button
         v-if="canEditOtherMessage"
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
         aria-label="编辑"
         title="编辑"
         @click="emit('edit')"
@@ -303,7 +303,7 @@
       </button>
       <DropdownMenuRoot>
         <DropdownMenuTrigger
-          class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors outline-none"
+          class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors outline-none"
           aria-label="更多"
         >
           <MoreVertical class="h-3.5 w-3.5" stroke-width="2" />
@@ -316,7 +316,7 @@
           >
             <DropdownMenuItem
               v-if="hasBotSource"
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="重试"
               @select="emit('retry')"
             >
@@ -324,7 +324,7 @@
               重试
             </DropdownMenuItem>
             <DropdownMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="收藏"
               @select="emit('favorite')"
             >
@@ -332,7 +332,7 @@
               收藏
             </DropdownMenuItem>
             <DropdownMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="导出 Markdown"
               @select="emit('exportMarkdown')"
             >
@@ -340,7 +340,7 @@
               导出 Markdown
             </DropdownMenuItem>
             <DropdownMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="查看编辑历史"
               @select="emit('viewEditHistory')"
             >
@@ -348,7 +348,7 @@
               查看编辑历史
             </DropdownMenuItem>
             <DropdownMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="听回复"
               @select="emit('listenReply')"
             >

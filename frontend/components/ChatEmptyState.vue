@@ -11,7 +11,7 @@
     </div>
     <button
       type="button"
-      class="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3.5 py-2 text-xs font-medium text-white shadow-sm hover:bg-primary-500 hover:shadow transition-colors duration-200"
+      class="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3.5 py-2 text-xs font-medium text-black dark:text-white shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-600 hover:shadow transition-colors duration-200"
       @click="$emit('new-chat')"
     >
       <Plus class="h-3.5 w-3.5" stroke-width="2.25" />

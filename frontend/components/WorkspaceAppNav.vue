@@ -29,7 +29,7 @@
       >
         <span
           class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors"
-          :class="activeTabId === tab.id ? 'bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400' : 'bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300'"
+          :class="activeTabId === tab.id ? 'bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white' : 'bg-zinc-100 dark:bg-zinc-600 text-black dark:text-white'"
         >
           <component :is="tabIcon(tab)" class="h-3.5 w-3.5" />
         </span>
@@ -40,7 +40,7 @@
           <button
             v-if="labelsVisible && canCloseTab(tab)"
             type="button"
-            class="tab-close shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-opacity focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800"
+            class="tab-close shrink-0 rounded p-0.5 opacity-0 group-hover:opacity-100 hover:bg-zinc-200 dark:hover:bg-zinc-600 text-black dark:text-white hover:text-black dark:hover:text-white transition-opacity focus:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800"
             :aria-label="`关闭 ${tab.title}`"
             @click.stop="closeTab(tab.id)"
           >
@@ -59,7 +59,7 @@
         aria-label="新标签"
         @click="addTab('home')"
       >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-black dark:text-white">
           <Plus class="h-3.5 w-3.5" />
         </span>
         <Transition name="nav-label">
@@ -74,7 +74,7 @@
         aria-label="系统设置"
         @click="openSettingsTab"
       >
-        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300">
+        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-zinc-100 dark:bg-zinc-600 text-black dark:text-white">
           <Settings class="h-3.5 w-3.5" />
         </span>
         <Transition name="nav-label">
@@ -218,10 +218,10 @@ function tabIcon(tab: AppTab) {
   display: none;
 }
 .tab-item {
-  @apply flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800;
+  @apply flex items-center gap-1.5 rounded-md py-1.5 min-w-0 w-full text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-800;
 }
 .tab-item-active {
-  @apply bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 border-l-2 border-primary-500;
+  @apply bg-primary-50 dark:bg-primary-900/20 text-black dark:text-white border-l-2 border-primary-500;
 }
 .tab-label {
   @apply flex-1 min-w-0 text-left;

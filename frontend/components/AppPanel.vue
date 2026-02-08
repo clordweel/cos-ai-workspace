@@ -14,7 +14,7 @@
                 @keydown.enter.prevent="openApp(app)"
               >
                 <div class="flex items-center gap-2.5">
-                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400">
+                  <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
                     <component :is="app.icon" class="h-4 w-4" />
                   </span>
                   <div class="min-w-0">
@@ -44,7 +44,7 @@
                 class="flex items-center gap-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 rounded-md transition-colors -mx-0.5 px-0.5"
                 @click="openChat('contact', c.id, c.name)"
               >
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xs font-medium">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-black dark:text-white text-xs font-medium">
                   {{ c.name.charAt(0) }}
                 </span>
                 <span class="text-sm font-medium text-zinc-800 dark:text-zinc-200">{{ c.name }}</span>
@@ -59,7 +59,7 @@
                 class="flex items-center gap-2.5 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 rounded-md transition-colors -mx-0.5 px-0.5"
                 @click="openChat('bot', b.id, b.name)"
               >
-                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
                   <Bot class="h-4 w-4" />
                 </span>
                 <div class="min-w-0 flex-1">
@@ -76,7 +76,7 @@
                 <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">{{ user }}</p>
                 <button
                   type="button"
-                  class="mt-3 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                  class="mt-3 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700"
                   @click="logout"
                 >
                   退出登录
@@ -90,7 +90,7 @@
                 <button
                   type="button"
                   class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
-                  :class="authMode === 'password' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  :class="authMode === 'password' ? 'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white' : 'text-black dark:text-white hover:text-black dark:hover:text-white'"
                   @click="authMode = 'password'"
                 >
                   账号密码
@@ -98,7 +98,7 @@
                 <button
                   type="button"
                   class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
-                  :class="authMode === 'token' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  :class="authMode === 'token' ? 'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white' : 'text-black dark:text-white hover:text-black dark:hover:text-white'"
                   @click="authMode = 'token'"
                 >
                   Token
@@ -106,7 +106,7 @@
                 <button
                   type="button"
                   class="flex-1 rounded-md py-2 text-xs font-medium transition-colors"
-                  :class="authMode === 'logto' ? 'bg-white dark:bg-zinc-600 shadow-sm text-zinc-900 dark:text-zinc-100' : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200'"
+                  :class="authMode === 'logto' ? 'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white' : 'text-black dark:text-white hover:text-black dark:hover:text-white'"
                   @click="authMode = 'logto'"
                 >
                   单点登录

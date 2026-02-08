@@ -28,7 +28,7 @@
                 <button
                   type="button"
                   class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-colors"
-                  :class="isSidebarPinned ? 'bg-zinc-100 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-200' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200'"
+                  :class="isSidebarPinned ? 'bg-zinc-100 dark:bg-zinc-600 text-black dark:text-white' : 'text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white'"
                   :title="isSidebarPinned ? '取消固定侧栏' : '固定侧栏当前状态'"
                   aria-label="固定侧栏坍缩/展开状态"
                   @click="toggleSidebarPinned"
@@ -44,7 +44,7 @@
               >
                 <button
                   type="button"
-                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-colors"
                   :title="isContentVisible ? '折叠内容区' : '展开内容区'"
                   aria-label="切换应用内容区"
                   @click="toggleContentPanel"

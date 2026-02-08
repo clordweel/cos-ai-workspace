@@ -127,8 +127,8 @@
                   <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
                 </div>
                 <div class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5" :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }">
-                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="drawerAppActive(app) ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700" :class="drawerAppActive(app) ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''">
+                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="drawerAppActive(app) ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black dark:text-white bg-white dark:bg-zinc-700" :class="drawerAppActive(app) ? 'ring-2 ring-primary-500/50' : ''">
                       <component :is="app.icon" class="h-4 w-4" />
                     </span>
                     <span class="min-w-0 max-w-[3.25rem] truncate text-[10px]">{{ app.title }}</span>

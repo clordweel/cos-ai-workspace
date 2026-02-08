@@ -6,20 +6,20 @@
         tabindex="0"
         class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
         :class="[
-          isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-800 dark:text-primary-200' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700',
+          isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-black dark:text-white' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700 text-black dark:text-white',
           isMock ? 'opacity-80' : '',
         ]"
         @click="$emit('click')"
         @keydown.enter.prevent="$emit('click')"
       >
         <SessionListThumb :type="thumbType" :participants="effectiveParticipants" />
-        <p class="min-w-0 flex-1 text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">
+        <p class="min-w-0 flex-1 text-xs font-medium text-inherit truncate">
           {{ item.title }}
         </p>
-        <span v-if="dateLabel" class="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500">
+        <span v-if="dateLabel" class="shrink-0 text-[11px] text-inherit opacity-80">
           {{ dateLabel }}
         </span>
-        <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
+        <span class="text-inherit opacity-70 text-xs">›</span>
       </li>
     </ContextMenuTrigger>
     <ContextMenuPortal>
@@ -29,7 +29,7 @@
       >
         <ContextMenuItem
           v-if="isPinned"
-          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
           text-value="取消置顶"
           @select="emit('toggle-pin')"
         >
@@ -38,7 +38,7 @@
         </ContextMenuItem>
         <ContextMenuItem
           v-else
-          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
           text-value="置顶"
           @select="emit('toggle-pin')"
         >
@@ -46,7 +46,7 @@
           置顶
         </ContextMenuItem>
         <ContextMenuItem
-          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
           text-value="重命名"
           @select="emit('rename')"
         >
@@ -54,7 +54,7 @@
           重命名
         </ContextMenuItem>
         <ContextMenuItem
-          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-700 dark:text-zinc-300 outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
           text-value="关闭会话"
           @select="emit('close')"
         >

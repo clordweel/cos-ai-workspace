@@ -8,7 +8,7 @@
       ref="tab0Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'active' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'active' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="活动聊天"
       @click="emit('update:modelValue', 'active')"
     >
@@ -18,7 +18,7 @@
       ref="tab1Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'pending' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'pending' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="待处理（未读等状态）"
       @click="emit('update:modelValue', 'pending')"
     >
@@ -29,7 +29,7 @@
       ref="tab2Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'favorites' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'favorites' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="收藏归档"
       @click="emit('update:modelValue', 'favorites')"
     >
@@ -39,7 +39,7 @@
       ref="tab3Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'settings' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'settings' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="会话设置"
       @click="emit('update:modelValue', 'settings')"
     >
