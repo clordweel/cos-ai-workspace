@@ -86,11 +86,12 @@
 </template>
 
 <script setup lang="ts">
-import { Home, Users, Bot, Settings, Package, ClipboardList, Layers, PackageOpen, X, Plus, LogIn } from 'lucide-vue-next'
+import { Home, Users, Bot, Settings, X, Plus, LogIn } from 'lucide-vue-next'
 import type { AppTab } from '~/composables/useAppView'
 
 const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
 const { isAuthenticated } = useAuth()
+const { get: getAppExtension } = useAppExtensions()
 
 function openSettingsTab() {
   const settingsTab = tabs.value.find((t) => t.view === 'settings')
@@ -145,19 +146,13 @@ onUnmounted(() => {
   if (layoutCollapseTimer) clearTimeout(layoutCollapseTimer)
 })
 
-const APP_ICONS: Record<string, typeof Package> = {
-  material: Package,
-  order: ClipboardList,
-  bom: Layers,
-  inventory: PackageOpen,
-}
-
 const VIEW_ICONS: Record<string, typeof Home> = {
   home: Home,
   contacts: Users,
   bots: Bot,
   settings: Settings,
   auth: LogIn,
+  app: Home,
 }
 
 /** 认证标签在未登录时不可关闭 */
@@ -168,7 +163,10 @@ function canCloseTab(tab: AppTab) {
 }
 
 function tabIcon(tab: AppTab) {
-  if (tab.appId && APP_ICONS[tab.appId]) return APP_ICONS[tab.appId]
+  if (tab.view === 'app' && tab.appId) {
+    const ext = getAppExtension(tab.appId)
+    if (ext?.icon) return ext.icon
+  }
   return VIEW_ICONS[tab.view] ?? Home
 }
 </script>

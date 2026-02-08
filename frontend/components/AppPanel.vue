@@ -5,21 +5,21 @@
           <template v-if="currentView === 'home'">
             <div class="grid gap-3 sm:grid-cols-2">
               <div
-                v-for="app in placeholderApps"
+                v-for="app in homeAppList"
                 :key="app.id"
                 role="button"
                 tabindex="0"
                 class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2"
-                @click="app.action"
-                @keydown.enter.prevent="app.action()"
+                @click="openApp(app)"
+                @keydown.enter.prevent="openApp(app)"
               >
                 <div class="flex items-center gap-2.5">
                   <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-primary-600 dark:text-primary-400">
                     <component :is="app.icon" class="h-4 w-4" />
                   </span>
                   <div class="min-w-0">
-                    <p class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ app.title }}</p>
-                    <p class="text-xs text-zinc-600 dark:text-zinc-400 truncate">{{ app.desc }}</p>
+                    <p class="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ app.name }}</p>
+                    <p v-if="app.description" class="text-xs text-zinc-600 dark:text-zinc-400 truncate">{{ app.description }}</p>
                   </div>
                 </div>
               </div>
@@ -27,6 +27,14 @@
             <p class="mt-4 text-xs text-zinc-500 dark:text-zinc-400 text-center">
               更多扩展应用将在此展示，支持物料、订单、BOM 等操作
             </p>
+          </template>
+          <template v-else-if="currentView === 'app' && currentAppExt">
+            <component :is="currentAppExt.component" />
+          </template>
+          <template v-else-if="currentView === 'app'">
+            <div class="rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-6 text-center">
+              <p class="text-sm text-zinc-600 dark:text-zinc-400">未找到该应用或扩展已卸载</p>
+            </div>
           </template>
           <template v-else-if="currentView === 'contacts'">
             <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
@@ -281,7 +289,7 @@ import SelectValue from '~/components/ui/select/SelectValue.vue'
 import SelectContent from '~/components/ui/select/SelectContent.vue'
 import SelectItem from '~/components/ui/select/SelectItem.vue'
 import Checkbox from '~/components/ui/checkbox/Checkbox.vue'
-import { Bot, Package, ClipboardList, Layers, PackageOpen, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { Bot, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 
 const router = useRouter()
 const apiBase = useApiBase()
@@ -315,7 +323,26 @@ async function runDiagnostics() {
     diagnosticsLoading.value = false
   }
 }
-const { currentView } = useAppView()
+const { currentView, activeTab, addTab } = useAppView()
+const { list: appExtensionsList, get: getAppExtension } = useAppExtensions()
+
+/** 首页展示的扩展列表（需登录的未登录时隐藏） */
+const homeAppList = computed(() =>
+  appExtensionsList.value.filter((app) => !app.requireAuth || isAuthenticated.value)
+)
+
+function openApp(app: import('~/types/app-extensions').AppExtension) {
+  if (app.requireAuth && !isAuthenticated.value) return
+  addTab('app', app.id)
+}
+
+/** 当前标签为扩展应用时的扩展元数据 */
+const currentAppExt = computed(() => {
+  const tab = activeTab.value
+  if (!tab || tab.view !== 'app' || !tab.appId) return null
+  return getAppExtension(tab.appId) ?? null
+})
+
 const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
 const { ensureChat } = useChatSessions()
@@ -380,12 +407,6 @@ function openChat(type: 'contact' | 'bot', id: string, name: string) {
   router.push(`/space/${chatId}`)
 }
 
-const placeholderApps = [
-  { id: 'material', title: '物料助手', desc: '参数化创建球磨机零件', icon: Package, action: () => {} },
-  { id: 'order', title: '订单进度', desc: '查询生产与交货状态', icon: ClipboardList, action: () => {} },
-  { id: 'bom', title: 'BOM 状态', desc: '查看物料清单与齐套', icon: Layers, action: () => {} },
-  { id: 'inventory', title: '库存概览', desc: '球磨机零件库存', icon: PackageOpen, action: () => {} },
-]
 </script>
 
 <style scoped>

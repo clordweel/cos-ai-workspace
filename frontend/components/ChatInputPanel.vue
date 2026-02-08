@@ -39,16 +39,30 @@
           </div>
         </div>
         <form class="flex flex-col" @submit.prevent="$emit('submit')">
-          <textarea
-            :value="modelValue"
-            rows="2"
-            placeholder="说点什么？"
-            class="min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
-            :disabled="streaming"
-            @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
-            @keydown.enter.exact.prevent="$emit('submit')"
-            @keydown.enter.shift.exact.prevent="$emit('update:modelValue', modelValue + '\n')"
-          />
+          <div
+            ref="textareaWrapRef"
+            class="chat-input-inner-scroll overflow-y-auto overflow-x-hidden"
+            :style="{ height: `${editHeightPx}px` }"
+          >
+            <textarea
+              :value="modelValue"
+              rows="2"
+              placeholder="说点什么？"
+              class="chat-input-textarea min-h-[72px] w-full resize-none border-0 bg-transparent px-3 py-3 text-sm text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
+              :disabled="streaming"
+              @input="$emit('update:modelValue', ($event.target as HTMLTextAreaElement).value)"
+              @keydown.enter.exact.prevent="$emit('submit')"
+              @keydown.enter.shift.exact.prevent="$emit('update:modelValue', modelValue + '\n')"
+            />
+          </div>
+          <button
+            type="button"
+            class="chat-input-resize-handle flex w-full shrink-0 cursor-ns-resize items-center justify-center border-0 bg-transparent py-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+            aria-label="拖拽调整输入框高度"
+            @mousedown.prevent="onResizeStart"
+          >
+            <GripHorizontal class="h-4 w-4" />
+          </button>
           <div class="flex items-center justify-between gap-2 px-3 pb-2 pt-0">
             <div class="flex items-center gap-2">
               <button
@@ -121,7 +135,8 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronDown, Globe, Image as ImageIcon, Infinity, Loader2, Send, Square, X } from 'lucide-vue-next'
+import { ChevronDown, Globe, GripHorizontal, Image as ImageIcon, Infinity, Loader2, Send, Square, X } from 'lucide-vue-next'
+import { ref, onUnmounted } from 'vue'
 
 defineProps<{
   modelValue: string
@@ -134,4 +149,69 @@ defineEmits<{
   (e: 'clear'): void
   (e: 'scroll-to-last'): void
 }>()
+
+const MIN_EDIT_HEIGHT = 72
+const MAX_EDIT_HEIGHT = 280
+const DEFAULT_EDIT_HEIGHT = 72
+
+const textareaWrapRef = ref<HTMLElement | null>(null)
+const editHeightPx = ref(DEFAULT_EDIT_HEIGHT)
+
+let resizeStartY = 0
+let resizeStartHeight = 0
+
+function onResizeStart(e: MouseEvent) {
+  resizeStartY = e.clientY
+  resizeStartHeight = editHeightPx.value
+  window.addEventListener('mousemove', onResizeMove)
+  window.addEventListener('mouseup', onResizeEnd)
+}
+
+function onResizeMove(e: MouseEvent) {
+  const delta = e.clientY - resizeStartY
+  const next = Math.min(MAX_EDIT_HEIGHT, Math.max(MIN_EDIT_HEIGHT, resizeStartHeight + delta))
+  editHeightPx.value = next
+}
+
+function onResizeEnd() {
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', onResizeEnd)
+}
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onResizeMove)
+  window.removeEventListener('mouseup', onResizeEnd)
+})
 </script>
+
+<style scoped>
+.chat-input-inner-scroll {
+  scrollbar-gutter: stable;
+}
+.chat-input-inner-scroll::-webkit-scrollbar {
+  width: 2px;
+}
+.chat-input-inner-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-input-inner-scroll::-webkit-scrollbar-thumb {
+  border-radius: 4px;
+  background: rgb(161 161 170 / 0.4);
+}
+.chat-input-inner-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(161 161 170 / 0.6);
+}
+.chat-input-inner-scroll::-webkit-scrollbar-thumb:active {
+  background: rgb(161 161 170 / 0.8);
+}
+@supports (scrollbar-width: thin) {
+  .chat-input-inner-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
+  }
+}
+/* 仅外层滚动，textarea 不出现第二条滚动条 */
+.chat-input-textarea {
+  overflow: hidden;
+}
+</style>

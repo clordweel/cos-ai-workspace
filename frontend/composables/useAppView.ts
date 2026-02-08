@@ -1,4 +1,4 @@
-export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth'
+export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth' | 'app'
 
 /** 侧栏「标签」：类似浏览器标签，可多开、切换、关闭 */
 export interface AppTab {
@@ -10,7 +10,7 @@ export interface AppTab {
   isAuthRequired?: boolean
 }
 
-const VIEW_TITLES: Record<AppView, string> = {
+const VIEW_TITLES: Record<Exclude<AppView, 'app'>, string> = {
   home: '首页',
   contacts: '联系人',
   bots: '机器人',
@@ -18,16 +18,16 @@ const VIEW_TITLES: Record<AppView, string> = {
   auth: '认证登录',
 }
 
-const APP_TITLES: Record<string, string> = {
-  material: '物料助手',
-  order: '订单进度',
-  bom: 'BOM 状态',
-  inventory: '库存概览',
-}
-
 function tabTitle(view: AppView, appId?: string): string {
-  if (appId && APP_TITLES[appId]) return APP_TITLES[appId]
-  return VIEW_TITLES[view]
+  if (view === 'app' && appId) {
+    const ext = useAppExtensions().get(appId)
+    return ext?.name ?? appId
+  }
+  if (appId) {
+    const ext = useAppExtensions().get(appId)
+    if (ext) return ext.name
+  }
+  return view === 'app' ? '应用' : VIEW_TITLES[view]
 }
 
 const defaultHomeTab: AppTab = { id: 'tab-home-default', view: 'home', title: '首页' }

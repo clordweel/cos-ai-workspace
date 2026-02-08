@@ -96,18 +96,18 @@
             </template>
           </div>
           <Transition name="fade">
-            <div v-show="showAppList" class="app-drawer absolute left-0 right-0 z-20 flex max-h-[16rem] w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg transition-all duration-200 isolate" :style="{ top: '0' }">
+            <div v-show="showAppList" class="app-drawer absolute left-0 right-0 z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate" :style="{ top: 0, height: `${appDrawerHeightRem}rem` }">
               <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-8 pr-7 pt-3 pb-8">
                 <div class="mb-3 flex flex-col items-center gap-0">
                   <Logo :size="22" class="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
                   <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
                 </div>
                 <div class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5" :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }">
-                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="app.view && currentView === app.view ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700" :class="app.view && currentView === app.view ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''">
+                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="drawerAppActive(app) ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-700" :class="drawerAppActive(app) ? 'ring-2 ring-primary-500/50 text-primary-600 dark:text-primary-400' : ''">
                       <component :is="app.icon" class="h-4 w-4" />
                     </span>
-                    <span class="text-xs">{{ app.title }}</span>
+                    <span class="min-w-0 max-w-[3.25rem] truncate text-[10px]">{{ app.title }}</span>
                   </button>
                 </div>
               </div>
@@ -227,7 +227,7 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, Inbox, LogIn, Music, Pin, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
+import { Archive, Bot, ChevronDown, ChevronRight, Home, Inbox, LogIn, Pin, Search, Settings, Users } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'workspace' })
 
@@ -245,25 +245,44 @@ function toggleAppList() { showAppList.value = !showAppList.value }
 function toggleSearchBar() { showSearchBar.value = !showSearchBar.value }
 const listViewTab = ref<'active' | 'favorites' | 'pending' | 'settings'>('active')
 const pinnedCollapsed = ref(false)
-const drawerApps = [
-  { id: 'home', title: '导航', view: 'home' as const, icon: Home },
-  { id: 'auth', title: '认证登录', view: 'auth' as const, icon: LogIn },
-  { id: 'contacts', title: '联系人', view: 'contacts' as const, icon: Users },
-  { id: 'bots', title: '机器人', view: 'bots' as const, icon: Bot },
-  { id: 'settings', title: '设置', view: 'settings' as const, icon: Settings },
-  { id: 'mock-calendar', title: '日历', icon: Calendar },
-  { id: 'mock-files', title: '文件', icon: FileText },
-  { id: 'mock-notes', title: '笔记', icon: StickyNote },
-  { id: 'mock-tasks', title: '任务', icon: CheckSquare },
-  { id: 'mock-bookmark', title: '书签', icon: Bookmark },
-  { id: 'mock-gallery', title: '图库', icon: ImageIcon },
-  { id: 'mock-music', title: '音乐', icon: Music },
-  { id: 'mock-weather', title: '天气', icon: Cloud },
-]
-function onDrawerAppClick(app: (typeof drawerApps)[number]) {
-  if ('view' in app && app.view) { if (app.view === 'home') openNavPage(); else openPanel(app.view) }
+/** 应用抽屉项：内置视图（view）或扩展应用（appId） */
+type DrawerAppItem =
+  | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' }
+  | { id: string; title: string; icon: import('vue').Component; appId: string }
+
+const { list: appExtensionsList } = useAppExtensions()
+const { isAuthenticated } = useAuth()
+
+const drawerApps = computed<DrawerAppItem[]>(() => {
+  const fixed: DrawerAppItem[] = [
+    { id: 'home', title: '导航', view: 'home', icon: Home },
+    { id: 'auth', title: '认证登录', view: 'auth', icon: LogIn },
+    { id: 'contacts', title: '联系人', view: 'contacts', icon: Users },
+    { id: 'bots', title: '机器人', view: 'bots', icon: Bot },
+    { id: 'settings', title: '设置', view: 'settings', icon: Settings },
+  ]
+  const extensions = appExtensionsList.value.filter((ext) => !ext.requireAuth || isAuthenticated.value)
+  const extItems: DrawerAppItem[] = extensions.map((ext) => ({
+    id: `ext-${ext.id}`,
+    title: ext.name,
+    icon: ext.icon,
+    appId: ext.id,
+  }))
+  return [...fixed, ...extItems]
+})
+
+function onDrawerAppClick(app: DrawerAppItem) {
+  if ('appId' in app && app.appId) {
+    addTab('app', app.appId)
+    return
+  }
+  if ('view' in app && app.view) {
+    if (app.view === 'home') openNavPage()
+    else openPanel(app.view)
+  }
 }
-const appDrawerHeightRem = 16
+/** 抽屉固定高度（rem），与 CSS 变量一致，避免截断与顶栏错位 */
+const appDrawerHeightRem = 18
 const toolbarTop = computed(() => (showAppList.value ? `${appDrawerHeightRem}rem` : '0'))
 const listPaddingTop = computed(() => `${showAppList.value ? appDrawerHeightRem + 3 : 3}rem`)
 function onSessionItemClick(id: string) {
@@ -485,7 +504,13 @@ function startNewChat() {
 }
 
 const { getWithTitle } = useContactsAndBots()
-const { openPanel, openNavPage, currentView } = useAppView()
+const { openPanel, openNavPage, currentView, addTab, activeTab } = useAppView()
+
+function drawerAppActive(app: DrawerAppItem): boolean {
+  if ('view' in app && app.view) return currentView.value === app.view
+  if ('appId' in app && app.appId) return activeTab.value?.view === 'app' && activeTab.value?.appId === app.appId
+  return false
+}
 /** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
 const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
 

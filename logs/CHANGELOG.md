@@ -6,6 +6,15 @@
 
 ## 2026-02-08
 
+### 前端：应用区扩展标准化
+
+- **扩展注册与类型**：新增 `types/app-extensions.ts`（`AppExtension` 接口）、`composables/useAppExtensions.ts`（`register`/`unregister`/`list`/`get`/`has`），支持第三方或项目内注册工作台应用。
+- **视图与标签**：`useAppView` 增加视图类型 `'app'`；标签可带 `view: 'app'` 与 `appId`，标题与扩展名从注册表解析。
+- **首页与内容区**：首页应用卡片改为基于 `useAppExtensions().list` 渲染，点击打开 `addTab('app', ext.id)`；`AppPanel` 在 `currentView === 'app'` 时渲染扩展的根组件，未注册时显示占位提示。
+- **侧栏图标**：`WorkspaceAppNav` 对扩展标签从 `useAppExtensions().get(tab.appId)?.icon` 取图标。
+- **内置占位**：`plugins/app-extensions.client.ts` 注册物料助手、订单进度、BOM 状态、库存概览四个占位应用，使用 `AppPlaceholder.vue`；可后续替换为真实组件。
+- **文档**：`docs/APP_EXTENSIONS.md` 编写扩展开发指南（契约、类型、注册方式、根组件约定、懒加载示例）。
+
 ### 中间层：TypeScript 重构
 
 - **全量 TypeScript**：middleware 源码由 JavaScript 迁移为 TypeScript（`src/**/*.ts`、`scripts/release-port.ts`），新增 `tsconfig.json`（target ES2022、module NodeNext、strict）。
