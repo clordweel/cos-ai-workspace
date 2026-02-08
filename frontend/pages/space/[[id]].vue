@@ -71,20 +71,7 @@
             </div>
           </Transition>
           <SessionListHeader class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md" :style="{ top: toolbarTop }" :app-drawer-open="showAppList" :search-bar-open="showSearchBar" v-model:search-query="searchQuery" @new-chat="startNewChat" @search="toggleSearchBar" @app="toggleAppList" />
-          <nav class="session-list-bottom-nav absolute bottom-2 left-1/2 z-10 -translate-x-1/2 flex h-11 w-fit items-center justify-center gap-1 rounded-2xl border border-white/40 dark:border-white/10 bg-white/55 dark:bg-zinc-800/55 px-2 backdrop-blur-xl transition-all duration-300 ease-out" aria-label="会话列表视图">
-            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'active' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="活动聊天" @click="listViewTab = 'active'">
-              <MessageCircle class="h-4 w-4 shrink-0" :class="listViewTab === 'active' ? 'drop-shadow-sm' : ''" />
-              <span v-if="listViewTab === 'active'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
-            </button>
-            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'favorites' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="收藏归档" @click="listViewTab = 'favorites'">
-              <Archive class="h-4 w-4 shrink-0" :class="listViewTab === 'favorites' ? 'drop-shadow-sm' : ''" />
-              <span v-if="listViewTab === 'favorites'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
-            </button>
-            <button type="button" class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95" :class="listViewTab === 'settings' ? 'text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'" aria-label="会话设置" @click="listViewTab = 'settings'">
-              <Settings class="h-4 w-4 shrink-0" :class="listViewTab === 'settings' ? 'drop-shadow-sm' : ''" />
-              <span v-if="listViewTab === 'settings'" class="absolute bottom-1 left-1/2 h-0.5 w-3 -translate-x-1/2 rounded-full bg-primary-500 dark:bg-primary-400 shadow-sm shadow-primary-400/30" aria-hidden="true" />
-            </button>
-          </nav>
+          <SessionListBottomNav v-model="listViewTab" />
         </div>
       </aside>
       <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
@@ -198,7 +185,7 @@
 import type { ChatMessage } from '~/composables/useChatSessions'
 import placeholderMessagesJson from '~/data/placeholder-messages.json'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, MessageCircle, Music, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
+import { Archive, Bookmark, Bot, Calendar, CheckSquare, ChevronDown, ChevronRight, Cloud, FileText, Home, Image as ImageIcon, LogIn, Music, Search, Settings, StickyNote, Users } from 'lucide-vue-next'
 
 const PLACEHOLDER_MESSAGES = placeholderMessagesJson as ChatMessage[]
 
@@ -478,10 +465,10 @@ onMounted(() => {
       const title = getWithTitle(id) ?? '会话'
       ensureChat(id, title)
     }
-    return
+  } else {
+    const app = route.query.app as 'contacts' | 'bots' | undefined
+    if (app === 'contacts' || app === 'bots') openPanel(app)
   }
-  const app = route.query.app as 'contacts' | 'bots' | undefined
-  if (app === 'contacts' || app === 'bots') openPanel(app)
 })
 
 watch(() => route.query.app, (app) => {
@@ -711,8 +698,6 @@ function retryMessage(index: number) {
 .session-list-scroll-area::-webkit-scrollbar-track { background: transparent; }
 .session-list-scroll-area::-webkit-scrollbar-thumb { border-radius: 4px; background: rgb(161 161 170 / 0.4); }
 .session-list-scroll-area::-webkit-scrollbar-thumb:hover { background: rgb(161 161 170 / 0.6); }
-.session-list-bottom-nav { box-shadow: 0 8px 32px rgba(0,0,0,0.08), 0 0 0 1px rgba(255,255,255,0.6) inset; }
-.dark .session-list-bottom-nav { box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.08) inset; }
 .app-drawer-scroll { scrollbar-width: none; }
 .app-drawer-scroll::-webkit-scrollbar { display: none; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
