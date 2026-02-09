@@ -37,7 +37,7 @@
           <div
             class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
           >
-            <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+            <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
           </div>
         </ContextMenuTrigger>
         <ContextMenuPortal>
@@ -91,7 +91,7 @@
       </ContextMenuRoot>
       <template v-else>
         <div class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
-          <p class="whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+          <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
         </div>
       </template>
     </div>
@@ -115,14 +115,14 @@
             </button>
             <div
               v-show="thinkingOpen"
-              class="mt-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap break-words border border-zinc-200 dark:border-zinc-600"
+              class="chat-message-text mt-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap break-words border border-zinc-200 dark:border-zinc-600"
             >
               {{ message.thinking }}
             </div>
           </div>
           <div
             v-if="isThinkingPlaceholder"
-            class="thinking-placeholder inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-600/80 bg-zinc-50/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400"
+            class="chat-message-text thinking-placeholder inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-600/80 bg-zinc-50/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400"
           >
             <Sparkles class="h-3.5 w-3.5 shrink-0 text-amber-500/80 dark:text-amber-400/80 thinking-icon" />
             <span>思考中</span>
@@ -132,7 +132,7 @@
               <span class="thinking-dot thinking-dot-3" />
             </span>
           </div>
-          <p v-else class="whitespace-pre-wrap break-words">
+          <p v-else class="chat-message-text whitespace-pre-wrap break-words">
             <template v-if="message.contentChunks?.length">
               <span
                 v-for="(chunk, i) in message.contentChunks"
@@ -226,14 +226,14 @@
         </button>
         <div
           v-show="thinkingOpen"
-          class="mt-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap break-words border border-zinc-200 dark:border-zinc-600"
+          class="chat-message-text mt-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-xs text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap break-words border border-zinc-200 dark:border-zinc-600"
         >
           {{ message.thinking }}
         </div>
       </div>
       <div
         v-if="isThinkingPlaceholder"
-        class="thinking-placeholder inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-600/80 bg-zinc-50/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400"
+        class="chat-message-text thinking-placeholder inline-flex items-center gap-2 rounded-xl border border-zinc-200/80 dark:border-zinc-600/80 bg-zinc-50/90 dark:bg-zinc-800/90 px-3 py-2 text-xs text-zinc-500 dark:text-zinc-400"
       >
         <Sparkles class="h-3.5 w-3.5 shrink-0 text-amber-500/80 dark:text-amber-400/80 thinking-icon" />
         <span>思考中</span>
@@ -243,7 +243,7 @@
           <span class="thinking-dot thinking-dot-3" />
         </span>
       </div>
-      <p v-else class="whitespace-pre-wrap break-words">
+      <p v-else class="chat-message-text whitespace-pre-wrap break-words">
         <template v-if="message.contentChunks?.length">
           <span
             v-for="(chunk, i) in message.contentChunks"
@@ -494,6 +494,10 @@ function onCopy() {
 </script>
 
 <style scoped>
+/* 仅聊天对话文字随「界面字体大小」设置缩放（:deep 确保在 as-child 等插槽内也生效） */
+:deep(.chat-message-text) {
+  font-size: calc(1rem * var(--chat-text-scale, 1)) !important;
+}
 .streaming-cursor {
   display: inline-block;
   width: 2px;

@@ -98,7 +98,7 @@
               :value="modelValue"
               rows="2"
               placeholder="说点什么？输入 @ 可引用联系人或机器人"
-              class="chat-input-textarea min-h-[72px] w-full resize-none border-0 bg-transparent pl-3 pr-1 py-3 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
+              class="chat-input-textarea chat-input-text-scale min-h-[72px] w-full resize-none border-0 bg-transparent pl-3 pr-1 py-3 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
               :disabled="streaming"
               @input="onTextareaInput"
               @keydown="onTextareaKeydown"
@@ -420,6 +420,10 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* 输入框文字随「界面字体大小」设置缩放 */
+.chat-input-text-scale {
+  font-size: calc(1rem * var(--chat-text-scale, 1));
+}
 .mention-list {
   scrollbar-gutter: stable;
 }

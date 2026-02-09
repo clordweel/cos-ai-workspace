@@ -5,172 +5,53 @@
       class="flex min-h-0 min-w-0 flex-1"
       :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
     >
-      <aside
-        v-show="isSessionExpanded || !chatId"
-        class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 session-area"
-        :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
-        :style="{ fontSize: sessionAreaFontScale + 'rem' }"
-      >
-        <div class="relative flex-1 min-h-0 flex flex-col min-w-0">
-          <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain pb-24">
-            <template v-if="listViewTab === 'active'">
-              <div class="min-h-full flex flex-col transition-[padding] duration-200" :style="{ paddingTop: listPaddingTop }">
-                <section class="session-list-pinned border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
-                  <button
-                    type="button"
-                    class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
-                    @click="pinnedCollapsed = !pinnedCollapsed"
-                  >
-                    <component :is="pinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <span class="flex-1">置顶</span>
-                    <span v-if="pinnedChats.length > 0" class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums">
-                      {{ pinnedChats.length }}
-                    </span>
-                  </button>
-                  <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
-                    <SessionListItem
-                      v-for="c in pinnedChats"
-                      :key="c.id"
-                      :item="c"
-                      :is-active="c.id === chatId && isSessionExpanded"
-                      :is-mock="isMockSession(c.id)"
-                      :is-pinned="true"
-                      :date-label="getChatDateLabel(c.id)"
-                      @click="onSessionItemClick(c.id)"
-                      @toggle-pin="togglePin(c.id)"
-                      @rename="onSessionRename(c.id)"
-                      @close="onSessionClose(c.id)"
-                    />
-                  </ul>
-                </section>
-                <section class="flex-1 min-h-0 flex flex-col">
-                  <template v-if="activeChats.length !== 0">
-                    <ul class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full">
-                      <SessionListItem
-                        v-for="c in activeChats"
-                        :key="c.id"
-                        :item="c"
-                        :is-active="c.id === chatId && isSessionExpanded"
-                        :is-mock="isMockSession(c.id)"
-                        :is-pinned="pinnedIds.includes(c.id)"
-                        :date-label="getChatDateLabel(c.id)"
-                        @click="onSessionItemClick(c.id)"
-                        @toggle-pin="togglePin(c.id)"
-                        @rename="onSessionRename(c.id)"
-                        @close="onSessionClose(c.id)"
-                      />
-                    </ul>
-                  </template>
-                  <div v-else-if="searchQuery" class="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-4 text-center">
-                    <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-                    <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
-                    <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
-                  </div>
-                </section>
-              </div>
-            </template>
-            <template v-else-if="listViewTab === 'favorites'">
-              <div class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center" :style="{ paddingTop: listPaddingTop }">
-                <Archive class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">收藏与归档</p>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">暂无收藏或归档会话</p>
-              </div>
-            </template>
-            <template v-else-if="listViewTab === 'pending'">
-              <div class="min-h-full flex flex-col transition-[padding] duration-200" :style="{ paddingTop: listPaddingTop }">
-                <section class="border-b border-zinc-100 dark:border-zinc-700/80 px-3 py-2">
-                  <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">未读、发送中、已送达等（非已读）</p>
-                </section>
-                <section v-if="pendingChats.length > 0" class="flex-1 min-h-0 overflow-y-auto">
-                  <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
-                    <li
-                      v-for="c in pendingChats"
-                      :key="c.id"
-                      role="button"
-                      tabindex="0"
-                      class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/40 rounded-md"
-                      @click="onSessionItemClick(c.id)"
-                      @keydown.enter.prevent="onSessionItemClick(c.id)"
-                    >
-                      <SessionListThumb :type="c.type === 'group' ? 'group' : 'private'" :participants="c.participants ?? [{ name: c.title }]" />
-                      <div class="min-w-0 flex-1">
-                        <p class="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ c.title }}</p>
-                        <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">{{ getChatDateLabel(c.id) }}</p>
-                      </div>
-                      <span class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums">
-                        {{ getNonReadCount(c.id) }}
-                      </span>
-                      <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
-                    </li>
-                  </ul>
-                </section>
-                <div v-else class="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <Inbox class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-                  <p class="text-sm text-zinc-500 dark:text-zinc-400">暂无待处理消息</p>
-                  <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">已读以外的消息会出现在这里</p>
-                </div>
-              </div>
-            </template>
-            <template v-else-if="listViewTab === 'settings'">
-              <div class="min-h-full flex flex-col overflow-y-auto" :style="{ paddingTop: listPaddingTop }">
-                <section class="px-4 py-4 border-b border-zinc-100 dark:border-zinc-700/80">
-                  <h2 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">本地界面设置</h2>
-                  <div class="space-y-3">
-                    <div class="flex items-center justify-between gap-3">
-                      <label class="text-xs font-medium text-zinc-800 dark:text-zinc-200 shrink-0">界面字体大小</label>
-                      <span class="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">{{ uiFontSizeStep }}</span>
-                    </div>
-                    <Slider
-                      :model-value="[uiFontSizeStep]"
-                      :min="FONT_STEP_MIN"
-                      :max="FONT_STEP_MAX"
-                      :step="1"
-                      class="w-full max-w-[12rem] mx-auto"
-                      @update:model-value="setUIFontSizeStep(($event as number[])[0])"
-                    />
-                  </div>
-                </section>
-                <section class="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
-                  <Settings class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-                  <p class="text-sm text-zinc-500 dark:text-zinc-400">会话设置</p>
-                  <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">通知、提醒等（占位）</p>
-                </section>
-              </div>
-            </template>
-          </div>
-          <Transition name="fade">
-            <div v-show="showAppList" class="app-drawer absolute left-0 right-0 z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate" :style="{ top: 0, height: `${appDrawerHeightRem}rem` }">
-              <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-8 pr-7 pt-3 pb-8">
-                <div class="mb-3 flex flex-col items-center gap-0">
-                  <Logo :size="22" class="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
-                  <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
-                </div>
-                <div class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5" :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }">
-                  <button v-for="app in drawerApps" :key="app.id" type="button" class="flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700/60 transition-colors" :class="drawerAppActive(app) ? 'bg-primary-50/50 dark:bg-primary-900/20' : ''" @click="onDrawerAppClick(app)">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-black dark:text-white bg-white dark:bg-zinc-700" :class="drawerAppActive(app) ? 'ring-2 ring-primary-500/50' : ''">
-                      <component :is="app.icon" class="h-4 w-4" />
-                    </span>
-                    <span class="min-w-0 max-w-[3.25rem] truncate text-[10px]">{{ app.title }}</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Transition>
-          <SessionListHeader class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md" :style="{ top: toolbarTop }" :app-drawer-open="showAppList" :search-bar-open="showSearchBar" v-model:search-query="searchQuery" @new-chat="startNewChat" @search="toggleSearchBar" @app="toggleAppList" />
-          <SessionListBottomNav v-model="listViewTab" :pending-count="totalPendingCount" />
-        </div>
-      </aside>
-      <!-- 右侧/下方：展开时始终显示，否则仅 chat 时显示 -->
+      <SpaceSessionSidebar
+        :is-session-expanded="isSessionExpanded"
+        :chat-id="chatId"
+        :list-view-tab="listViewTab"
+        :list-padding-top="listPaddingTop"
+        :toolbar-top="toolbarTop"
+        :pinned-collapsed="pinnedCollapsed"
+        :pinned-chats="pinnedChats"
+        :active-chats="activeChats"
+        :pending-chats="pendingChats"
+        :pinned-ids="pinnedIds"
+        :search-query="searchQuery"
+        :show-app-list="showAppList"
+        :show-search-bar="showSearchBar"
+        :app-drawer-height-rem="appDrawerHeightRem"
+        :drawer-apps="drawerApps"
+        :total-pending-count="totalPendingCount"
+        :get-chat-date-label="getChatDateLabel"
+        :get-non-read-count="getNonReadCount"
+        :is-mock="isMockSession"
+        :drawer-app-active="drawerAppActive"
+        @update:pinned-collapsed="pinnedCollapsed = $event"
+        @update:search-query="setSearchQuery"
+        @update:list-view-tab="setListViewTab"
+        @session-click="onSessionItemClick"
+        @toggle-pin="togglePin"
+        @rename="onSessionRename"
+        @close="onSessionClose"
+        @new-chat="startNewChat"
+        @search="toggleSearchBar"
+        @app="toggleAppList"
+        @drawer-select="onDrawerAppClick"
+      />
       <main
         class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative"
         v-show="isSessionExpanded || !!chatId"
+        :style="{ '--chat-text-scale': sessionAreaFontScale }"
       >
         <template v-if="chatId">
-          <ChatHeader
-            :title="chatTitle"
-            :user-name="chatUserName"
+          <SpaceChatPane
+            :scroll-ref="scrollRef"
+            :chat-title="chatTitle"
+            :chat-user-name="chatUserName"
             :is-session-expanded="isSessionExpanded"
+            :session-area-font-scale="sessionAreaFontScale"
+            v-model:input="input"
+            :streaming="streaming"
             @close="onCloseChat"
             @rename="onRenameChat"
             @share="onShareConversation"
@@ -180,13 +61,12 @@
             @export-markdown="onExportMarkdown"
             @archive="onArchiveChat"
             @delete="onDeleteChat"
-          />
-          <!-- 滚动区：虚拟列表 + 可定制滚动条；仅消息行有右键菜单，其它为系统菜单 -->
-          <div
-            ref="scrollRef"
-            class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pt-16 pb-52"
+            @submit="send"
+            @stop="stopStream"
+            @clear="input = ''"
+            @scroll-to-last="scrollToLastMessage"
+            @add-participant="openAddParticipant"
           >
-            <!-- 虚拟列表就绪时：只渲染可见行 -->
             <template v-if="virtualRows.length > 0">
               <div
                 :style="{
@@ -244,7 +124,6 @@
                 </div>
               </div>
             </template>
-            <!-- 虚拟未就绪（如首帧 scrollRef 未挂载）或无虚拟行时：普通列表 -->
             <div v-else class="space-y-3">
               <div
                 v-for="(msg, i) in displayMessages"
@@ -276,16 +155,7 @@
                 />
               </div>
             </div>
-          </div>
-          <ChatInputPanel
-            v-model="input"
-            :streaming="streaming"
-            @submit="send"
-            @stop="stopStream"
-            @clear="input = ''"
-            @scroll-to-last="scrollToLastMessage"
-            @add-participant="openAddParticipant"
-          />
+          </SpaceChatPane>
         </template>
         <ChatEmptyState v-else @new-chat="startNewChat" />
       </main>
@@ -296,20 +166,7 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Slider } from '~/components/ui/slider'
-import {
-  Archive,
-  Bot,
-  ChevronDown,
-  ChevronRight,
-  Home,
-  Inbox,
-  LogIn,
-  Pin,
-  Search,
-  Settings,
-  Users,
-} from 'lucide-vue-next'
+import { Bot, Home, LogIn, Settings, Users } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'workspace' })
 
@@ -325,9 +182,11 @@ const showAppList = ref(false)
 const showSearchBar = ref(false)
 function toggleAppList() { showAppList.value = !showAppList.value }
 function toggleSearchBar() { showSearchBar.value = !showSearchBar.value }
+function setSearchQuery(v: string) { searchQuery.value = v }
+function setListViewTab(v: 'active' | 'favorites' | 'pending' | 'settings') { listViewTab.value = v }
 const listViewTab = ref<'active' | 'favorites' | 'pending' | 'settings'>('active')
 const pinnedCollapsed = ref(false)
-const { uiFontSizeStep, sessionAreaFontScale, setUIFontSizeStep, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings()
+const { sessionAreaFontScale } = useUISettings()
 /** 应用抽屉项：内置视图（view）或扩展应用（appId） */
 type DrawerAppItem =
   | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' }
@@ -958,82 +817,4 @@ function retryMessage(index: number) {
   opacity: 0;
   transform: translateY(-100%);
 }
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-
-/* 会话消息区选中：与气泡背景协调，主题色半透明 */
-.chat-scroll-area *::selection {
-  background: rgb(59 130 246 / 0.22);
-  color: inherit;
-}
-.chat-scroll-area *::-moz-selection {
-  background: rgb(59 130 246 / 0.22);
-  color: inherit;
-}
-:global(.dark) .chat-scroll-area *::selection {
-  background: rgb(96 165 250 / 0.28);
-}
-:global(.dark) .chat-scroll-area *::-moz-selection {
-  background: rgb(96 165 250 / 0.28);
-}
-
-/* 可定制滚动条：细条、圆角、悬停显色，千条消息下仍流畅 */
-.chat-scroll-area {
-  scrollbar-gutter: stable;
-}
-.chat-scroll-area::-webkit-scrollbar {
-  width: 2px;
-}
-.chat-scroll-area::-webkit-scrollbar-track {
-  background: transparent;
-}
-.chat-scroll-area::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgb(161 161 170 / 0.4);
-}
-.chat-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: rgb(161 161 170 / 0.6);
-}
-.chat-scroll-area::-webkit-scrollbar-thumb:active {
-  background: rgb(161 161 170 / 0.8);
-}
-@supports (scrollbar-width: thin) {
-  .chat-scroll-area {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
-  }
-}
-
-/* 会话列表区选中：略柔和，与列表项悬停风格一致 */
-.session-list-scroll-area *::selection {
-  background: rgb(59 130 246 / 0.18);
-  color: inherit;
-}
-.session-list-scroll-area *::-moz-selection {
-  background: rgb(59 130 246 / 0.18);
-  color: inherit;
-}
-:global(.dark) .session-list-scroll-area *::selection {
-  background: rgb(96 165 250 / 0.22);
-}
-:global(.dark) .session-list-scroll-area *::-moz-selection {
-  background: rgb(96 165 250 / 0.22);
-}
-
-.session-list-scroll-area { scrollbar-gutter: stable; }
-.session-list-scroll-area::-webkit-scrollbar { width: 2px; }
-.session-list-scroll-area::-webkit-scrollbar-track { background: transparent; }
-.session-list-scroll-area::-webkit-scrollbar-thumb { border-radius: 4px; background: rgb(161 161 170 / 0.4); }
-.session-list-scroll-area::-webkit-scrollbar-thumb:hover { background: rgb(161 161 170 / 0.6); }
-.app-drawer-scroll { scrollbar-width: none; }
-.app-drawer-scroll::-webkit-scrollbar { display: none; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.15s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
