@@ -12,18 +12,25 @@ export const TAILWIND_BREAKPOINTS_PX: Record<string, number> = {
 }
 
 const breakpointRefs: Record<string, Ref<boolean>> = {}
+/** 客户端已挂载的 matchMedia 监听，避免重复注册且保证刷新后能同步到当前视口 */
+const clientMediaQueries: Record<string, MediaQueryList> = {}
 
 /** 当前视口是否 >= 指定 Tailwind 断点（min-width），单例 per 断点，与 Tailwind 类对齐 */
 export function useBreakpoint(name: keyof typeof TAILWIND_BREAKPOINTS_PX) {
   const key = name
   if (!breakpointRefs[key]) {
-    const minWidth = TAILWIND_BREAKPOINTS_PX[name] ?? 0
-    const query = `(min-width: ${minWidth}px)`
     breakpointRefs[key] = ref(false)
-    if (import.meta.client) {
+  }
+  if (import.meta.client) {
+    if (!clientMediaQueries[key]) {
+      const minWidth = TAILWIND_BREAKPOINTS_PX[name] ?? 0
+      const query = `(min-width: ${minWidth}px)`
       const mq = window.matchMedia(query)
       breakpointRefs[key].value = mq.matches
-      mq.addEventListener('change', (e: MediaQueryListEvent) => { breakpointRefs[key].value = e.matches })
+      mq.addEventListener('change', (e: MediaQueryListEvent) => {
+        breakpointRefs[key].value = e.matches
+      })
+      clientMediaQueries[key] = mq
     }
   }
   return breakpointRefs[key]

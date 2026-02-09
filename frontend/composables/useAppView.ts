@@ -73,6 +73,15 @@ const activeTab = computed(() => {
 const canGoBack = computed(() => tabs.value.length > 1)
 
 export function useAppView() {
+  /** 视口 < lg(1024px) 时自动展开应用区（面板 + 内容区），与 useWorkspaceLayout 的 lg 断点一致 */
+  const isSessionWide = useBreakpoint('lg')
+  watch(() => isSessionWide.value, (wide) => {
+    if (!wide) {
+      isPanelOpen.value = true
+      isContentVisible.value = true
+    }
+  }, { immediate: true })
+
   /** 应用标签栏是否展开：仅由用户手动操作决定（固定时的锁定状态 或 悬停展开） */
   const appSidebarExpanded = computed(() =>
     isSidebarPinned.value ? sidebarPinnedExpanded.value : isSidebarHovered.value

@@ -28,6 +28,12 @@ export const WORKSPACE_APP_PANEL_MAX_WIDTH_PX = 1000
 export function useWorkspaceLayout() {
   const route = useRoute()
   const isXl = useBreakpoint('xl')
+  const isSm = useBreakpoint('sm')
+  /** 视口 >= lg(1024px) 才会话区可左右双栏；低于 lg 为单栏（sm 且应用区折叠时仍为双栏） */
+  const isSessionWide = useBreakpoint('lg')
+  /** 仅客户端挂载后才使用断点，避免 SSR 与首屏 hydration 时不一致导致布局错乱 */
+  const isMounted = ref(false)
+  onMounted(() => { isMounted.value = true })
   const {
     isPanelOpen,
     isContentVisible,
@@ -61,14 +67,20 @@ export function useWorkspaceLayout() {
     return 'list_chat_app_tabs_content_collapsed'
   })
 
-  /** 会话区是否「展开」：xl 断点及以上或应用区关闭/内容区折叠时为 true，会话列表与聊天左右并排 */
-  const isSessionExpanded = computed(() => isXl.value || !isPanelOpen.value || !isContentVisible.value)
+  /** 会话区是否「展开」：挂载后 >= lg 时 xl 或应用区折叠则双栏；< lg 时仅 sm 且应用区折叠则为双栏，否则单栏 */
+  const isSessionExpanded = computed(() => {
+    const appCollapsed = !isPanelOpen.value || !isContentVisible.value
+    if (!isMounted.value) return appCollapsed
+    if (isSessionWide.value) return isXl.value || appCollapsed
+    return isSm.value && appCollapsed
+  })
 
-  /** 会话区宽度类：xl 时三栏（列表+聊天+应用）均展开，会话区占满除应用区外的空间；非 xl 且应用内容展开时会话区收窄为 max-w-sm */
+  /** 会话区宽度类：< lg 单栏时占满剩余；>= lg 按原逻辑；首屏与 SSR 一致 */
   const sessionAreaClass = computed(() => {
     if (!isPanelOpen.value) return 'max-w-none'
     if (isPanelOpen.value && !isContentVisible.value) return 'max-w-none mr-3'
-    if (isXl.value) return 'max-w-none mr-3'
+    if (isMounted.value && !isSessionWide.value) return 'max-w-none mr-3'
+    if (isMounted.value && isXl.value) return 'max-w-none mr-3'
     return 'max-w-sm mr-3'
   })
 

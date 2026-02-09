@@ -115,28 +115,6 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.app-drawer::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image: radial-gradient(
-    circle at center,
-    rgba(0, 0, 0, 0.04) 1px,
-    transparent 1px
-  );
-  background-size: 14px 14px;
-}
-
-:global(.dark) .app-drawer::before {
-  background-image: radial-gradient(
-    circle at center,
-    rgba(255, 255, 255, 0.05) 1px,
-    transparent 1px
-  );
-}
-
 .app-drawer-scroll {
   scrollbar-width: none;
 }
