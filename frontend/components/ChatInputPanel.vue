@@ -176,7 +176,7 @@
                 <button
                   type="submit"
                   class="send-btn-inner group relative flex h-6 min-w-8 items-center justify-center gap-0.5 rounded-[calc(0.5rem-1px)] pl-1 pr-1.5 transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50"
-                  :class="modelValue.trim() ? 'text-black dark:text-white bg-white dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25 hover:bg-white dark:hover:bg-zinc-600/90' : 'text-black dark:text-white bg-zinc-100 dark:bg-zinc-600/60 hover:text-black dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-600'"
+                  :class="modelValue.trim() ? 'text-black dark:text-white bg-white dark:bg-zinc-800 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25 hover:bg-zinc-50 dark:hover:bg-zinc-700' : 'text-black dark:text-white bg-white dark:bg-zinc-800 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700'"
                   :disabled="!modelValue.trim()"
                   aria-label="发送"
                 >

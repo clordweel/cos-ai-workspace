@@ -1,73 +1,38 @@
-import { ref, computed, watch, readonly, onMounted, onUnmounted } from 'vue'
-
-const STORAGE_KEY = 'app-theme'
+import { computed, watch } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 
-function getStored(): ThemeMode {
-  if (typeof window === 'undefined') return 'light'
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    if (v === 'dark' || v === 'light' || v === 'system') return v
-  } catch {}
-  return 'light'
-}
-
-function getSystemDark(): boolean {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-color-scheme: dark)').matches
-}
-
-function applyEffective(isDark: boolean) {
-  if (typeof window === 'undefined') return
-  const html = document.documentElement
-  if (isDark) {
-    html.classList.add('dark')
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#0a0a0a')
-  } else {
-    html.classList.remove('dark')
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#fafafa')
-  }
-}
-
-const themeMode = ref<ThemeMode>(getStored())
-const systemDark = ref(false)
-
-const isDark = computed(() => {
-  const mode = themeMode.value
-  if (mode === 'dark') return true
-  if (mode === 'light') return false
-  return systemDark.value
-})
-
+/**
+ * 基于 @nuxtjs/color-mode 的主题 composable，与 shadcn-vue 暗色模式文档一致。
+ * 同步 meta theme-color，并对外保持原有 useTheme 接口供设置页等使用。
+ * themeMode 使用可写 computed，确保 Select 等组件的 v-model 能正确更新。
+ */
 export function useTheme() {
-  function setTheme(mode: ThemeMode) {
-    themeMode.value = mode
-    try {
-      localStorage.setItem(STORAGE_KEY, mode)
-    } catch {}
-    applyEffective(isDark.value)
+  const colorMode = useColorMode()
+
+  if (import.meta.client) {
+    watch(
+      () => colorMode.value,
+      (value) => {
+        const meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', value === 'dark' ? '#0a0a0a' : '#fafafa')
+      },
+      { immediate: true },
+    )
   }
 
-  onMounted(() => {
-    systemDark.value = getSystemDark()
-    applyEffective(isDark.value)
-    const mql = window.matchMedia('(prefers-color-scheme: dark)')
-    const listener = () => {
-      systemDark.value = mql.matches
-      applyEffective(isDark.value)
-    }
-    mql.addEventListener('change', listener)
-    onUnmounted(() => mql.removeEventListener('change', listener))
+  const themeMode = computed<ThemeMode>({
+    get: () => (colorMode.preference as ThemeMode) || 'light',
+    set: (mode: ThemeMode) => {
+      colorMode.preference = mode
+    },
   })
 
-  watch(isDark, (v) => {
-    applyEffective(v)
-  }, { immediate: false })
-
   return {
-    isDark: readonly(isDark),
-    themeMode: readonly(themeMode),
-    setTheme,
+    isDark: computed(() => colorMode.value === 'dark'),
+    themeMode,
+    setTheme(mode: ThemeMode) {
+      colorMode.preference = mode
+    },
   }
 }

@@ -13,7 +13,10 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   // 若仍出现 500 (reading 'ce'/'isCE')，可临时开启下一行关闭 SSR 以规避 Nuxt 3.11+ addComponent 已知问题
   // ssr: false,
-  modules: ['shadcn-nuxt'],
+  modules: ['shadcn-nuxt', '@nuxtjs/color-mode'],
+  colorMode: {
+    classSuffix: '',
+  },
   css: ['~/assets/css/tailwind.css'],
   shadcn: {
     prefix: '',

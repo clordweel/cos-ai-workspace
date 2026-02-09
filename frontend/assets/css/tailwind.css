@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 使 dark: 随 html 上的 .dark class 生效，与 @nuxtjs/color-mode 一致（否则 v4 默认仅响应 prefers-color-scheme） */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   /* 全局主题色（高饱和科技蓝），与原 tailwind.config 一致 */
   --color-primary-50: #eff6ff;

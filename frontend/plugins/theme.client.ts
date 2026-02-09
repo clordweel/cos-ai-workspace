@@ -1,18 +1,9 @@
-const STORAGE_KEY = 'app-theme'
-
+/**
+ * 在 @nuxtjs/color-mode 已设置 html class 后，同步 meta theme-color，避免首屏闪动。
+ * 具体主题 class 与持久化由 @nuxtjs/color-mode 负责。
+ */
 export default defineNuxtPlugin(() => {
-  try {
-    const v = localStorage.getItem(STORAGE_KEY)
-    let isDark = false
-    if (v === 'dark') isDark = true
-    else if (v === 'system') isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    // v === 'light' or invalid: isDark stays false (default 浅色)
-    if (isDark) {
-      document.documentElement.classList.add('dark')
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#0a0a0a')
-    } else {
-      document.documentElement.classList.remove('dark')
-      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', '#fafafa')
-    }
-  } catch {}
+  const isDark = document.documentElement.classList.contains('dark')
+  const meta = document.querySelector('meta[name="theme-color"]')
+  if (meta) meta.setAttribute('content', isDark ? '#0a0a0a' : '#fafafa')
 })

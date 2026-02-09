@@ -197,10 +197,7 @@
                 <div class="rounded-md border border-zinc-200 dark:border-zinc-600 divide-y divide-zinc-100 dark:divide-zinc-600">
                   <div class="px-3 py-2.5">
                     <p class="text-sm text-zinc-800 dark:text-zinc-200 mb-2">主题</p>
-                    <Select
-                      :model-value="themeMode"
-                      @update:model-value="(v: string) => setTheme(v as ThemeMode)"
-                    >
+                    <Select v-model="themeMode">
                       <SelectTrigger class="w-full">
                         <SelectValue placeholder="选择主题" />
                       </SelectTrigger>
