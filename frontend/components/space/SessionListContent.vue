@@ -57,23 +57,29 @@
           </template>
           <div
             v-else-if="searchQuery"
-            class="flex-1 min-h-0 flex flex-col items-center justify-center py-12 px-4 text-center"
+            class="flex-1 min-h-0 flex flex-col items-center justify-center"
           >
-            <Search class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-            <p class="text-sm text-zinc-500 dark:text-zinc-400">无匹配会话</p>
-            <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">试试其它关键词</p>
+            <Empty
+              compact
+              title="无匹配会话"
+              description="试试其它关键词"
+              :icon="Search"
+            />
           </div>
         </section>
       </div>
     </template>
     <template v-else-if="listViewTab === 'favorites'">
       <div
-        class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center"
+        class="min-h-full flex flex-col items-center justify-center"
         :style="{ paddingTop: listPaddingTop }"
       >
-        <Archive class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-        <p class="text-sm text-zinc-500 dark:text-zinc-400">收藏与归档</p>
-        <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">暂无收藏或归档会话</p>
+        <Empty
+          compact
+          title="收藏与归档"
+          description="暂无收藏或归档会话"
+          :icon="Archive"
+        />
       </div>
     </template>
     <template v-else-if="listViewTab === 'pending'">
@@ -110,10 +116,13 @@
             </li>
           </ul>
         </section>
-        <div v-else class="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
-          <Inbox class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-          <p class="text-sm text-zinc-500 dark:text-zinc-400">暂无待处理消息</p>
-          <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">已读以外的消息会出现在这里</p>
+        <div v-else class="flex-1 flex flex-col items-center justify-center">
+          <Empty
+            compact
+            title="暂无待处理消息"
+            description="已读以外的消息会出现在这里"
+            :icon="Inbox"
+          />
         </div>
       </div>
     </template>
@@ -125,6 +134,7 @@
 
 <script setup lang="ts">
 import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search } from 'lucide-vue-next'
+import { Empty } from '~/components/ui/empty'
 import SessionListItem from '~/components/SessionListItem.vue'
 import SessionListThumb from '~/components/SessionListThumb.vue'
 import SessionListSettings from '~/components/space/SessionListSettings.vue'
