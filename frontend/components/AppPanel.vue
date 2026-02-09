@@ -9,11 +9,11 @@
                 :key="app.id"
                 role="button"
                 tabindex="0"
-                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2"
+                class="rounded-md border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-700/50 p-4 hover:border-zinc-300 dark:hover:border-zinc-500 hover:bg-zinc-100/80 dark:hover:bg-zinc-600/50 hover:shadow-sm transition-all duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 flex items-start justify-between gap-2"
                 @click="openApp(app)"
                 @keydown.enter.prevent="openApp(app)"
               >
-                <div class="flex items-center gap-2.5">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
                   <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
                     <component :is="app.icon" class="h-4 w-4" />
                   </span>
@@ -22,6 +22,16 @@
                     <p v-if="app.description" class="text-xs text-zinc-600 dark:text-zinc-400 truncate">{{ app.description }}</p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  class="shrink-0 flex h-8 w-8 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-200/80 dark:hover:bg-zinc-600/80 hover:text-amber-500 dark:hover:text-amber-400 transition-colors"
+                  :title="isFavorite(app.id) ? '从抽屉移除' : '加入抽屉'"
+                  aria-label="收藏到抽屉"
+                  @click.stop="toggleFavorite(app.id)"
+                >
+                  <Star v-if="isFavorite(app.id)" class="h-4 w-4 fill-amber-500 text-amber-500 dark:fill-amber-400 dark:text-amber-400" />
+                  <Star v-else class="h-4 w-4" />
+                </button>
               </div>
             </div>
             <p class="mt-4 text-xs text-zinc-500 dark:text-zinc-400 text-center">
@@ -291,7 +301,7 @@ import {
   SelectItem,
 } from '~/components/ui/select'
 import { Checkbox } from '~/components/ui/checkbox'
-import { Bot, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { Bot, Stethoscope, Loader2, CheckCircle2, AlertCircle, Star } from 'lucide-vue-next'
 
 const router = useRouter()
 const apiBase = useApiBase()
@@ -327,6 +337,7 @@ async function runDiagnostics() {
 }
 const { currentView, activeTab, addTab } = useAppView()
 const { list: appExtensionsList, get: getAppExtension } = useAppExtensions()
+const { isFavorite, toggle: toggleFavorite } = useAppFavorites()
 
 /** 首页展示的扩展列表（需登录的未登录时隐藏） */
 const homeAppList = computed(() =>

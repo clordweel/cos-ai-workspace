@@ -4,15 +4,16 @@
     role="banner"
     aria-label="会话列表"
   >
+    <!-- 展开时折叠按钮移至抽屉左上角，顶栏此处隐藏 -->
     <button
+      v-if="!appDrawerOpen"
       type="button"
       class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-colors"
-      :title="appDrawerOpen ? '收起应用' : '应用'"
-      :aria-label="appDrawerOpen ? '收起应用' : '应用'"
+      title="应用"
+      aria-label="应用"
       @click="$emit('app')"
     >
-      <ChevronUp v-if="appDrawerOpen" class="h-4 w-4" />
-      <ChevronDown v-else class="h-4 w-4" />
+      <ChevronDown class="h-4 w-4" />
     </button>
     <div class="flex min-w-0 flex-1 items-center justify-end gap-1">
       <SessionSearchBar
@@ -35,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ChevronDown, ChevronUp, MessageSquarePlus } from 'lucide-vue-next'
+import { ChevronDown, MessageSquarePlus } from 'lucide-vue-next'
 
 defineProps<{
   appDrawerOpen?: boolean

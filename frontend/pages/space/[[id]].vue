@@ -20,7 +20,8 @@
         :show-app-list="showAppList"
         :show-search-bar="showSearchBar"
         :app-drawer-height-rem="appDrawerHeightRem"
-        :drawer-apps="drawerApps"
+        :drawer-common-apps="drawerCommonApps"
+        :drawer-favorite-apps="drawerFavoriteApps"
         :total-pending-count="totalPendingCount"
         :get-chat-date-label="getChatDateLabel"
         :get-non-read-count="getNonReadCount"
@@ -36,6 +37,7 @@
         @new-chat="startNewChat"
         @search="toggleSearchBar"
         @app="toggleAppList"
+        @more="onDrawerMore"
         @drawer-select="onDrawerAppClick"
       />
       <main
@@ -166,7 +168,7 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Bot, Home, LogIn, Settings, Users } from 'lucide-vue-next'
+import { BarChart3, Bot, ClipboardList, Home, Layers, LogIn, Package, Settings, Users } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'workspace' })
 
@@ -187,33 +189,52 @@ function setListViewTab(v: 'active' | 'favorites' | 'pending' | 'settings') { li
 const listViewTab = ref<'active' | 'favorites' | 'pending' | 'settings'>('active')
 const pinnedCollapsed = ref(false)
 const { sessionAreaFontScale } = useUISettings()
-/** 应用抽屉项：内置视图（view）或扩展应用（appId） */
+/** 应用抽屉项：内置视图（view）、扩展应用（appId）或 mock（无 view/appId，点击跳转全部应用） */
 type DrawerAppItem =
   | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' }
   | { id: string; title: string; icon: import('vue').Component; appId: string }
+  | { id: string; title: string; icon: import('vue').Component }
 
 const { list: appExtensionsList } = useAppExtensions()
 const { isAuthenticated } = useAuth()
+const { favoriteIds } = useAppFavorites()
 
-const drawerApps = computed<DrawerAppItem[]>(() => {
-  const fixed: DrawerAppItem[] = [
-    { id: 'home', title: '导航', view: 'home', icon: Home },
-    { id: 'auth', title: '认证登录', view: 'auth', icon: LogIn },
-    { id: 'contacts', title: '联系人', view: 'contacts', icon: Users },
-    { id: 'bots', title: '机器人', view: 'bots', icon: Bot },
-    { id: 'settings', title: '设置', view: 'settings', icon: Settings },
-  ]
-  const extensions = appExtensionsList.value.filter((ext) => !ext.requireAuth || isAuthenticated.value)
-  const extItems: DrawerAppItem[] = extensions.map((ext) => ({
-    id: `ext-${ext.id}`,
-    title: ext.name,
-    icon: ext.icon,
-    appId: ext.id,
-  }))
-  return [...fixed, ...extItems]
+/** 抽屉常用：固定 5 项 */
+const drawerCommonApps = computed<DrawerAppItem[]>(() => [
+  { id: 'home', title: '导航', view: 'home', icon: Home },
+  { id: 'auth', title: '认证登录', view: 'auth', icon: LogIn },
+  { id: 'contacts', title: '联系人', view: 'contacts', icon: Users },
+  { id: 'bots', title: '机器人', view: 'bots', icon: Bot },
+  { id: 'settings', title: '设置', view: 'settings', icon: Settings },
+])
+
+/** 收藏区 mock 应用（点击跳转全部应用，用于展示与引导） */
+const DRAWER_FAVORITE_MOCK_APPS: DrawerAppItem[] = [
+  { id: 'mock-material', title: '物料助手', icon: Package },
+  { id: 'mock-order', title: '订单进度', icon: ClipboardList },
+  { id: 'mock-bom', title: 'BOM 状态', icon: Layers },
+  { id: 'mock-inventory', title: '库存概览', icon: BarChart3 },
+]
+
+/** 抽屉收藏：已收藏的扩展 + mock 应用 */
+const drawerFavoriteApps = computed<DrawerAppItem[]>(() => {
+  const ids = favoriteIds.value
+  const list: DrawerAppItem[] = appExtensionsList.value
+    .filter((ext) => ids.includes(ext.id) && (!ext.requireAuth || isAuthenticated.value))
+    .map((ext) => ({
+      id: `ext-${ext.id}`,
+      title: ext.name,
+      icon: ext.icon,
+      appId: ext.id,
+    }))
+  return [...list, ...DRAWER_FAVORITE_MOCK_APPS]
 })
 
 function onDrawerAppClick(app: DrawerAppItem) {
+  if (app.id.startsWith('mock-')) {
+    onDrawerMore()
+    return
+  }
   if ('appId' in app && app.appId) {
     addTab('app', app.appId)
     return
@@ -222,6 +243,12 @@ function onDrawerAppClick(app: DrawerAppItem) {
     if (app.view === 'home') openNavPage()
     else openPanel(app.view)
   }
+}
+
+/** 抽屉「更多」：打开全部应用并收起抽屉 */
+function onDrawerMore() {
+  openNavPage()
+  showAppList.value = false
 }
 /** 抽屉固定高度（rem），与 CSS 变量一致，避免截断与顶栏错位 */
 const appDrawerHeightRem = 18

@@ -28,9 +28,12 @@
       <SpaceAppDrawer
         :open="showAppList"
         :height-rem="appDrawerHeightRem"
-        :apps="drawerApps"
+        :common-apps="drawerCommonApps"
+        :favorite-apps="drawerFavoriteApps"
         :is-active="drawerAppActive"
         @select="emit('drawer-select', $event)"
+        @close="emit('app')"
+        @more="emit('more')"
       />
       <SessionListHeader
         class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md"
@@ -75,7 +78,8 @@ defineProps<{
   showAppList: boolean
   showSearchBar: boolean
   appDrawerHeightRem: number
-  drawerApps: DrawerAppItem[]
+  drawerCommonApps: DrawerAppItem[]
+  drawerFavoriteApps: DrawerAppItem[]
   totalPendingCount: number
   getChatDateLabel: (id: string) => string
   getNonReadCount: (id: string) => number
@@ -94,6 +98,7 @@ const emit = defineEmits<{
   'new-chat': []
   search: []
   app: []
+  more: []
   'drawer-select': [app: DrawerAppItem]
 }>()
 </script>
