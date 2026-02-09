@@ -50,6 +50,7 @@
 ### 3.3 身份与认证
 
 - Matrix 使用 **MXID**（如 `@user:homeserver`）；现有登录用户（如 Frappe/Logto）需通过**认证适配器**解析，再经**用户 id → MXID 映射**（或 Matrix 账号绑定）由会话适配器在 invite、send、list 时使用。认证适配器与会话适配器解耦：认证负责「当前是谁」，会话适配器负责「用该身份在 Matrix 上的操作」。
+- 若需 **Synapse 直接使用 Logto 做 OIDC 登录**（用户在 Element 等客户端用 Logto SSO 登录 Matrix），见 [deploy/matrix/README.md](../deploy/matrix/README.md) 的「Logto OIDC 登录」；配置后 MXID 的 localpart 可与 Logto `sub` 一致，便于与工作台 `logtoSub` 对齐。
 
 ---
 
@@ -109,3 +110,5 @@
 - **会话后端与 IM 选型（Matrix 对比与运维）**：[SESSION_BACKEND_AND_IM_OPTIONS.md](SESSION_BACKEND_AND_IM_OPTIONS.md)。
 - **标准化模型与适配器接口**：[SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md](SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md)。
 - **适配器类型定义**：`middleware/src/adapters/types.ts`。
+- **部署与管理台**：`deploy/matrix/`（Synapse + PostgreSQL，内网单实例；管理台 GUI 见该目录 README「管理台 GUI」小节）。
+- **中间层实现**：`middleware/src/adapters/matrix.ts`、`matrixClient.ts`；环境变量见根目录 `.env.example` 与 `middleware/README.md`。

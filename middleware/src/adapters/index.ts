@@ -4,6 +4,7 @@
  */
 import { config } from '../config.js';
 import { createMockAdapter } from './mock.js';
+import { createMatrixAdapter, isMatrixConfigured } from './matrix.js';
 import type { ChatBackendAdapter } from './types.js';
 
 const adapters = new Map<string, () => ChatBackendAdapter>();
@@ -13,6 +14,7 @@ function register(name: string, factory: () => ChatBackendAdapter): void {
 }
 
 register('mock', () => createMockAdapter());
+register('matrix', () => createMatrixAdapter());
 
 /**
  * 获取当前配置的聊天后端适配器
@@ -22,6 +24,7 @@ export function getChatAdapter(): ChatBackendAdapter | null {
   const provider = config.chat?.provider || 'mock';
   const factory = adapters.get(provider);
   if (!factory) return null;
+  if (provider === 'matrix' && !isMatrixConfigured()) return null;
   try {
     return factory();
   } catch {

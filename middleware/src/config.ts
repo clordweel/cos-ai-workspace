@@ -15,6 +15,12 @@ export interface Config {
   port: number;
   shutdownTimeoutMs: number;
   chat: { provider: string };
+  matrix: {
+    baseUrl: string;
+    userId: string;
+    accessToken: string;
+    password: string;
+  };
   dify: { apiBase: string; apiKey: string };
   cos: {
     baseUrl: string;
@@ -35,6 +41,13 @@ export const config: Config = {
 
   chat: {
     provider: (process.env.CHAT_PROVIDER || 'mock').toLowerCase(),
+  },
+
+  matrix: {
+    baseUrl: (process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').replace(/\/$/, ''),
+    userId: process.env.MATRIX_USER_ID || '',
+    accessToken: process.env.MATRIX_ACCESS_TOKEN || '',
+    password: process.env.MATRIX_PASSWORD || '',
   },
 
   dify: {

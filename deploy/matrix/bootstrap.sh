@@ -77,6 +77,44 @@ with open(path, "w") as f:
     f.write(content)
 PY
 
+# 可选：注入 Logto OIDC 配置（当 LOGTO_ISSUER、LOGTO_APP_ID_MATRIX、LOGTO_APP_SECRET 均设置时）
+if [ -n "${LOGTO_ISSUER}" ] && [ -n "${LOGTO_APP_ID_MATRIX}" ] && [ -n "${LOGTO_APP_SECRET}" ]; then
+  echo "正在注入 Logto OIDC 配置..."
+  export LOGTO_ISSUER LOGTO_APP_ID_MATRIX LOGTO_APP_SECRET DATA_DIR
+  python3 << PYLOGTO
+import os
+path = os.environ.get("DATA_DIR", "data") + "/homeserver.yaml"
+issuer = os.environ.get("LOGTO_ISSUER", "").rstrip("/")
+client_id = os.environ.get("LOGTO_APP_ID_MATRIX", "")
+client_secret = os.environ.get("LOGTO_APP_SECRET", "")
+# 避免 YAML 特殊字符，用双引号包裹并转义内部双引号
+def q(s):
+    return '"' + str(s).replace("\\\\", "\\\\\\\\").replace('"', '\\\\"') + '"'
+block = """
+# Logto OIDC（由 bootstrap 注入）
+oidc_providers:
+  - idp_id: logto
+    idp_name: Logto
+    discover: true
+    issuer: %s
+    client_id: %s
+    client_secret: %s
+    scopes: ["openid", "profile"]
+    user_mapping_provider:
+      config:
+        localpart_template: "{{ user.sub }}"
+        display_name_template: "{{ user.name }}"
+""" % (q(issuer), q(client_id), q(client_secret))
+with open(path, "r") as f:
+    content = f.read()
+# 若已有 oidc_providers 则不再追加
+if "oidc_providers:" in content:
+    raise SystemExit(0)
+with open(path, "a") as f:
+    f.write(block)
+PYLOGTO
+fi
+
 if [ ! -f "$DATA_DIR/homeserver.yaml" ]; then
   echo "生成或修改配置失败"
   exit 1

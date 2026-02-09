@@ -32,6 +32,11 @@
 | `COS_ERP_API_KEY` | 调用 cos 时的 Bearer Token（可选，按 Frappe/cos 约定） |
 | `COS_ERP_API_SECRET` | 若使用 API Key + Secret 认证时填写（由 cos 侧约定） |
 | `COS_ERP_TIMEOUT_MS` | 调用 ERPNext 接口超时（毫秒），可选，默认 15000 |
+| **Matrix（CHAT_PROVIDER=matrix 时）** | |
+| `MATRIX_BASE_URL` | Synapse 根地址（如 `http://10.1.1.15:8008`），默认 10.1.1.15:8008 |
+| `MATRIX_USER_ID` | Matrix 用户 ID（如 `@workbench:10.1.1.15`） |
+| `MATRIX_PASSWORD` | 登录密码（与 MATRIX_ACCESS_TOKEN 二选一） |
+| `MATRIX_ACCESS_TOKEN` | 已有 access token 时可直接填，免登录 |
 
 ## 开发
 
