@@ -2,17 +2,18 @@ import { ref, computed, onMounted } from 'vue'
 
 const STORAGE_KEY = 'app-ui-font-size'
 
-/** 界面字体大小档位：0=最小, 4=最大，步进 1（仅作用于会话区） */
-const FONT_STEP_MIN = 0
-const FONT_STEP_MAX = 4
-const FONT_STEP_DEFAULT = 2
+/** 界面字体大小档位：1=最小(约10px), 5=最大，步进 1（仅作用于聊天对话与输入框文字） */
+const FONT_STEP_MIN = 1
+const FONT_STEP_MAX = 5
+const FONT_STEP_DEFAULT = 3
 
+/** 档位 → 相对 16px 的倍数，1≈10px 2≈12px 3≈14px 4=16px 5≈18px */
 const scaleMap: Record<number, number> = {
-  0: 0.875,
-  1: 1,
-  2: 1.125,
-  3: 1.25,
-  4: 1.375,
+  1: 10 / 16,
+  2: 12 / 16,
+  3: 14 / 16,
+  4: 1,
+  5: 18 / 16,
 }
 
 function getStoredStep(): number {
@@ -27,8 +28,8 @@ function getStoredStep(): number {
 
 const uiFontSizeStep = ref(getStoredStep())
 
-/** 会话区字体缩放倍数（仅用于会话区容器 font-size） */
-const sessionAreaFontScale = computed(() => scaleMap[uiFontSizeStep.value] ?? 1)
+/** 聊天/输入框字体缩放倍数（相对 1rem） */
+const sessionAreaFontScale = computed(() => scaleMap[uiFontSizeStep.value] ?? 14 / 16)
 
 export function useUISettings() {
   function setUIFontSizeStep(step: number) {
@@ -44,7 +45,7 @@ export function useUISettings() {
   })
 
   return {
-    /** 当前字体档位 0–4 */
+    /** 当前字体档位 1–5 */
     uiFontSizeStep,
     /** 会话区字体缩放倍数，用于会话区容器 style.fontSize */
     sessionAreaFontScale,
