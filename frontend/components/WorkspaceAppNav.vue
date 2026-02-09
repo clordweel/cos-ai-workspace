@@ -172,6 +172,7 @@ function tabIcon(tab: AppTab) {
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .nav-width-transition {
   transition: width 0.2s ease-out;
   contain: layout style;

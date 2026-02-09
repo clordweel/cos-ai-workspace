@@ -3,6 +3,7 @@ import AppPlaceholder from '~/components/AppPlaceholder.vue'
 
 /**
  * 注册内置应用扩展（占位），供首页与侧栏展示。
+ * 服务端与客户端均执行，保证 drawerApps 等依赖 list 的初始渲染一致，避免 hydration mismatch。
  * 第三方扩展可在自己的 client 插件中调用 useAppExtensions().register()。
  */
 export default defineNuxtPlugin(() => {

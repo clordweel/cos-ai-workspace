@@ -283,12 +283,14 @@
 
 <script setup lang="ts">
 import type { ThemeMode } from '~/composables/useTheme'
-import Select from '~/components/ui/select/Select.vue'
-import SelectTrigger from '~/components/ui/select/SelectTrigger.vue'
-import SelectValue from '~/components/ui/select/SelectValue.vue'
-import SelectContent from '~/components/ui/select/SelectContent.vue'
-import SelectItem from '~/components/ui/select/SelectItem.vue'
-import Checkbox from '~/components/ui/checkbox/Checkbox.vue'
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '~/components/ui/select'
+import { Checkbox } from '~/components/ui/checkbox'
 import { Bot, Stethoscope, Loader2, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 
 const router = useRouter()

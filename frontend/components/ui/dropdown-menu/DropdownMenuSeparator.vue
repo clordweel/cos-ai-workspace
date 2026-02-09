@@ -1,9 +1,23 @@
-<template>
-  <DropdownMenuSeparator class="my-1 h-px bg-zinc-200 dark:bg-zinc-600" v-bind="$attrs" />
-</template>
-
 <script setup lang="ts">
-import { DropdownMenuSeparator as DropdownMenuSeparatorPrimitive } from 'radix-vue'
-defineOptions({ name: 'DropdownMenuSeparator' })
-const DropdownMenuSeparator = DropdownMenuSeparatorPrimitive
+import type { DropdownMenuSeparatorProps } from "reka-ui"
+import type { HTMLAttributes } from "vue"
+import { reactiveOmit } from "@vueuse/core"
+import {
+  DropdownMenuSeparator,
+} from "reka-ui"
+import { cn } from '~/lib/utils'
+
+const props = defineProps<DropdownMenuSeparatorProps & {
+  class?: HTMLAttributes["class"]
+}>()
+
+const delegatedProps = reactiveOmit(props, "class")
 </script>
+
+<template>
+  <DropdownMenuSeparator
+    data-slot="dropdown-menu-separator"
+    v-bind="delegatedProps"
+    :class="cn('bg-zinc-200 -mx-1 my-1 h-px dark:bg-zinc-800', props.class)"
+  />
+</template>

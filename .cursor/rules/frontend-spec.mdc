@@ -28,6 +28,11 @@ alwaysApply: false
 - 主界面以**对话流**为主，结构化结果用**任务卡片**（订单进度、库存摘要、BOM 状态、待确认物料等）。
 - 对话：`POST /api/chat/stream`，消费 **SSE**，打字机展示。确认创建物料：卡片「确认」→ `POST /api/material/confirm`（`draft_id`、用户标识）。
 
+## Shadcn-vue 与 UI 组件
+- **安装方式**：仅通过官方 CLI 安装，禁止手动复制或手写 `components/ui` 下组件。命令：`pnpm dlx shadcn-vue@latest add <组件名>`（在 `frontend` 目录执行）；多组件可连续 `add checkbox dropdown-menu select`。
+- **结构**：遵循 [Nuxt 安装文档](https://www.shadcn-vue.com/docs/installation/nuxt)：Tailwind 使用 `@tailwindcss/vite` + `~/assets/css/tailwind.css`，`nuxt.config` 中 `modules: ['shadcn-nuxt']`、`css` 与 `vite.plugins` 按文档配置；UI 组件目录为 `@/components/ui`，由 `components.json` 与 CLI 维护。
+- **Vue 内使用 @apply**：若在 SFC 的 `<style>` 中使用 `@apply`，须在样式块顶部加 `@reference "~/assets/css/tailwind.css";`（Tailwind v4 要求）。
+
 ## 关键文件
 - 布局/页：`layouts/workspace.vue`、`pages/space/[[id]].vue`
 - 组件：`SessionListHeader.vue`、`WorkspaceAppNav.vue`、`AppPanel.vue`、`ChatMessageBubble.vue`、`TaskCard/*`

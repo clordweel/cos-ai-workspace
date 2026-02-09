@@ -7,8 +7,9 @@
     >
       <aside
         v-show="isSessionExpanded || !chatId"
-        class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"
+        class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 session-area"
         :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
+        :style="{ fontSize: sessionAreaFontScale + 'rem' }"
       >
         <div class="relative flex-1 min-h-0 flex flex-col min-w-0">
           <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain pb-24">
@@ -112,10 +113,29 @@
               </div>
             </template>
             <template v-else-if="listViewTab === 'settings'">
-              <div class="min-h-full flex flex-col items-center justify-center py-12 px-4 text-center" :style="{ paddingTop: listPaddingTop }">
-                <Settings class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
-                <p class="text-sm text-zinc-500 dark:text-zinc-400">会话设置</p>
-                <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">通知、提醒等（占位）</p>
+              <div class="min-h-full flex flex-col overflow-y-auto" :style="{ paddingTop: listPaddingTop }">
+                <section class="px-4 py-4 border-b border-zinc-100 dark:border-zinc-700/80">
+                  <h2 class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">本地界面设置</h2>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between gap-3">
+                      <label class="text-xs font-medium text-zinc-800 dark:text-zinc-200 shrink-0">界面字体大小</label>
+                      <span class="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums">{{ uiFontSizeStep }}</span>
+                    </div>
+                    <Slider
+                      :model-value="[uiFontSizeStep]"
+                      :min="FONT_STEP_MIN"
+                      :max="FONT_STEP_MAX"
+                      :step="1"
+                      class="w-full max-w-[12rem] mx-auto"
+                      @update:model-value="setUIFontSizeStep(($event as number[])[0])"
+                    />
+                  </div>
+                </section>
+                <section class="flex-1 flex flex-col items-center justify-center py-12 px-4 text-center">
+                  <Settings class="h-10 w-10 text-zinc-300 dark:text-zinc-500 mb-2" />
+                  <p class="text-sm text-zinc-500 dark:text-zinc-400">会话设置</p>
+                  <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">通知、提醒等（占位）</p>
+                </section>
               </div>
             </template>
           </div>
@@ -276,6 +296,7 @@
 <script setup lang="ts">
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
+import { Slider } from '~/components/ui/slider'
 import {
   Archive,
   Bot,
@@ -306,6 +327,7 @@ function toggleAppList() { showAppList.value = !showAppList.value }
 function toggleSearchBar() { showSearchBar.value = !showSearchBar.value }
 const listViewTab = ref<'active' | 'favorites' | 'pending' | 'settings'>('active')
 const pinnedCollapsed = ref(false)
+const { uiFontSizeStep, sessionAreaFontScale, setUIFontSizeStep, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings()
 /** 应用抽屉项：内置视图（view）或扩展应用（appId） */
 type DrawerAppItem =
   | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' }

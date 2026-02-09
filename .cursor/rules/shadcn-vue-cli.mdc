@@ -1,0 +1,19 @@
+---
+description: Shadcn-vue 组件仅通过 CLI 安装，禁止手写或复制 UI 组件
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Shadcn-vue 组件安装约束
+
+## 必须通过 CLI 安装
+- 新增或更新 **shadcn-vue** 组件时，**仅使用官方 CLI**，禁止从文档或其它项目复制代码到 `frontend/components/ui`。
+- 在 `frontend` 目录下执行：
+  ```bash
+  pnpm dlx shadcn-vue@latest add <组件名>
+  ```
+- 多组件可一次添加：`pnpm dlx shadcn-vue@latest add checkbox select slider -y`
+
+## 与文档一致
+- 项目结构遵循 [shadcn-vue Nuxt 安装文档](https://www.shadcn-vue.com/docs/installation/nuxt)。
+- 配置以 `frontend/components.json` 为准；新增组件后由 Nuxt 自动导入，可按需从 `~/components/ui/<名>` 显式引用。

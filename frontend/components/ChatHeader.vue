@@ -15,10 +15,13 @@
     </div>
     <div class="flex min-w-0 items-center justify-center">
       <DropdownMenu>
-        <DropdownMenuTrigger class="max-w-[14rem] !bg-white dark:!bg-zinc-800 border border-zinc-200/80 dark:border-zinc-600/80" aria-label="会话菜单">
-          <span class="truncate">{{ title }}</span>
+        <DropdownMenuTrigger
+          class="max-w-[14rem] inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-sm font-medium truncate bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700/80 border border-zinc-200 dark:border-zinc-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-inset"
+          aria-label="会话菜单"
+        >
+          <span class="min-w-0 max-w-[100px] truncate text-xs">{{ title }}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" :side-offset="4" class="chat-header-dropdown text-xs">
+        <DropdownMenuContent align="center" side="top" :side-offset="4" class="chat-header-dropdown w-max min-w-[10rem] text-xs">
           <DropdownMenuItem class="!text-xs" text-value="重命名会话" @select="$emit('rename')">
             <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
             重命名会话
@@ -36,9 +39,11 @@
             关闭会话
           </DropdownMenuItem>
           <DropdownMenuSub>
-            <DropdownMenuSubTrigger class="!text-xs" text-value="导出为...">
-              <Download class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              导出为…
+            <DropdownMenuSubTrigger class="!text-xs justify-start gap-2" text-value="导出为...">
+              <span class="flex min-w-0 flex-1 items-center gap-2">
+                <Download class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                导出为…
+              </span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent class="text-xs">
               <DropdownMenuItem class="!text-xs" text-value="当前屏" @select="$emit('export-screen')">
@@ -91,7 +96,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from '~/lib/dropdown-menu'
+} from '~/components/ui/dropdown-menu'
 import { Archive, ChevronLeft, Download, Link, Pencil, Share2, Trash2, User, X } from 'lucide-vue-next'
 
 defineProps<{
