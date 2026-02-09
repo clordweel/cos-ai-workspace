@@ -268,8 +268,8 @@
     <div class="mt-1.5 flex items-center gap-0.5 text-zinc-400 dark:text-zinc-500">
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
-        :class="userHasLiked ? 'text-black dark:text-white' : ''"
+        class="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+        :class="userHasLiked ? '!text-zinc-700 dark:!text-zinc-200' : ''"
         aria-label="赞同"
         @click="onLike"
       >
@@ -277,7 +277,7 @@
       </button>
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
         aria-label="反对"
         @click="onDislike"
       >
@@ -285,7 +285,7 @@
       </button>
       <button
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
         aria-label="复制"
         @click="onCopy"
       >
@@ -294,7 +294,7 @@
       <button
         v-if="canEditOtherMessage"
         type="button"
-        class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors"
+        class="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
         aria-label="编辑"
         title="编辑"
         @click="emit('edit')"
@@ -303,7 +303,7 @@
       </button>
       <DropdownMenuRoot>
         <DropdownMenuTrigger
-          class="flex h-7 w-7 items-center justify-center rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-700 text-black dark:text-white hover:text-black dark:hover:text-white transition-colors outline-none"
+          class="flex h-7 w-7 items-center justify-center rounded-md text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors outline-none"
           aria-label="更多"
         >
           <MoreVertical class="h-3.5 w-3.5" stroke-width="2" />

@@ -1,14 +1,14 @@
 <template>
   <nav
     ref="navRef"
-    class="session-list-bottom-nav absolute bottom-2 left-1/2 z-10 -translate-x-1/2 flex h-11 w-fit items-end justify-center gap-1 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/40 dark:bg-zinc-800/35 px-2 pb-1 pt-2 backdrop-blur-xl transition-all duration-300 ease-out"
+    class="session-list-bottom-nav absolute bottom-2 left-1/2 z-10 -translate-x-1/2 flex h-11 w-fit items-end justify-center gap-1 rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white/50 dark:bg-zinc-800/40 px-2 pb-1 pt-2 backdrop-blur-xl transition-all duration-300 ease-out"
     aria-label="会话列表视图"
   >
     <button
       ref="tab0Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'active' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'active' ? 'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="活动聊天"
       @click="emit('update:modelValue', 'active')"
     >
@@ -18,7 +18,7 @@
       ref="tab1Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'pending' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'pending' ? 'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="待处理（未读等状态）"
       @click="emit('update:modelValue', 'pending')"
     >
@@ -29,7 +29,7 @@
       ref="tab2Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'favorites' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'favorites' ? 'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="收藏归档"
       @click="emit('update:modelValue', 'favorites')"
     >
@@ -39,7 +39,7 @@
       ref="tab3Ref"
       type="button"
       class="session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95"
-      :class="modelValue === 'settings' ? 'text-black dark:text-white bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40'"
+      :class="modelValue === 'settings' ? 'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40'"
       aria-label="会话设置"
       @click="emit('update:modelValue', 'settings')"
     >

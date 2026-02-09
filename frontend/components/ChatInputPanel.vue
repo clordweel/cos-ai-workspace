@@ -1,10 +1,10 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 z-20 flex flex-col">
+  <div class="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
     <div
-      class="h-16 pointer-events-none shrink-0 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-800 dark:via-zinc-800 dark:to-transparent"
+      class="h-16 shrink-0 bg-gradient-to-t from-white/50 via-white/50 to-transparent dark:from-zinc-800/50 dark:via-zinc-800/50 dark:to-transparent"
       aria-hidden
     />
-    <div class="shrink-0 p-3 pt-0 bg-white dark:bg-zinc-800">
+    <div class="shrink-0 p-3 pt-0 bg-white dark:bg-zinc-800 pointer-events-auto">
       <div class="chat-input-card relative rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm overflow-visible">
         <div
           v-if="streaming"
