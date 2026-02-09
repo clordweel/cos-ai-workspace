@@ -2,16 +2,22 @@
   <div class="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div class="flex-1 flex min-h-0 flex-row gap-0 p-3 relative">
-        <!-- 会话区：内容区折叠时按展开逻辑占满除侧栏外宽度 -->
+        <!-- 会话区：宽度由 useWorkspaceLayout 根据 UI 状态分配 -->
         <div
           class="h-full flex-1 min-w-0 flex flex-col overflow-visible"
-          :class="isPanelOpen && isContentVisible ? 'max-w-sm mr-3' : isPanelOpen ? 'max-w-none mr-3' : 'max-w-none'"
+          :class="sessionAreaClass"
         >
           <slot />
         </div>
-        <!-- 应用区：顶部工具条 + 导航栏 + 内容区 -->
+        <!-- 应用区：最大宽度由 useWorkspaceLayout 统一配置，剩余空间归会话区 -->
         <Transition name="app-panel" mode="out-in">
-          <section v-if="isPanelOpen" key="panel" class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-sm" :class="isContentVisible ? 'flex-1 min-w-0' : ''">
+          <section
+            v-if="isPanelOpen"
+            key="panel"
+            class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-sm"
+            :class="isContentVisible ? 'flex-1 min-w-0' : ''"
+            :style="{ maxWidth: appPanelMaxWidthCss }"
+          >
             <!-- 顶部工具条：左区块=固定按钮（侧栏+内容都折叠时隐藏），右区块=折叠按钮；鼠标进入工具栏时取消侧栏延迟折叠 -->
             <div
               class="shrink-0 flex items-center py-1"
@@ -77,10 +83,13 @@ const router = useRouter()
 useTheme()
 const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave, openAuthTab } = useAppView()
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
+const { isSessionExpanded, sessionAreaClass, appPanelMaxWidthCss } = useWorkspaceLayout()
+
+/** 供子组件（space 页、应用区工具栏）使用 */
+provide('isSessionExpanded', isSessionExpanded)
 
 /** 侧边栏和应用内容区都折叠时隐藏左区块（固定按钮）；任一展开或侧栏悬浮/固定则显示 */
 const showPinButton = computed(() => isContentVisible.value || isSidebarPinned.value || isSidebarHovered.value)
-provide('isSessionExpanded', computed(() => !isPanelOpen.value || !isContentVisible.value))
 
 onMounted(async () => {
   await fetchUser()

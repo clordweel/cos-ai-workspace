@@ -73,6 +73,11 @@ const activeTab = computed(() => {
 const canGoBack = computed(() => tabs.value.length > 1)
 
 export function useAppView() {
+  /** 应用标签栏是否展开：仅由用户手动操作决定（固定时的锁定状态 或 悬停展开） */
+  const appSidebarExpanded = computed(() =>
+    isSidebarPinned.value ? sidebarPinnedExpanded.value : isSidebarHovered.value
+  )
+
   function genId(): string {
     return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   }
@@ -249,6 +254,7 @@ export function useAppView() {
     canGoBack,
     isPanelOpen: readonly(isPanelOpen),
     isContentVisible: readonly(isContentVisible),
+    appSidebarExpanded: readonly(appSidebarExpanded),
     isSidebarPinned: readonly(isSidebarPinned),
     sidebarPinnedExpanded: readonly(sidebarPinnedExpanded),
     isSidebarHovered: readonly(isSidebarHovered),

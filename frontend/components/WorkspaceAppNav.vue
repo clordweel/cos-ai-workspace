@@ -2,7 +2,7 @@
   <nav
     class="relative z-10 flex flex-col shrink-0 min-h-0 overflow-visible rounded-l-lg nav-width-transition"
     :class="[
-      showExpanded ? 'w-48' : 'w-12',
+      navWidthClass,
       labelsVisible && 'labels-visible'
     ]"
     aria-label="标签"
@@ -89,7 +89,7 @@
 import { Home, Users, Bot, Settings, X, Plus, LogIn } from 'lucide-vue-next'
 import type { AppTab } from '~/composables/useAppView'
 
-const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
+const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, appSidebarExpanded, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
 const { isAuthenticated } = useAuth()
 const { get: getAppExtension } = useAppExtensions()
 
@@ -99,7 +99,10 @@ function openSettingsTab() {
   else addTab('settings')
 }
 
-const showExpanded = computed(() => isSidebarPinned.value ? sidebarPinnedExpanded.value : isSidebarHovered.value)
+/** 展开状态：仅用户手动（悬停/固定）展开，与 useAppView.appSidebarExpanded 一致 */
+const showExpanded = appSidebarExpanded
+
+const navWidthClass = computed(() => showExpanded.value ? 'w-48' : 'w-12')
 
 /** 按钮布局（图标左/中）：收起后保持「展开布局」直到宽度动画结束，避免图标瞬间回中 */
 const layoutExpanded = ref(false)
