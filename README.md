@@ -14,7 +14,7 @@
 | **docs** | 架构与 API 文档 | — |
 | **logs** | 开发变更记录 | [CHANGELOG.md](./logs/CHANGELOG.md) |
 
-详细架构见 [PROJECT.md](./PROJECT.md) 与 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。
+详细架构见 [PROJECT.md](./PROJECT.md) 与 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。多维度状态总结见 [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)。
 
 ---
 
@@ -23,13 +23,13 @@
 1. **Node.js** 18+ 与 **npm**（frontend、middleware）
 2. **pnpm** 无需全局安装：根目录已把 pnpm 列为 devDependency，脚本会使用项目内的 pnpm（[pnpm workspace](https://pnpm.io/workspaces)）
 3. **ERPNext v16 + cos** 部署在可访问的服务器或本地 bench
-4. **Dify** 实例（API Key 用于对话流）
+4. **聊天后端**：默认 `CHAT_PROVIDER=mock` 即可开发；可选 Matrix 或后续 Dify 适配器。**认证**：需配置 Logto（见 `.env.example`）。
 
 复制环境变量并按需修改：
 
 ```bash
 cp .env.example .env
-# 编辑 .env，填写 DIFY_API_BASE、DIFY_API_KEY、COS_ERP_BASE 等
+# 编辑 .env：CHAT_PROVIDER（mock|matrix）、Logto（LOGTO_*）、Matrix（MATRIX_*）、COS_ERP_BASE 等，详见 .env.example 注释
 ```
 
 ---
@@ -62,7 +62,7 @@ npm run dev:frontend
 
 ## 开发顺序建议
 
-1. **middleware**：先打通 Dify SSE 代理与健康检查。
-2. **frontend**：对接 `/api/chat/stream`，实现打字机效果与任务卡片占位。
+1. **middleware**：先打通聊天适配器（默认 mock）与健康检查；可选配置 Matrix 或后续扩展 Dify 适配器。
+2. **frontend**：对接 `/api/chat/stream`，实现打字机效果与任务卡片；认证走 Logto（见 `.env.example` 中 Nuxt 承载配置）。
 3. **cos**：按 [docs/API_SPEC.md](./docs/API_SPEC.md) 实现只读接口与物料草稿/写入接口。
-4. 联调：前端 → 中间层 → Dify + cos。
+4. 联调：前端 → 中间层 → 聊天后端 + cos。

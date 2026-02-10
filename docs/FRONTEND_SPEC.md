@@ -34,7 +34,7 @@
 
 - **应用内容区**  
   - 当 `isContentVisible` 为 true 时显示：内层容器圆角 `rounded-xl`、浅底 `bg-zinc-50/50`、内阴影 + 边框外阴影。  
-  - 由 **AppPanel** 根据 `useAppView()` 的 `currentView` 切换：**home**（导航页，应用卡片网格）、**contacts**（联系人列表）、**bots**（机器人列表）、**settings**（设置项）。
+  - 由 **AppPanel** 根据 `useAppView()` 的 `currentView` 切换：**home**（导航页，应用卡片网格）、**contacts**（联系人列表）、**bots**（机器人列表）、**settings**（设置项）、**auth**（认证登录，未登录时可选强制打开）、**app**（扩展应用，由 `appId` 指定）。
 
 ### 会话区（space 页）
 
@@ -88,39 +88,48 @@ const decoder = new TextDecoder();
 
 ```
 frontend/
-├── app.vue
-├── app.config.ts
-├── nuxt.config.ts
-├── tailwind.config.ts
+├── app.vue, app.config.ts, nuxt.config.ts, tailwind.config.ts
 ├── layouts/
 │   ├── default.vue        # 备用布局（无会话区时）
-│   └── workspace.vue     # 工作台布局：会话区 + 应用区
+│   └── workspace.vue      # 工作台布局：会话区 + 应用区（useWorkspaceLayout 驱动 grid）
 ├── pages/
 │   ├── index.vue          # 入口，重定向至 /space（可带 app、with 等 query）
+│   ├── logto.vue           # Logto 登录发起（前端承载时 302 到 Logto）
+│   ├── logto-callback.vue  # Logto 回调（收 code 后 302 到中间层换 token）
 │   └── space/
-│       └── [[id]].vue     # 会话页（列表 + 聊天），layout: workspace
+│       └── [[id]].vue      # 会话页（列表 + 聊天），layout: workspace
 ├── components/
-│   ├── SessionListHeader.vue   # 会话列表顶栏（Logo、新会话、搜索）
-│   ├── WorkspaceAppNav.vue     # 应用侧栏（导航、设置、应用入口、折叠）
-│   ├── AppPanel.vue            # 应用内容区（home/contacts/bots/settings）
-│   ├── ChatMessageBubble.vue   # 单条消息（含打字机）
+│   ├── SessionListHeader.vue, SessionListItem.vue, SessionListThumb.vue
+│   ├── SessionListBottomNav.vue, SessionSearchBar.vue
+│   ├── space/                  # 会话区子组件
+│   │   ├── SessionListContent.vue, SessionSidebar.vue
+│   │   ├── ChatPane.vue, AppDrawer.vue
+│   │   └── SessionListSettings.vue
+│   ├── ChatHeader.vue, ChatMessageBubble.vue, ChatInputPanel.vue, ChatEmptyState.vue
+│   ├── WorkspaceAppNav.vue     # 应用侧栏（标签式、折叠、固定）
+│   ├── AppPanel.vue            # 应用内容区（currentView: home|contacts|bots|settings|auth|app）
+│   ├── AppPlaceholder.vue       # 扩展占位
 │   ├── Logo.vue
 │   ├── TaskCard/               # 任务卡片（订单、库存、BOM、物料确认）
-│   │   ├── OrderProgress.vue
-│   │   ├── InventorySummary.vue
-│   │   ├── BomStatus.vue
-│   │   └── MaterialConfirm.vue
-│   └── ui/                     # 通用 UI（Shadcn 风格，基于 radix-vue）
-│       ├── select/             # Select, SelectTrigger, SelectValue, SelectContent, SelectItem
-│       └── checkbox/           # Checkbox（CheckboxRoot + CheckboxIndicator）
+│   │   ├── OrderProgress.vue, InventorySummary.vue, BomStatus.vue, MaterialConfirm.vue
+│   └── ui/                     # Shadcn-vue 组件（仅通过 CLI 安装）
+│       ├── select/, checkbox/, button/, dropdown-menu/, accordion/, slider/, tooltip/, empty/
 ├── composables/
-│   ├── useAppView.ts      # 应用区视图状态（面板、内容区、currentView）
-│   ├── useChatSessions.ts # 会话与消息列表
-│   ├── useChatStream.ts   # SSE 流式对话
-│   ├── useContactsAndBots.ts
-│   └── useTheme.ts
-└── plugins/
-    └── theme.client.ts
+│   ├── useAppView.ts       # 应用区（tabs、currentView、openAuthTab、addTab…）
+│   ├── useWorkspaceLayout.ts   # 布局模式与 grid 列宽（layoutMode、appPanelMaxWidthCss）
+│   ├── useChatSessions.ts, useChatSessionsApi.ts
+│   ├── useChatStream.ts    # SSE 流式对话
+│   ├── useAuth.ts, usePermissions.ts
+│   ├── useAppExtensions.ts, useAppFavorites.ts
+│   ├── useContactsAndBots.ts, useTheme.ts, useBreakpoint.ts
+│   ├── useApiBase.ts, useUISettings.ts, useWorkspaceOptions.ts
+│   └── useMockSessions.ts  # Mock 会话（开发/MSW）
+├── types/
+│   └── app-extensions.ts   # AppExtension 等
+├── plugins/
+│   ├── theme.client.ts, app-extensions.ts
+│   ├── mock-worker.client.ts, ssr-width.client.ts, suppress-anonymous-warn.ts
+└── mock/                    # MSW 与占位数据（可选）
 ```
 
 ### 命名与组织约定
@@ -128,7 +137,7 @@ frontend/
 - **组件**：大驼峰（PascalCase），语义清晰（SessionListHeader、WorkspaceAppNav、ChatMessageBubble）。通用 UI 放在 `components/ui/` 下按原子组件分子目录（如 `ui/select/`、`ui/checkbox/`）。
 - **页面**：`pages/` 下按路由划分；入口用 `index.vue`，动态路由用 `[[id]].vue` 等，避免冗余中间页（如已删除的 `list.vue` 由 index 的 query 处理）。
 - **Composables**：`use` 前缀 + 功能名（useAppView、useChatSessions），单文件单职责。
-- **废弃与清理**：未再被引用的组件或页面应及时移除，避免死代码（如已移除的 ChatFlow.vue、WorkspaceSessionList.vue）。
+- **废弃与清理**：未再被引用的组件或页面应及时移除，避免死代码（如已移除的 ChatFlow.vue、WorkspaceSessionList.vue）。扩展开发见 `docs/APP_EXTENSIONS.md`；鉴权与权限见 `docs/FRONTEND_AUTH_AND_PERMISSIONS.md`。
 
 ## 主题
 
