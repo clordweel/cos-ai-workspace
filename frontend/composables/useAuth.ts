@@ -1,9 +1,15 @@
-/**
- * 认证状态：项目唯一认证入口为 Logto，会话由中间层 Cookie 保持
- * 可选：/api/auth/me 返回 permissions 时分权限控制用
- */
+/** /api/auth/me 可能返回的用户对象（Logto 等提供 name/email/avatar） */
+export interface AuthUserProfile {
+  name: string
+  email?: string
+  avatar?: string
+}
+
+/** 当前用户：字符串（用户名）或完整资料对象 */
+export type AuthUser = string | AuthUserProfile | null
+
 const isAuthenticated = ref(false)
-const user = ref<string | null>(null)
+const user = ref<AuthUser>(null)
 const authLoading = ref(true)
 /** 当前用户权限列表，由 /api/auth/me 的 data.permissions 同步，未实现时为空数组 */
 const permissions = ref<string[]>([])

@@ -6,10 +6,19 @@ import { config } from '../config.js';
 const COOKIE_NAME = 'auth_session';
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 天
 
+/** 用户资料（Logto 等返回 name/email/avatar），供 /api/auth/me 返回给前端 */
+export interface UserProfile {
+  name: string;
+  email?: string;
+  avatar?: string;
+}
+
 export interface Session {
   sessionId: string;
   type: 'frappe' | 'token' | 'logto';
   user: string;
+  /** 可选：完整用户资料，存在时 /api/auth/me 优先返回此对象 */
+  userProfile?: UserProfile;
   frappeSid?: string;
   frappeToken?: string;
   logtoSub?: string;
@@ -180,10 +189,12 @@ export interface LogtoAuthUrlError {
 
 /**
  * Logto SSO：生成授权 URL
+ * @param prompt 可选 'consent' 或 'login'，用于重新授权以获取更新的 scope 数据（姓名、邮箱等）
  */
 export function getLogtoAuthUrl(
   redirectUri: string,
-  state?: string
+  state?: string,
+  options?: { prompt?: 'consent' | 'login' }
 ): LogtoAuthUrlResult | LogtoAuthUrlError {
   const { endpoint, appId } = config.logto || {};
   if (!endpoint || !appId) {
@@ -193,9 +204,10 @@ export function getLogtoAuthUrl(
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid',
+    scope: 'openid profile email',
     state: state || generateSessionId(),
   });
+  if (options?.prompt) params.set('prompt', options.prompt);
   return { ok: true, url: `${endpoint}/oidc/auth?${params.toString()}`, state: params.get('state') };
 }
 
@@ -251,16 +263,24 @@ export async function handleLogtoCallback(
     name?: string;
     sub?: string;
     username?: string;
+    email?: string;
+    picture?: string;
   };
-  const user = meData.name || meData.sub || meData.username || 'Logto User';
+  const displayName = meData.name || meData.username || meData.sub || 'Logto User';
+  const userProfile: UserProfile = {
+    name: displayName,
+    ...(meData.email && { email: meData.email }),
+    ...(meData.picture && { avatar: meData.picture }),
+  };
   const sessionId = generateSessionId();
   sessions.set(sessionId, {
     type: 'logto',
-    user,
+    user: displayName,
+    userProfile,
     logtoSub: meData.sub,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
-  return { ok: true, sessionId, user };
+  return { ok: true, sessionId, user: displayName };
 }
 
 // 定时清理过期会话

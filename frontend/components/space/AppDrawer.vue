@@ -2,9 +2,14 @@
   <Transition name="fade">
     <div
       v-show="open"
-      class="app-drawer absolute left-0 right-0 z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate relative"
+      class="app-drawer absolute left-0 right-0 z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate relative overflow-hidden"
       :style="{ top: 0, height: `${heightRem}rem` }"
     >
+      <!-- 左上射出的渐变色带（仅装饰） -->
+      <div
+        class="drawer-gradient-band absolute left-0 top-0 z-0 h-full w-full pointer-events-none dark:[filter:brightness(0.26)]"
+        aria-hidden="true"
+      />
       <!-- 顶部栏：左侧折叠按钮，右侧应用列表说明标题 -->
       <div class="shrink-0 flex items-center justify-between pl-2 pr-4 pt-2 pb-0 relative z-10">
         <button
@@ -26,11 +31,13 @@
           <ChevronRight class="h-3.5 w-3.5 shrink-0" />
         </button>
       </div>
-      <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-6 pr-4 pt-0 pb-8 relative z-10">
-        <!-- 用户信息区块 -->
-        <div class="mb-1 flex items-center gap-2.5 px-1 py-1">
+      <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-4 pr-4 pt-2 pb-8 relative z-10">
+        <!-- 用户信息区块：卡片式样式 -->
+        <div
+          class="drawer-user-block mb-4 flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-500/50 bg-white/60 dark:bg-zinc-700/50 backdrop-blur-md px-3 py-2.5"
+        >
           <span
-            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-200/80 dark:border-zinc-500/80 bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+            class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-200/80 dark:border-zinc-500/80 bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
           >
             <img
               v-if="userAvatarUrl"
@@ -38,15 +45,15 @@
               :alt="userName || '用户'"
               class="h-full w-full object-cover"
             />
-            <span v-else-if="userName" class="text-sm font-medium">{{ userFirstChar }}</span>
+            <span v-else-if="userName" class="text-sm font-semibold">{{ userFirstChar }}</span>
             <User v-else class="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
           </span>
           <div class="min-w-0 flex-1">
-            <p class="truncate text-xs font-medium text-zinc-800 dark:text-zinc-200">
+            <p class="truncate text-sm font-medium mt-1 text-zinc-800 dark:text-zinc-200 leading-none">
               {{ userName || '未登录' }}
             </p>
-            <p class="text-[10px] text-zinc-500 dark:text-zinc-400">
-              {{ isAuthenticated ? '已登录' : '点击登录以使用更多功能' }}
+            <p class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate mt-1 mb-0.5 leading-none" :title="userEmail || undefined">
+              {{ isAuthenticated ? (userEmail || '已登录') : '点击登录以使用更多功能' }}
             </p>
           </div>
         </div>
@@ -119,6 +126,12 @@ const userName = computed(() => {
     return (u as { name: string }).name
   return null
 })
+const userEmail = computed(() => {
+  const u = user.value
+  if (u && typeof u === 'object' && 'email' in u && typeof (u as { email?: string }).email === 'string')
+    return (u as { email: string }).email
+  return ''
+})
 const userAvatarUrl = computed(() => {
   const u = user.value
   if (u && typeof u === 'object' && 'avatar' in u && typeof (u as { avatar?: string }).avatar === 'string')
@@ -155,6 +168,14 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
+/* 左上到右下的线束：清晰光带，无晕开，约 135° 对角线 */
+.drawer-gradient-band {
+  background:
+    linear-gradient(132deg, transparent 0%, transparent 18%, color-mix(in srgb, white 35%, transparent) 22%, color-mix(in srgb, white 12%, transparent) 28%, transparent 32%, transparent 100%),
+    linear-gradient(128deg, transparent 0%, transparent 8%, color-mix(in srgb, #c7d2fe 28%, transparent) 12%, color-mix(in srgb, #a5b4fc 8%, transparent) 20%, transparent 24%, transparent 100%),
+    linear-gradient(136deg, transparent 0%, transparent 25%, color-mix(in srgb, #bfdbfe 24%, transparent) 29%, color-mix(in srgb, #93c5fd 6%, transparent) 35%, transparent 39%, transparent 100%),
+    linear-gradient(124deg, transparent 0%, transparent 42%, color-mix(in srgb, #e9d5ff 18%, transparent) 46%, transparent 52%, transparent 100%);
+}
 .app-drawer-scroll {
   scrollbar-width: none;
 }

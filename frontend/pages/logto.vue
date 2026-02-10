@@ -8,10 +8,13 @@
 <script setup lang="ts">
 /**
  * Logto 登录入口：由 Nuxt 承载，跳转到 Logto 授权页；回调地址为前端 /logto-callback
+ * 请求 scope openid profile email 以获取姓名、邮箱、头像
+ * 带 ?refresh=1 或 ?prompt=consent 时使用 prompt=consent，让用户重新授权以获取更新的 profile 数据
  */
 definePageMeta({ layout: 'default' })
 
 const config = useRuntimeConfig()
+const route = useRoute()
 const error = ref('')
 
 onMounted(() => {
@@ -28,9 +31,14 @@ onMounted(() => {
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid',
+    scope: 'openid profile email',
     state,
   })
+  const refresh = route.query?.refresh === '1' || route.query?.refresh === ''
+  const promptQuery = route.query?.prompt as string | undefined
+  if (refresh || promptQuery === 'consent' || promptQuery === 'login') {
+    params.set('prompt', promptQuery === 'login' ? 'login' : 'consent')
+  }
   window.location.href = `${endpoint.replace(/\/$/, '')}/oidc/auth?${params.toString()}`
 })
 </script>

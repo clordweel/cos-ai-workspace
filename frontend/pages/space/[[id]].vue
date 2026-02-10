@@ -268,7 +268,7 @@ function onDrawerMore() {
   showAppList.value = false
 }
 /** 抽屉固定高度（rem），与 CSS 变量一致，避免截断与顶栏错位 */
-const appDrawerHeightRem = 18
+const appDrawerHeightRem = 24
 const toolbarTop = computed(() => (showAppList.value ? `${appDrawerHeightRem}rem` : '0'))
 const listPaddingTop = computed(() => `${showAppList.value ? appDrawerHeightRem + 3 : 3}rem`)
 function onSessionItemClick(id: string) {

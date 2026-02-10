@@ -83,14 +83,22 @@
             <div class="auth-panel space-y-4">
               <div v-if="isAuthenticated" class="rounded-xl bg-emerald-50/80 dark:bg-emerald-900/20 p-4">
                 <p class="text-sm font-medium text-emerald-800 dark:text-emerald-200">已登录</p>
-                <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">{{ user }}</p>
-                <button
-                  type="button"
-                  class="mt-3 rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                  @click="logout"
-                >
-                  退出登录
-                </button>
+                <p class="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">{{ authUserDisplay }}</p>
+                <div class="mt-3 flex flex-wrap items-center gap-2">
+                  <a
+                    href="/logto?refresh=1"
+                    class="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    重新授权以更新姓名与邮箱
+                  </a>
+                  <button
+                    type="button"
+                    class="rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    @click="logout"
+                  >
+                    退出登录
+                  </button>
+                </div>
               </div>
               <template v-else>
                 <p class="text-[11px] text-zinc-500 dark:text-zinc-400 text-center">
@@ -274,6 +282,16 @@ const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
 const { ensureChat } = useChatSessions()
 const { login, logout, isAuthenticated, user } = useAuth()
+const authUserDisplay = computed(() => {
+  const u = user.value
+  if (typeof u === 'string') return u
+  if (u && typeof u === 'object' && 'name' in u) {
+    const name = (u as { name?: string; email?: string }).name ?? ''
+    const email = (u as { email?: string }).email
+    return email ? `${name} · ${email}` : name
+  }
+  return ''
+})
 const route = useRoute()
 const logtoQueryError = computed(() => (route.query?.auth_error ? decodeURIComponent(String(route.query.auth_error)) : ''))
 

@@ -71,7 +71,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!session) {
       return reply.code(401).send({ ok: false, error: '未登录' });
     }
-    return reply.send({ ok: true, user: session.user, type: session.type });
+    const user = session.userProfile ?? session.user;
+    return reply.send({ ok: true, user, type: session.type });
   });
 
   app.post('/api/auth/logout', async (req, reply) => {
@@ -83,7 +84,9 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/auth/logto', async (req, reply) => {
     const base = getRedirectUriBase(req);
     const redirectUri = `${base}/api/auth/logto/callback`;
-    const result = getLogtoAuthUrl(redirectUri);
+    const prompt = (req.query as { prompt?: string }).prompt;
+    const promptOpt = prompt === 'consent' || prompt === 'login' ? prompt : undefined;
+    const result = getLogtoAuthUrl(redirectUri, undefined, promptOpt ? { prompt: promptOpt } : undefined);
     if (!result.ok) {
       return reply.code(503).send({ ok: false, error: result.error });
     }
