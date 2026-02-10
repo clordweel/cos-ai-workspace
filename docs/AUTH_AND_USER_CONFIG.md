@@ -16,6 +16,10 @@
   - `preferences`：对象，字段为 `theme`（'light'|'dark'|'system'）、`uiFontSizeStep`（1–5）、`notificationsEnabled`（boolean）。  
   参考：[User data structure - Custom data](https://docs.logto.io/user-management/user-data#custom-data)。Logto 的 PATCH custom-data 会**整体覆盖**，故中间层在更新偏好时先 GET 再仅合并 `preferences` 后 PATCH，不覆盖其它键。**勿在 customData 中存敏感信息**（JWT 为 base64、易被截获）。
 
+## 中间层会话与持久化
+
+- 会话数据（含 Logto token、Frappe sid 等）当前存于**内存**，中间层重启后会话丢失、用户需重新登录。若需重启后保持认证，见 **[SESSION_PERSISTENCE.md](./SESSION_PERSISTENCE.md)**（文件/Redis 等方案与实现要点）。
+
 ## 中间层 API
 
 | 能力 | 说明 |

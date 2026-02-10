@@ -9,6 +9,7 @@
 | 整体架构与数据流 | `docs/ARCHITECTURE.md` |
 | 当前状态与各模块说明 | `docs/PROJECT_STATUS.md` |
 | 认证与用户配置（Logto、Matrix、偏好） | `docs/AUTH_AND_USER_CONFIG.md` |
+| 会话持久化（重启保持认证） | `docs/SESSION_PERSISTENCE.md` |
 | 前端布局与约定 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
 | 提交规范 | `.cursor/rules/git-commit.mdc` |
 
