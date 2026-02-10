@@ -36,6 +36,11 @@ export function useTheme() {
     get: () => (colorMode.preference as ThemeMode) || 'light',
     set: (mode: ThemeMode) => {
       colorMode.preference = mode
+      // 主题变更时同步到 Logto 用户偏好（与 setTheme 行为一致）
+      if (isAuthenticated.value) {
+        const { savePreferences } = useUserPreferences()
+        void savePreferences({ theme: mode })
+      }
     },
   })
 

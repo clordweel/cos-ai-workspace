@@ -6,7 +6,9 @@ import { ensureMatrixUser } from '../matrixUserSync.js';
 import {
   generateSessionId,
   saveSession,
+  updateSession,
   SESSION_TTL_MS,
+  type Session,
   type UserProfile,
 } from './sessionStore.js';
 
@@ -31,11 +33,12 @@ export function getLogtoAuthUrl(
   if (!endpoint || !appId) {
     return { ok: false, error: '未配置 Logto（LOGTO_ENDPOINT / LOGTO_APP_ID）' };
   }
+  // custom_data：Account API PATCH /api/my-account 读写 customData 所需（不传 resource，避免「resource indicator missing or unknown」）
   const params = new URLSearchParams({
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid profile email',
+    scope: 'openid profile email offline_access custom_data',
     state: state || generateSessionId(),
   });
   if (options?.prompt) params.set('prompt', options.prompt);
@@ -90,6 +93,8 @@ export async function handleLogtoCallback(
   });
   const tokenData = (await tokenRes.json().catch(() => ({}))) as {
     access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
     error?: string;
     error_description?: string;
   };
@@ -116,11 +121,15 @@ export async function handleLogtoCallback(
     ...(meData.email && { email: meData.email }),
     ...(meData.picture && { avatar: meData.picture }),
   };
+  const expiresIn = Math.max(Number(tokenData.expires_in) || 3600, 60);
   const session = saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
     logtoSub: meData.sub,
+    logtoAccessToken: accessToken,
+    ...(tokenData.refresh_token && { logtoRefreshToken: tokenData.refresh_token }),
+    logtoTokenExpiresAt: Date.now() + expiresIn * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
   if (meData.sub) syncMatrixUser(meData.sub, displayName, meData.email);
@@ -151,13 +160,59 @@ export async function createSessionFromLogtoAccessToken(
     ...(meData.email && { email: meData.email }),
     ...(meData.picture && { avatar: meData.picture }),
   };
+  // sync-session 仅带 accessToken，无 refresh_token，设 1 小时过期
   const session = saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
     logtoSub: meData.sub,
+    logtoAccessToken: accessToken,
+    logtoTokenExpiresAt: Date.now() + 3600 * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
   if (meData.sub) syncMatrixUser(meData.sub, displayName, meData.email);
   return { ok: true, sessionId: session.sessionId, user: displayName };
+}
+
+const TOKEN_REFRESH_BUFFER_MS = 60 * 1000;
+
+/**
+ * 获取可用于 Account API 的 Logto access token；若已过期则用 refresh_token 刷新并写回 session。
+ * 无 token 或无法刷新时返回 null。
+ */
+export async function getLogtoAccessTokenForSession(
+  session: Session | null | undefined
+): Promise<string | null> {
+  const { endpoint, appId, appSecret } = config.logto || {};
+  if (!endpoint || !appId || !session?.logtoSub) return null;
+  const now = Date.now();
+  const expiresAt = session.logtoTokenExpiresAt ?? 0;
+  if (session.logtoAccessToken && expiresAt > now + TOKEN_REFRESH_BUFFER_MS) {
+    return session.logtoAccessToken;
+  }
+  if (!session.logtoRefreshToken) return session.logtoAccessToken || null;
+  const refreshRes = await fetch(`${endpoint}/oidc/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: session.logtoRefreshToken,
+      client_id: appId,
+      ...(appSecret && { client_secret: appSecret }),
+    }),
+  });
+  const refreshData = (await refreshRes.json().catch(() => ({}))) as {
+    access_token?: string;
+    refresh_token?: string;
+    expires_in?: number;
+    error?: string;
+  };
+  if (!refreshData.access_token) return null;
+  const newExpiresIn = Math.max(Number(refreshData.expires_in) || 3600, 60);
+  updateSession(session.sessionId, {
+    logtoAccessToken: refreshData.access_token,
+    ...(refreshData.refresh_token && { logtoRefreshToken: refreshData.refresh_token }),
+    logtoTokenExpiresAt: now + newExpiresIn * 1000,
+  });
+  return refreshData.access_token;
 }

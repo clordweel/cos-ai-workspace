@@ -10,10 +10,11 @@
 ## Logto 侧
 
 - 应用配置：`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`LOGTO_APP_SECRET`（OAuth 回调、换 token）。
-- 修改密码、读写用户 customData：需 **Management API**，即 M2M 应用：`LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`（不填则沿用 APP_ID/APP_SECRET，需该应用具备 Management API 权限）。
-- **授权**：在 Logto 控制台「授予用户数据权限」中需包含 **custom_data**，Management API（M2M）才能读写用户 customData；若后续用用户 access token 读 customData，也依赖该权限。当前实现仅用 M2M Management API。
-- customData 中当前约定字段：`theme`（'light'|'dark'|'system'）、`uiFontSizeStep`（1–5）、`notificationsEnabled`（boolean）。  
-  参考：[User data structure - Custom data](https://docs.logto.io/user-management/user-data#custom-data)。注意 Logto 的 PATCH custom-data 会**整体覆盖**，故中间层在更新偏好时先 GET 再合并后 PATCH，避免覆盖其他键。**勿在 customData 中存敏感信息**（JWT 为 base64、易被截获）。
+- **用户偏好（customData）**：优先用 Logto **Account API**（`/api/my-account`）+ 用户 token 读写；若返回「Account center is not enabled」或 403，则回退到 **Management API**（需配置 M2M）。因此：**若未在控制台启用 Account center**，须配置 `LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`，偏好才能同步；若已启用 Account center 且 scope 含 `custom_data`，则无需 M2M。
+- **修改 Logto 密码**：需 **Management API**，须配置独立的 M2M 应用（`LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`）；不配置则「修改密码」功能不可用。
+- **customData 结构约定**：仅使用顶层 key `preferences` 存放本应用用户偏好，其它顶层 key 预留给其它用途，本应用不读写。  
+  - `preferences`：对象，字段为 `theme`（'light'|'dark'|'system'）、`uiFontSizeStep`（1–5）、`notificationsEnabled`（boolean）。  
+  参考：[User data structure - Custom data](https://docs.logto.io/user-management/user-data#custom-data)。Logto 的 PATCH custom-data 会**整体覆盖**，故中间层在更新偏好时先 GET 再仅合并 `preferences` 后 PATCH，不覆盖其它键。**勿在 customData 中存敏感信息**（JWT 为 base64、易被截获）。
 
 ## 中间层 API
 

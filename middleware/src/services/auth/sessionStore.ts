@@ -19,6 +19,10 @@ export interface Session {
   frappeSid?: string;
   frappeToken?: string;
   logtoSub?: string;
+  /** Logto 用户 access token，用于 Account API 读写 customData（无需 M2M） */
+  logtoAccessToken?: string;
+  logtoRefreshToken?: string;
+  logtoTokenExpiresAt?: number;
   expiresAt: number;
 }
 
@@ -40,6 +44,13 @@ export function saveSession(data: Omit<Session, 'sessionId'>): Session {
 export function getStableUserId(session: Session | null | undefined): string {
   if (!session) return 'default';
   return session.logtoSub ?? session.user;
+}
+
+/** 更新已有会话的部分字段（如刷新 Logto token 后写回） */
+export function updateSession(sessionId: string, updates: Partial<Omit<Session, 'sessionId'>>): void {
+  const data = sessions.get(sessionId);
+  if (!data) return;
+  Object.assign(data, updates);
 }
 
 /** 从 cookie 中取 sessionId，返回会话信息（并做过期清理） */

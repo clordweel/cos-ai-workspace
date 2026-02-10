@@ -13,10 +13,21 @@ import {
   getLogtoAuthUrl,
   handleLogtoCallback,
   createSessionFromLogtoAccessToken,
+  getLogtoAccessTokenForSession,
 } from '../services/auth.js';
 import { matrixLoginWithIdentifier, matrixChangePassword } from '../services/matrixAuth.js';
 import { getMatrixUserIdForLogtoSub, setMatrixPasswordByAdmin } from '../services/matrixUserSync.js';
-import { logtoUpdateUserPassword, getLogtoUserCustomData, patchLogtoUserCustomData } from '../services/logtoManagement.js';
+import {
+  logtoUpdateUserPassword,
+  getLogtoUserCustomDataViaAccountApi,
+  patchLogtoUserCustomDataViaAccountApi,
+  getLogtoUserCustomData,
+  patchLogtoUserCustomData,
+  getPreferencesFromCustomData,
+  mergePreferencesIntoCustomData,
+} from '../services/logtoManagement.js';
+
+const ACCOUNT_CENTER_DISABLED = 'Account center is not enabled';
 
 function getRedirectUriBase(req: { headers: Record<string, string | undefined>; protocol: string; hostname: string; port?: string | number }): string {
   if (config.middlewarePublicOrigin) {
@@ -85,9 +96,23 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       type: session.type,
     };
     if (session.logtoSub) {
-      const prefRes = await getLogtoUserCustomData(session.logtoSub);
-      if (prefRes.ok && Object.keys(prefRes.customData).length > 0) {
-        payload.preferences = prefRes.customData;
+      let customData: Record<string, unknown> | null = null;
+      const token = await getLogtoAccessTokenForSession(session);
+      if (token) {
+        const prefRes = await getLogtoUserCustomDataViaAccountApi(token);
+        if (prefRes.ok) {
+          customData = prefRes.customData;
+        }
+        if (customData === null) {
+          const m2mRes = await getLogtoUserCustomData(session.logtoSub);
+          if (m2mRes.ok) customData = m2mRes.customData;
+        }
+      } else {
+        const m2mRes = await getLogtoUserCustomData(session.logtoSub);
+        if (m2mRes.ok) customData = m2mRes.customData;
+      }
+      if (customData !== null) {
+        payload.preferences = getPreferencesFromCustomData(customData);
       }
     }
     return reply.send(payload);
@@ -106,17 +131,30 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (Object.keys(patch).length === 0) {
       return reply.code(400).send({ ok: false, error: '请提供要更新的偏好字段' });
     }
-    // Logto PATCH custom-data 会完全覆盖，故先拉取再合并后写入
-    const current = await getLogtoUserCustomData(session.logtoSub);
-    const merged = current.ok ? { ...current.customData, ...patch } : patch;
-    const result = await patchLogtoUserCustomData(session.logtoSub, merged);
+    const token = await getLogtoAccessTokenForSession(session);
+    let result: { ok: true; customData: Record<string, unknown> } | { ok: false; error: string; statusCode?: number };
+    if (token) {
+      const current = await getLogtoUserCustomDataViaAccountApi(token);
+      const toWrite = current.ok ? mergePreferencesIntoCustomData(current.customData, patch) : { preferences: patch };
+      result = await patchLogtoUserCustomDataViaAccountApi(token, toWrite);
+      if (!result.ok && (result.error?.includes(ACCOUNT_CENTER_DISABLED) || result.statusCode === 403)) {
+        const m2mCurrent = await getLogtoUserCustomData(session.logtoSub);
+        const toWriteM2m = m2mCurrent.ok ? mergePreferencesIntoCustomData(m2mCurrent.customData, patch) : { preferences: patch };
+        result = await patchLogtoUserCustomData(session.logtoSub, toWriteM2m);
+      }
+    } else {
+      const m2mCurrent = await getLogtoUserCustomData(session.logtoSub);
+      const toWriteM2m = m2mCurrent.ok ? mergePreferencesIntoCustomData(m2mCurrent.customData, patch) : { preferences: patch };
+      result = await patchLogtoUserCustomData(session.logtoSub, toWriteM2m);
+    }
     if (!result.ok) {
-      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
+      console.warn('[auth] PATCH preferences 写回 Logto 失败:', result.statusCode, result.error, 'userId:', session.logtoSub);
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 503).send({
         ok: false,
         error: result.error,
       });
     }
-    return reply.send({ ok: true, preferences: result.customData });
+    return reply.send({ ok: true, preferences: getPreferencesFromCustomData(result.customData) });
   });
 
   app.post('/api/auth/logout', async (req, reply) => {

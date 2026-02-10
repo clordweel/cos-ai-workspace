@@ -103,21 +103,28 @@ export function useUserPreferences() {
     if (patch.uiFontSizeStep !== undefined) body.uiFontSizeStep = Math.max(FONT_STEP_MIN, Math.min(FONT_STEP_MAX, Math.round(patch.uiFontSizeStep)))
     if (patch.notificationsEnabled !== undefined) body.notificationsEnabled = patch.notificationsEnabled
     if (Object.keys(body).length === 0) return true
+    const url = `${apiBase || ''}/api/auth/me/preferences`
     try {
-      const res = await fetch(`${apiBase}/api/auth/me/preferences`, {
+      const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
       })
-      const data = await res.json().catch(() => ({})) as { ok?: boolean; preferences?: Record<string, unknown> }
+      const data = await res.json().catch(() => ({})) as { ok?: boolean; preferences?: Record<string, unknown>; error?: string }
       if (res.ok && data.ok && data.preferences) {
         const { preferences: current, setPreferences: setPref } = useAuth()
         setPref({ ...current, ...data.preferences })
         return true
       }
+      if (import.meta.dev && !res.ok) {
+        console.warn('[preferences] PATCH 失败:', res.status, data?.error ?? data)
+      }
       return false
-    } catch {
+    } catch (e) {
+      if (import.meta.dev) {
+        console.warn('[preferences] PATCH 请求异常:', e)
+      }
       return false
     }
   }
