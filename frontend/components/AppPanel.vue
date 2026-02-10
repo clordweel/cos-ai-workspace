@@ -1,5 +1,5 @@
 <template>
-  <div class="h-full flex flex-col overflow-hidden bg-white dark:bg-zinc-800 rounded-[inherit]">
+  <div class="h-full min-w-[480px] flex flex-col overflow-hidden bg-white dark:bg-zinc-800 rounded-[inherit]">
     <div class="app-panel-scroll flex-1 overflow-y-auto p-4 sm:p-5 min-h-0 min-w-0 flex flex-col items-stretch">
       <div class="app-panel-content w-full min-w-0 max-w-2xl mx-auto">
           <template v-if="currentView === 'home'">

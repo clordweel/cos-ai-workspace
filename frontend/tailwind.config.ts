@@ -10,6 +10,17 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        /** 最窄档：≤320px，默认仅会话列表，点击会话切聊天 */
+        xxs: { max: '320px' },
+        /** 语义化断点，与 useBreakpoint 一致 */
+        xs: '320px',
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
+        '2xl': '1536px',
+      },
       colors: {
         /** 全局主题色（高饱和科技蓝），一处修改即可换肤 */
         primary: {

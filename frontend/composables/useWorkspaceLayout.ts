@@ -1,46 +1,58 @@
 /**
  * Workspace 全局布局状态与空间分配
  *
- * UI 区块状态（单一数据源）：
- * - 会话列表：始终展示
- * - 会话聊天：有 chatId 时展示（由 route 决定）
- * - 应用标签栏：折叠 | 展开（由 useAppView 侧栏状态决定）
- * - 应用内容区：展开 | 折叠（由 useAppView isContentVisible 决定）
+ * 使用 CSS Grid 管理左栏（会话区）与右栏（应用区），由语义化断点与 UI 状态决定列宽。
  *
- * 四种典型布局模式：
- * 1. 会话列表 + 应用标签栏折叠 + 应用内容展开（默认）
- * 2. 会话列表 + 会话聊天 + 应用标签折叠 + 应用内容展开
- * 3. 会话列表 + 会话聊天 + 应用标签折叠 + 应用内容折叠
- * 4. 会话列表 + 会话聊天 + 应用标签展开 + 应用内容折叠
+ * 断点（语义化，从窄到宽）：
+ * - xxs: viewport ≤ 320px — 默认仅会话列表，点击会话切换到聊天（仅列表 / 仅聊天二选一）
+ * - xs:  ≥ 320px
+ * - sm:  ≥ 640px
+ * - md:  ≥ 768px
+ * - lg:  ≥ 1024px
+ * - xl:  ≥ 1280px
  *
- * 空间分配完全由当前 UI 状态推导，不依赖 ResizeObserver。
+ * 左栏（会话区）行为：
+ * | 视口   | 应用区关闭 | 应用区展开                 |
+ * |--------|------------|----------------------------|
+ * | < sm   | 1fr        | 1fr（应用区不显示，单栏会话） |
+ * | sm~md  | 1fr        | 1fr（应用区不显示，双栏会话） |
+ * | md~lg  | 1fr        | 1fr + 应用区（auto 适应宽度） |
+ * | lg+    | 1fr        | 1fr + 应用区（auto 适应宽度） |
+ *
+ * 右栏（应用区）：关闭或 < md 不渲染；否则 grid 列为 auto，由内容与 max-width 约束自适应。
+ *
+ * 会话区内部（列表 vs 聊天）：由 isSessionExpanded 控制。
+ * - < sm：单栏（仅列表或仅聊天）
+ * - sm+（含 xl）：双栏，列表 w-72 与聊天左右并排
  */
 
 export type WorkspaceLayoutMode =
-  | 'list_app_content_expanded'           // 1. 列表 + 应用标签折叠 + 应用内容展开（默认）
-  | 'list_chat_app_content_expanded'      // 2. 列表+聊天 + 应用标签折叠 + 应用内容展开
-  | 'list_chat_app_tabs_content_collapsed' // 3. 列表+聊天 + 应用标签折叠 + 应用内容折叠
-  | 'list_chat_app_sidebar_content_collapsed' // 4. 列表+聊天 + 应用标签展开 + 应用内容折叠
+  | 'list_app_content_expanded'
+  | 'list_chat_app_content_expanded'
+  | 'list_chat_app_tabs_content_collapsed'
+  | 'list_chat_app_sidebar_content_collapsed'
 
-/** 应用区最大宽度（px），超出部分归会话区 */
+/** 应用区最大宽度（px），右栏 grid 列宽上限 */
 export const WORKSPACE_APP_PANEL_MAX_WIDTH_PX = 1000
+/** 会话列表固定宽度（折叠会话区时左栏宽度），与 w-72 一致 */
+const SESSION_LIST_WIDTH_PX = 288
 
 export function useWorkspaceLayout() {
   const route = useRoute()
+  const isXxs = useBreakpoint('xxs')
   const isXl = useBreakpoint('xl')
   const isSm = useBreakpoint('sm')
-  /** 视口 >= lg(1024px) 才会话区可左右双栏；低于 lg 为单栏（sm 且应用区折叠时仍为双栏） */
-  const isSessionWide = useBreakpoint('lg')
-  /** 仅客户端挂载后才使用断点，避免 SSR 与首屏 hydration 时不一致导致布局错乱 */
+  const isMd = useBreakpoint('md')
+  const isLg = useBreakpoint('lg')
   const isMounted = ref(false)
   onMounted(() => { isMounted.value = true })
+
   const {
     isPanelOpen,
     isContentVisible,
     appSidebarExpanded,
   } = useAppView()
 
-  /** 当前是否有会话聊天（由路由 /space/:id 决定） */
   const hasChat = computed(() => {
     const path = route.path
     if (!path.startsWith('/space')) return false
@@ -49,7 +61,6 @@ export function useWorkspaceLayout() {
     return !!id
   })
 
-  /** 当前布局模式（由 UI 状态推导） */
   const layoutMode = computed<WorkspaceLayoutMode>(() => {
     const panelOpen = isPanelOpen.value
     const contentVisible = isContentVisible.value
@@ -67,31 +78,54 @@ export function useWorkspaceLayout() {
     return 'list_chat_app_tabs_content_collapsed'
   })
 
-  /** 会话区是否「展开」：挂载后 >= lg 时 xl 或应用区折叠则双栏；< lg 时仅 sm 且应用区折叠则为双栏，否则单栏 */
+  /** 会话区是否「展开」：列表与聊天左右并排，列表固定 w-72。断点 ≤ sm 完全单栏；≥ md 双栏；有 chat 时首屏双栏（挂载后 ≤ sm 仍单栏） */
   const isSessionExpanded = computed(() => {
-    const appCollapsed = !isPanelOpen.value || !isContentVisible.value
-    if (!isMounted.value) return appCollapsed
-    if (isSessionWide.value) return isXl.value || appCollapsed
-    return isSm.value && appCollapsed
+    if (hasChat.value) {
+      if (isMounted.value && (isXxs.value || (!isMd.value && !isLg.value))) return false
+      return true
+    }
+    if (!isMounted.value) return !isPanelOpen.value || !isContentVisible.value
+    if (isXxs.value) return false
+    if (isMd.value || isLg.value) return true
+    return false
   })
 
-  /** 会话区宽度类：< lg 单栏时占满剩余；>= lg 按原逻辑；首屏与 SSR 一致 */
-  const sessionAreaClass = computed(() => {
-    if (!isPanelOpen.value) return 'max-w-none'
-    if (isPanelOpen.value && !isContentVisible.value) return 'max-w-none mr-3'
-    if (isMounted.value && !isSessionWide.value) return 'max-w-none mr-3'
-    if (isMounted.value && isXl.value) return 'max-w-none mr-3'
-    return 'max-w-sm mr-3'
+  /** 应用区内容是否展开（面板打开且内容区可见）；用于应用区展开时隐藏会话聊天区 */
+  const appContentVisible = computed(() => isPanelOpen.value && isContentVisible.value)
+
+  /**
+   * Grid 两列 [会话区 | 应用区]：
+   * - xl+ 且应用区展开：'1fr auto'，会话列 1fr（列表 w-72 + 聊天 flex-1 共享）
+   * - md～lg 且应用区展开：'288px 1fr'，会话列仅 288px（仅列表，聊天被挤出）
+   * - 其他：'1fr auto' 或 '1fr 0fr'
+   * layout 内用 isXlFromViewport 覆盖为 effectiveGridColumns，保证挂载后 xl 正确。
+   */
+  const gridTemplateColumns = computed(() => {
+    const open = isPanelOpen.value
+    const contentVisible = isContentVisible.value
+    if (!open) return '1fr 0fr'
+    if (isMounted.value && !isMd.value && !isLg.value) return '1fr 0fr'
+    if (open && contentVisible) {
+      if (isXl.value) return '1fr auto'
+      return `${SESSION_LIST_WIDTH_PX}px 1fr`
+    }
+    return '1fr auto'
   })
 
-  /** 应用区是否需限制最大宽度（打开时始终限制） */
+  /** < md 不渲染应用区；md~lg 与 lg+ 渲染，折叠按钮控制内容区展开/折叠 */
+  const showAppPanel = computed(() => isPanelOpen.value && (isMounted.value ? (isMd.value || isLg.value) : true))
+
   const appPanelMaxWidthCss = `${WORKSPACE_APP_PANEL_MAX_WIDTH_PX}px`
 
   return {
     hasChat: readonly(hasChat),
     layoutMode: readonly(layoutMode),
     isSessionExpanded: readonly(isSessionExpanded),
-    sessionAreaClass: readonly(sessionAreaClass),
+    appContentVisible: readonly(appContentVisible),
+    gridTemplateColumns: readonly(gridTemplateColumns),
+    showAppPanel: readonly(showAppPanel),
+    isXxs: readonly(isXxs),
+    isXl: readonly(isXl),
     appPanelMaxWidthCss,
     appPanelMaxWidthPx: WORKSPACE_APP_PANEL_MAX_WIDTH_PX,
   }

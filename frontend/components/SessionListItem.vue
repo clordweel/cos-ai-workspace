@@ -4,7 +4,7 @@
       <li
         role="button"
         tabindex="0"
-        class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-md"
+        class="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-offset-2 rounded-none"
         :class="[
           isActive ? 'bg-primary-50 dark:bg-primary-900/30 text-black dark:text-white' : 'hover:bg-zinc-50 dark:hover:bg-zinc-700/50 active:bg-zinc-100 dark:active:bg-zinc-700 text-black dark:text-white',
           isMock ? 'opacity-80' : '',

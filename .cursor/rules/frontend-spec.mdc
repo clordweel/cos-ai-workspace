@@ -12,10 +12,10 @@ alwaysApply: false
 
 ## 布局（workspace）
 - **布局文件**：`layouts/workspace.vue`。全屏 `h-screen`、主体横向 flex、`p-3`。
-- **Workspace UI 状态（单一数据源）**：`useWorkspaceLayout()` 根据「会话列表 + 会话聊天(由 route) + 应用标签栏折叠/展开 + 应用内容展开/折叠」推导 **layoutMode**，并统一计算 **sessionAreaClass**、**appPanelMaxWidthCss**。空间分配完全由 UI 状态决定，不依赖 ResizeObserver。
-- **四种典型布局模式**：`list_app_content_expanded`（默认）| `list_chat_app_content_expanded` | `list_chat_app_tabs_content_collapsed` | `list_chat_app_sidebar_content_collapsed`。应用区最大宽度常量 `WORKSPACE_APP_PANEL_MAX_WIDTH_PX`（如 1000px），超出归会话区。
-- **左侧会话区**：`<slot />`（一般为 `pages/space/[[id]].vue`）。宽度由 `sessionAreaClass` 决定：应用区打开且内容区展开时 `max-w-sm`，否则占满剩余。
-- **右侧应用区**：`section`（`rounded-2xl`、白底、`max-width` 由 `useWorkspaceLayout` 提供）。内为 **WorkspaceAppNav** + 应用内容区；由 `useAppView()` 的 `isPanelOpen`、`isContentVisible`、`appSidebarExpanded` 等控制，过渡动画 `app-panel`。
+- **Workspace UI 状态（单一数据源）**：`useWorkspaceLayout()` 根据「会话列表 + 会话聊天(由 route) + 应用标签栏折叠/展开 + 应用内容展开/折叠」推导 **layoutMode**，并用 **grid 左栏/右栏** 分配空间：**gridTemplateColumns**、**appPanelMaxWidthCss**。断点从窄到宽（sm / lg / xl）决定左栏为 1fr 或固定 288px，右栏为 0fr 或 minmax(0, 1000px)。不依赖 ResizeObserver。
+- **四种典型布局模式**：`list_app_content_expanded`（默认）| `list_chat_app_content_expanded` | `list_chat_app_tabs_content_collapsed` | `list_chat_app_sidebar_content_collapsed`。应用区最大宽度常量 `WORKSPACE_APP_PANEL_MAX_WIDTH_PX`（如 1000px）。
+- **左栏（会话区）**：`<slot />`（一般为 `pages/space/[[id]].vue`）。宽度由 grid 列宽决定：应用区关闭时 1fr；应用区打开时 &lt; lg 为 1fr，lg～xl 为 288px(w-72)，xl+ 为 1fr。
+- **右栏（应用区）**：`section`（`rounded-2xl`、白底、`max-width` 由 `useWorkspaceLayout` 提供）。内为 **WorkspaceAppNav** + 应用内容区；由 `useAppView()` 的 `isPanelOpen`、`isContentVisible`、`appSidebarExpanded` 等控制，过渡动画 `app-panel`。
 
 ## 应用区结构
 - **WorkspaceAppNav**：侧栏为**浏览器标签式**，宽度 `w-48`/`w-12` 可折叠，宽度过渡 200ms。悬停 500ms 才展开，移出 180ms 延迟收起；可固定侧栏（顶部工具栏按钮）。自上而下：**已打开标签列表**（图标 + 标题 + 悬停显示关闭按钮，点击切换、× 关闭）→ 底部固定「新标签」「设置」按钮。

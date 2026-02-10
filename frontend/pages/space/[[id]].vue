@@ -1,12 +1,20 @@
 <template>
-  <!-- 会话区：展开时列表与聊天左右并排 -->
-  <div class="h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
+  <!--
+    会话区布局（由 workspace layout 的 grid 左列承载）：
+    - 外层：session-area-container，flex-col，占满 layout 给的宽度。
+    - 内层：flex-row（sm+ 双栏）或 flex-col（< sm 单栏）。
+    - 左：SessionSidebar，sm+ 时 w-72(288px)，否则 flex-1；v-show 控制显隐。
+    - 右：main 聊天区，flex-1 min-w-0，与列表左右并排时占剩余宽度。
+    - 注意：layout 在 xl+ 且应用区展开时会话列给 1fr，否则 md～lg 应用区展开时给 288px（仅列表可见）。
+  -->
+  <div class="session-area-container h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
     <div
       class="flex min-h-0 min-w-0 flex-1"
       :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
     >
       <SpaceSessionSidebar
         :is-session-expanded="isSessionExpanded"
+        :app-content-visible="appContentVisible && showAppPanel"
         :chat-id="chatId"
         :list-view-tab="listViewTab"
         :list-padding-top="listPaddingTop"
@@ -41,11 +49,15 @@
         @drawer-select="onDrawerAppClick"
       />
       <main
-        class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden relative"
+        class="flex-1 min-h-0 flex flex-col overflow-hidden relative"
+        :class="{ 'min-w-0': !(chatId && showChatPlaceholderOnFirstLoad) }"
         v-show="isSessionExpanded || !!chatId"
-        :style="{ '--chat-text-scale': sessionAreaFontScale }"
+        :style="[
+          { '--chat-text-scale': sessionAreaFontScale },
+          chatId && showChatPlaceholderOnFirstLoad ? { minWidth: '20rem' } : {}
+        ]"
       >
-        <template v-if="chatId">
+        <template v-if="chatId && !showChatPlaceholderOnFirstLoad">
           <SpaceChatPane
             :scroll-ref="scrollRef"
             :chat-title="chatTitle"
@@ -159,7 +171,10 @@
             </div>
           </SpaceChatPane>
         </template>
-        <ChatEmptyState v-else @new-chat="startNewChat" />
+        <ChatEmptyState
+          v-if="!chatId || showChatPlaceholderOnFirstLoad"
+          @new-chat="startNewChat"
+        />
       </main>
     </div>
   </div>
@@ -176,6 +191,8 @@ const route = useRoute()
 const router = useRouter()
 const chatId = computed(() => (route.params.id as string) || undefined)
 
+/** 页面首次加载且有 chatId 时先显示 ChatEmptyState 占位，挂载后置为 false 以显示 SpaceChatPane */
+const showChatPlaceholderOnFirstLoad = ref(true)
 const scrollRef = ref<HTMLElement | null>(null)
 const input = ref('')
 const streaming = ref(false)
@@ -534,8 +551,10 @@ function drawerAppActive(app: DrawerAppItem): boolean {
   if ('appId' in app && app.appId) return activeTab.value?.view === 'app' && activeTab.value?.appId === app.appId
   return false
 }
-/** 展开：会话列表与聊天区左右并排（由 layout provide，应用区关闭或应用内容区折叠时为 true） */
+/** 展开：会话列表与聊天区左右并排（由 layout provide） */
 const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
+const appContentVisible = inject<Ref<boolean>>('appContentVisible', ref(false))
+const showAppPanel = inject<Ref<boolean>>('showAppPanel', ref(false))
 
 /** 进入会话时将该会话内收到的消息标记为已读 */
 watch(chatId, (id) => {
@@ -550,6 +569,9 @@ watch(chatId, (id) => {
 })
 
 onMounted(() => {
+  // 延迟关闭占位，确保首帧/布局稳定后用户能看见 ChatEmptyState，再切到真实聊天
+  const t = setTimeout(() => { showChatPlaceholderOnFirstLoad.value = false }, 120)
+  onBeforeUnmount(() => clearTimeout(t))
   const id = chatId.value
   if (id) {
     if (!isMockSession(id)) {
@@ -825,6 +847,13 @@ function retryMessage(index: number) {
 </script>
 
 <style scoped>
+@media (max-width: 320px) {
+  .session-area-container {
+    border-radius: 0;
+    border: none !important;
+  }
+}
+
 .search-slide-enter-active,
 .search-slide-leave-active {
   transition: opacity 0.2s ease, transform 0.2s ease;

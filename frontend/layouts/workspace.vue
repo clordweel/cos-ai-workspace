@@ -1,22 +1,24 @@
 <template>
   <div class="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <div class="flex-1 flex min-h-0 flex-row gap-0 p-3 relative">
-        <!-- 会话区：宽度由 useWorkspaceLayout 根据 UI 状态分配 -->
-        <div
-          class="h-full flex-1 min-w-0 flex flex-col overflow-visible"
-          :class="sessionAreaClass"
-        >
-          <slot />
+      <div
+        class="workspace-grid flex-1 grid min-h-0 p-3 relative"
+        :class="showAppPanel ? 'gap-3' : 'gap-0'"
+        :style="{ gridTemplateColumns: effectiveGridColumns }"
+      >
+        <!-- 左栏：会话区；< sm 时居中且限制最大宽度；左栏最大 940px 由 effectiveGridColumns 控制 -->
+        <div class="workspace-session-column h-full w-full min-w-0 flex flex-col overflow-visible">
+          <div class="workspace-session-column-inner h-full w-full min-w-0 flex flex-col overflow-visible">
+            <slot />
+          </div>
         </div>
-        <!-- 应用区：最大宽度由 useWorkspaceLayout 统一配置，剩余空间归会话区 -->
+        <!-- 右栏：应用区；xxs 下由 CSS 媒体查询首屏即隐藏，避免刷新时先显后隐 -->
         <Transition name="app-panel" mode="out-in">
           <section
-            v-if="isPanelOpen"
+            v-if="showAppPanel"
             key="panel"
-            class="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 shadow-sm"
+            class="workspace-app-panel flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 min-w-0"
             :class="isContentVisible ? 'flex-1 min-w-0' : ''"
-            :style="{ maxWidth: appPanelMaxWidthCss }"
           >
             <!-- 顶部工具条：左区块=固定按钮（侧栏+内容都折叠时隐藏），右区块=折叠按钮；鼠标进入工具栏时取消侧栏延迟折叠 -->
             <div
@@ -63,7 +65,7 @@
             <div class="flex flex-1 min-h-0 min-w-0">
               <WorkspaceAppNav />
               <div v-show="isContentVisible" class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden p-2 pl-0 pt-0">
-                <div class="flex-1 min-h-0 min-w-0 overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
+                <div class="workspace-app-content flex-1 min-h-0 min-w-0 overflow-auto rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex flex-col" style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.06);">
                   <AppPanel />
                 </div>
               </div>
@@ -83,10 +85,42 @@ const router = useRouter()
 useTheme()
 const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave, openAuthTab } = useAppView()
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
-const { isSessionExpanded, sessionAreaClass, appPanelMaxWidthCss } = useWorkspaceLayout()
+const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isXl } = useWorkspaceLayout()
 
-/** 供子组件（space 页、应用区工具栏）使用 */
+/** 按实际视口判断 xl：客户端同步取初值（刷新首屏即正确），再在 onMounted 里监听变化 */
+const isXlFromViewport = ref(
+  import.meta.client ? window.matchMedia('(min-width: 1280px)').matches : false
+)
+onMounted(() => {
+  const mq = window.matchMedia('(min-width: 1280px)')
+  const update = () => { isXlFromViewport.value = mq.matches }
+  update()
+  mq.addEventListener('change', update)
+})
+
+/** 当前是否为会话页（有 chat id）：有则应用区展开时会话列始终 1fr，避免聊天被折叠 */
+const hasChatInRoute = computed(() => {
+  const p = route.path
+  if (!p.startsWith('/space')) return false
+  const rest = p.slice('/space'.length)
+  const id = rest === '' || rest === '/' ? undefined : rest.replace(/^\//, '').split('/')[0]
+  return !!id
+})
+/** xl+ 或会话页且应用区展开时：左栏最大 940px、右栏 1fr 占满剩余，避免过宽时留白 */
+const effectiveGridColumns = computed(() => {
+  const appExpanded = showAppPanel.value && isContentVisible.value
+  if (appExpanded && (isXlFromViewport.value || hasChatInRoute.value)) return 'minmax(0, 940px) 1fr'
+  return gridTemplateColumns.value
+})
+
+/** 供子组件（space 页、应用区工具栏）使用；仅 md～lg 且应用区展开时折叠会话聊天区，xl 及以上不折叠 */
+const hideChatForApp = computed(() => appContentVisible.value && showAppPanel.value && !isXlFromViewport.value)
 provide('isSessionExpanded', isSessionExpanded)
+provide('appContentVisible', appContentVisible)
+provide('showAppPanel', showAppPanel)
+provide('isXxs', isXxs)
+provide('isXl', isXl)
+provide('hideChatForApp', hideChatForApp)
 
 /** 侧边栏和应用内容区都折叠时隐藏左区块（固定按钮）；任一展开或侧栏悬浮/固定则显示 */
 const showPinButton = computed(() => isContentVisible.value || isSidebarPinned.value || isSidebarHovered.value)
@@ -112,6 +146,64 @@ watch(() => route.query?.auth_error, (authError) => {
 </script>
 
 <style scoped>
+/* 应用内容区：内容超出显示滚动条，极细样式 */
+.workspace-app-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+.workspace-app-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.workspace-app-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.workspace-app-content::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 3px;
+}
+.dark .workspace-app-content {
+  scrollbar-color: rgb(82 82 91) transparent;
+}
+.dark .workspace-app-content::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
+}
+
+/* < md 断点：首屏即单栏、隐藏应用区；避免刷新时先显示应用区 */
+@media (max-width: 767px) {
+  .workspace-grid {
+    grid-template-columns: 1fr 0fr !important;
+  }
+  .workspace-app-panel {
+    display: none !important;
+  }
+}
+
+/* < sm 断点：会话区居中，最大宽度 32rem */
+@media (max-width: 639px) {
+  .workspace-session-column {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+  }
+  .workspace-session-column-inner {
+    width: 100%;
+    max-width: 32rem;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+/* xxs 断点：去除 padding 与 border */
+@media (max-width: 320px) {
+  .workspace-grid {
+    padding: 0 !important;
+  }
+  .workspace-app-panel {
+    border: none !important;
+  }
+}
+
 /* 侧栏与内容区都折叠时，折叠按钮居中 */
 .toolbar-fold-btn-centered {
   margin: auto;

@@ -14,7 +14,7 @@
 |--------------|----------------------|--------------------------------------------------------------------------|--------|
 | 会话与消息   | `useChatSessions`    | `chats`、`messagesByChatId`、`conversationIds`；增删改查、已读、conversationId | space 页、AppPanel |
 | 应用区 UI    | `useAppView`         | `tabs`、`activeTabId`、`isPanelOpen`、`isContentVisible`、侧栏悬停/固定   | workspace、space、WorkspaceAppNav、AppPanel、AppPlaceholder |
-| 布局         | `useWorkspaceLayout` | 无自身持久状态；由 route + `useAppView` + `useBreakpoint` 推导 layoutMode、sessionAreaClass 等 | workspace |
+| 布局         | `useWorkspaceLayout` | 无自身持久状态；由 route + `useAppView` + `useBreakpoint` 推导 layoutMode、gridTemplateColumns 等 | workspace |
 | 认证         | `useAuth`            | `isAuthenticated`、`user`、`authLoading`；登录/登出/requireAuth           | workspace、space、WorkspaceAppNav、AppPanel、MaterialConfirm |
 | 主题         | `useTheme`           | 基于 `@nuxtjs/color-mode`，对外 `themeMode` / `setTheme`                 | 设置页等 |
 | UI 设置      | `useUISettings`      | `uiFontSizeStep` + localStorage                                          | space 页（字体缩放） |

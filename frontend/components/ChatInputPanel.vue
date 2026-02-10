@@ -106,42 +106,81 @@
           </div>
           <div class="flex items-center justify-between gap-2 px-3 pb-2 pt-0">
             <div class="flex items-center gap-1">
-              <button
-                type="button"
-                class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-primary-200 hover:bg-primary-50/80 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-primary-500/40 dark:hover:bg-primary-900/20"
-                title="@ 引用联系人或机器人"
-                aria-label="@ 引用"
-                @click="insertAtCursor('@')"
-              >
-                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
-                  <AtSign class="h-2 w-2" />
-                </span>
-                <span class="text-[10px] font-medium text-black dark:text-white">引用</span>
-              </button>
-              <button
-                type="button"
-                class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
-                title="# 引用来源"
-                aria-label="# 引用来源"
-                @click="insertAtCursor('#')"
-              >
-                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
-                  <Hash class="h-2 w-2" />
-                </span>
-                <span class="text-[10px] font-medium text-black dark:text-white">来源</span>
-              </button>
-              <button
-                type="button"
-                class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
-                title="/ 命令"
-                aria-label="/ 命令"
-                @click="insertAtCursor('/')"
-              >
-                <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
-                  <Slash class="h-2 w-2" />
-                </span>
-                <span class="text-[10px] font-medium text-black dark:text-white">命令</span>
-              </button>
+              <!-- xxs：工具以下拉菜单展示 -->
+              <DropdownMenu v-if="isXxs">
+                <DropdownMenuTrigger
+                  as-child
+                >
+                  <button
+                    type="button"
+                    class="flex h-6 items-center justify-between gap-1.5 rounded-md border border-zinc-200 dark:border-zinc-600 bg-transparent px-2 py-1 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 [&_svg]:shrink-0 [&_svg]:opacity-70"
+                    title="插入 @ / # / 命令"
+                    aria-label="输入工具"
+                  >
+                    <span>工具</span>
+                    <ChevronDown class="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="bottom" :side-offset="4" class="min-w-[8.5rem] shadow-none">
+                  <DropdownMenuItem text-value="引用" class="gap-2" @select="insertAtCursor('@')">
+                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary-100 dark:bg-primary-900/50">
+                      <AtSign class="h-2.5 w-2.5 text-black dark:text-white" />
+                    </span>
+                    引用
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="来源" class="gap-2" @select="insertAtCursor('#')">
+                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
+                      <Hash class="h-2.5 w-2.5 text-black dark:text-white" />
+                    </span>
+                    来源
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="命令" class="gap-2" @select="insertAtCursor('/')">
+                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
+                      <Slash class="h-2.5 w-2.5 text-black dark:text-white" />
+                    </span>
+                    命令
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <!-- 非 xxs：三个按钮并排 -->
+              <template v-else>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-primary-200 hover:bg-primary-50/80 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-primary-500/40 dark:hover:bg-primary-900/20"
+                  title="@ 引用联系人或机器人"
+                  aria-label="@ 引用"
+                  @click="insertAtCursor('@')"
+                >
+                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
+                    <AtSign class="h-2 w-2" />
+                  </span>
+                  <span class="text-[10px] font-medium text-black dark:text-white">引用</span>
+                </button>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="# 引用来源"
+                  aria-label="# 引用来源"
+                  @click="insertAtCursor('#')"
+                >
+                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
+                    <Hash class="h-2 w-2" />
+                  </span>
+                  <span class="text-[10px] font-medium text-black dark:text-white">来源</span>
+                </button>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="/ 命令"
+                  aria-label="/ 命令"
+                  @click="insertAtCursor('/')"
+                >
+                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
+                    <Slash class="h-2 w-2" />
+                  </span>
+                  <span class="text-[10px] font-medium text-black dark:text-white">命令</span>
+                </button>
+              </template>
             </div>
             <div class="flex items-center gap-1">
               <span
@@ -198,9 +237,16 @@
 </template>
 
 <script setup lang="ts">
-import { AtSign, Bot, GripHorizontal, Hash, Image as ImageIcon, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
+import { AtSign, Bot, ChevronDown, GripHorizontal, Hash, Image as ImageIcon, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { useBreakpoint } from '~/composables/useBreakpoint'
 import { useContactsAndBots } from '~/composables/useContactsAndBots'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '~/components/ui/dropdown-menu'
 
 const props = defineProps<{
   modelValue: string
@@ -215,6 +261,7 @@ const emit = defineEmits<{
   (e: 'add-participant'): void
 }>()
 
+const isXxs = useBreakpoint('xxs')
 const { contacts, bots } = useContactsAndBots()
 
 type MentionCandidate = { kind: 'contact' | 'bot'; id: string; name: string }

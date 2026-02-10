@@ -26,16 +26,35 @@
           <ChevronRight class="h-3.5 w-3.5 shrink-0" />
         </button>
       </div>
-      <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-8 pr-7 pt-1 pb-8 relative z-10">
-        <div class="mb-3 flex flex-col items-center gap-0">
-          <Logo :size="22" class="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" />
-          <span class="text-[10px] text-zinc-600 dark:text-zinc-400">由 COS AI 驱动</span>
+      <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-6 pr-4 pt-0 pb-8 relative z-10">
+        <!-- 用户信息区块 -->
+        <div class="mb-1 flex items-center gap-2.5 px-1 py-1">
+          <span
+            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-200/80 dark:border-zinc-500/80 bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
+          >
+            <img
+              v-if="userAvatarUrl"
+              :src="userAvatarUrl"
+              :alt="userName || '用户'"
+              class="h-full w-full object-cover"
+            />
+            <span v-else-if="userName" class="text-sm font-medium">{{ userFirstChar }}</span>
+            <User v-else class="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-xs font-medium text-zinc-800 dark:text-zinc-200">
+              {{ userName || '未登录' }}
+            </p>
+            <p class="text-[10px] text-zinc-500 dark:text-zinc-400">
+              {{ isAuthenticated ? '已登录' : '点击登录以使用更多功能' }}
+            </p>
+          </div>
         </div>
         <!-- 常用 -->
-        <div class="mb-4">
+        <div class="mb-1">
           <p class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 px-0.5">常用</p>
           <div
-            class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5"
+            class="grid auto-rows-[minmax(3.5rem,auto)] gap-x-1.5 gap-y-0"
             :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }"
           >
             <button
@@ -60,7 +79,7 @@
         <div>
           <p class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 px-0.5">收藏</p>
           <div
-            class="grid auto-rows-[minmax(3.5rem,auto)] gap-1.5"
+            class="grid auto-rows-[minmax(3.5rem,auto)] gap-x-1.5 gap-y-0"
             :style="{ gridTemplateColumns: 'repeat(auto-fill, minmax(3.5rem, 1fr))' }"
           >
             <button
@@ -88,8 +107,29 @@
 
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { ChevronUp, ChevronRight } from 'lucide-vue-next'
-import Logo from '~/components/Logo.vue'
+import { computed } from 'vue'
+import { ChevronRight, ChevronUp, User } from 'lucide-vue-next'
+import { useAuth } from '~/composables/useAuth'
+
+const { user, isAuthenticated } = useAuth()
+const userName = computed(() => {
+  const u = user.value
+  if (typeof u === 'string') return u
+  if (u && typeof u === 'object' && 'name' in u && typeof (u as { name?: string }).name === 'string')
+    return (u as { name: string }).name
+  return null
+})
+const userAvatarUrl = computed(() => {
+  const u = user.value
+  if (u && typeof u === 'object' && 'avatar' in u && typeof (u as { avatar?: string }).avatar === 'string')
+    return (u as { avatar: string }).avatar
+  return ''
+})
+const userFirstChar = computed(() => {
+  const name = userName.value
+  if (!name || !name.trim()) return '?'
+  return name.trim().charAt(0).toUpperCase()
+})
 
 export interface DrawerAppItem {
   id: string

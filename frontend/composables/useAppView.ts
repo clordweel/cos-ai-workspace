@@ -73,13 +73,23 @@ const activeTab = computed(() => {
 const canGoBack = computed(() => tabs.value.length > 1)
 
 export function useAppView() {
-  /** 视口 < lg(1024px) 时自动展开应用区（面板 + 内容区），与 useWorkspaceLayout 的 lg 断点一致 */
-  const isSessionWide = useBreakpoint('lg')
-  watch(() => isSessionWide.value, (wide) => {
-    if (!wide) {
-      isPanelOpen.value = true
+  const isMd = useBreakpoint('md')
+  const isLg = useBreakpoint('lg')
+  const isXl = useBreakpoint('xl')
+  /** 视口 < lg 时保持面板打开；md~lg 区间内应用区内容区初始为折叠 */
+  watch([isMd, isLg], ([md, lg]) => {
+    if (lg) return
+    isPanelOpen.value = true
+    const inMdLg = md && !lg
+    if (inMdLg) {
+      isContentVisible.value = false
+    } else {
       isContentVisible.value = true
     }
+  }, { immediate: true })
+  /** xl 及以上强制应用区内容展开 */
+  watch(isXl, (xl) => {
+    if (xl) isContentVisible.value = true
   }, { immediate: true })
 
   /** 应用标签栏是否展开：仅由用户手动操作决定（固定时的锁定状态 或 悬停展开） */

@@ -1,8 +1,8 @@
 <template>
   <aside
-    v-show="isSessionExpanded || !chatId"
+    v-show="isSessionExpanded || !chatId || appContentVisible"
     class="flex flex-col min-h-0 shrink-0 bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 session-area"
-    :class="isSessionExpanded ? 'w-64 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
+    :class="isSessionExpanded ? 'w-72 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
   >
     <div class="relative flex-1 min-h-0 flex flex-col min-w-0">
       <SpaceSessionListContent
@@ -65,6 +65,8 @@ import SpaceSessionListContent from '~/components/space/SessionListContent.vue'
 
 defineProps<{
   isSessionExpanded: boolean
+  /** 应用区内容展开时为 true，此时始终显示会话列表、隐藏聊天区 */
+  appContentVisible?: boolean
   chatId?: string
   listViewTab: 'active' | 'favorites' | 'pending' | 'settings'
   listPaddingTop: string
