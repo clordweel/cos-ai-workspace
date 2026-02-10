@@ -11,6 +11,8 @@ dotenv.config({ path: path.resolve(dir, '..', '.env') })
 
 export default defineNuxtConfig({
   devtools: { enabled: true },
+  // 规避 Nuxt 3.15+ 开发时 Vite 无法解析 #app-manifest 的 pre-transform 错误（见 nuxt/nuxt#30461、#33606）
+  experimental: { appManifest: false },
   // 若仍出现 500 (reading 'ce'/'isCE')，可临时开启下一行关闭 SSR 以规避 Nuxt 3.11+ addComponent 已知问题
   // ssr: false,
   modules: ['shadcn-nuxt', '@nuxtjs/color-mode', '@logto/nuxt'],

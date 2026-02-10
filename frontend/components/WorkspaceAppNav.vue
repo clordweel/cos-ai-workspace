@@ -87,7 +87,7 @@
 
 <script setup lang="ts">
 import { Home, Users, Bot, Settings, X, Plus, LogIn, User } from 'lucide-vue-next'
-import type { AppTab } from '~/composables/useAppView'
+import type { AppTab } from '~/composables/useAppViewConstants'
 
 const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, appSidebarExpanded, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
 const { isAuthenticated } = useAuth()

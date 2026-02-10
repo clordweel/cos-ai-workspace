@@ -13,6 +13,11 @@
 - **中间层 auth 拆分**：`services/auth.ts` 拆为 `auth/sessionStore.ts`（会话存储与 Cookie）、`auth/frappeLogin.ts`（用户名密码/Token 登录）、`auth/logto.ts`（Logto SSO 与 Matrix 同步），入口 `auth.ts` 仅 re-export，便于按需阅读与修改。
 - **前端**：`useAppView` 的类型与常量抽至 `composables/useAppViewConstants.ts`，控制单文件行数；新增 `.cursor/plans/split-space-page.md` 作为后续拆分 `pages/space/[[id]].vue`（约 920 行）的参考计划。
 
+### Space 页拆分（split-space-page 计划执行）
+
+- **composables**：新增 `useSpaceSessionList.ts`（列表 Tab、搜索、置顶、Mock、应用抽屉）、`useSpaceChatPane.ts`（消息、虚拟滚动、流式发送、导出与单条消息操作）、`useSpacePage.ts`（组合二者 + 路由/注入/生命周期）。
+- **页面**：`pages/space/[[id]].vue` 瘦身为「模板 + definePageMeta + useSpacePage() 解构 + style」，约 296 行；逻辑全部迁入上述 composable，单文件符合约 300 行内约定。
+
 ### 会话多用户支持
 
 - **中间层**：会话/消息/流式发送按「当前用户」隔离。`userId` 优先从 Cookie 会话推导（`getStableUserId(session)`：Logto 用 `logtoSub`，Frappe/Token 用 `user`），无会话时使用 body/query 的 `user_id` 或 `'default'`。`GET /api/auth/me` 增加返回字段 `userId`。

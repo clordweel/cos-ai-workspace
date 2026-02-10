@@ -19,5 +19,7 @@
 - 页面行为与当前一致；构建与 E2E/手动测试通过。
 - 单文件行数控制在约 300 行内；新 composable 命名语义化，便于搜索与引用。
 
-## 备注
-- 本计划可在「改 space 页」或「优化前端大文件」时执行；执行时建议单会话只做拆分，不做功能改动。
+## 执行记录（2026-02-10）
+- 已拆分为 **useSpaceSessionList**（列表、置顶、mock、抽屉）、**useSpaceChatPane**（消息、流式、虚拟列表、导出与消息操作）、**useSpacePage**（组合二者 + 路由/注入/生命周期）。
+- 页面 **pages/space/[[id]].vue** 现仅保留 `definePageMeta`、`useSpacePage()` 解构与模板，约 296 行（含 template + script + style）。
+- 验收：前端 `pnpm run build` 通过；行为与拆分前一致。

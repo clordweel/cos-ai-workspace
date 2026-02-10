@@ -1,23 +1,10 @@
-export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth' | 'profile' | 'app'
-
-/** 侧栏「标签」：类似浏览器标签，可多开、切换、关闭 */
-export interface AppTab {
-  id: string
-  view: AppView
-  title: string
-  appId?: string
-  /** 认证标签：未登录时不可关闭 */
-  isAuthRequired?: boolean
-}
-
-const VIEW_TITLES: Record<Exclude<AppView, 'app'>, string> = {
-  home: '首页',
-  contacts: '联系人',
-  bots: '机器人',
-  settings: '设置',
-  auth: '认证登录',
-  profile: '用户信息',
-}
+import {
+  type AppView,
+  type AppTab,
+  VIEW_TITLES,
+  defaultProfileTab,
+  defaultHomeTab,
+} from './useAppViewConstants'
 
 function tabTitle(view: AppView, appId?: string): string {
   if (view === 'app' && appId) {
@@ -30,9 +17,6 @@ function tabTitle(view: AppView, appId?: string): string {
   }
   return view === 'app' ? '应用' : VIEW_TITLES[view]
 }
-
-const defaultProfileTab: AppTab = { id: 'tab-profile-default', view: 'profile', title: '用户信息' }
-const defaultHomeTab: AppTab = { id: 'tab-home-default', view: 'home', title: '首页' }
 
 /** 已打开的标签列表（侧栏展示顺序）；用户信息固定在顶部，默认首项为「用户信息」+「首页」 */
 const tabs = ref<AppTab[]>([defaultProfileTab, defaultHomeTab])
