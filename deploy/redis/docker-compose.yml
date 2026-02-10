@@ -1,0 +1,22 @@
+# Redis 单实例，供中间层会话持久化（SESSION_STORE=redis）
+# 见 docs/SESSION_PERSISTENCE.md
+
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["sh", "-c", "[ -n \"$$REDIS_PASSWORD\" ] && exec redis-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\" || exec redis-server --appendonly yes"]
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  redis_data:

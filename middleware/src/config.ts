@@ -39,6 +39,10 @@ export interface Config {
   };
   /** 中间层对外访问根 URL，用于拼 Logto redirect_uri；不设则从请求头/主机推导 */
   middlewarePublicOrigin: string;
+  /** 会话存储：memory（默认）| redis。redis 时需配置 redisUrl，见 SESSION_PERSISTENCE.md */
+  sessionStore: 'memory' | 'redis';
+  /** Redis 连接 URL，SESSION_STORE=redis 时必填，如 redis://10.1.1.15:6379 或 redis://:password@host:6379 */
+  redisUrl: string;
 }
 
 export const config: Config = {
@@ -84,4 +88,7 @@ export const config: Config = {
   },
 
   middlewarePublicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || '').replace(/\/$/, ''),
+
+  sessionStore: (process.env.SESSION_STORE || 'memory').toLowerCase() === 'redis' ? 'redis' : 'memory',
+  redisUrl: (process.env.REDIS_URL || '').trim(),
 };

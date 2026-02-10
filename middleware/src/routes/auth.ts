@@ -83,7 +83,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/auth/me', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session) {
       return reply.code(401).send({ ok: false, error: '未登录' });
     }
@@ -119,7 +119,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/api/auth/me/preferences', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session?.logtoSub) {
       return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
     }
@@ -158,8 +158,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/api/auth/logout', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
-    if (session) logoutSession(session.sessionId);
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (session) await logoutSession(session.sessionId);
     reply.clearCookie(cookieName, { path: '/' }).send({ ok: true });
   });
 
@@ -188,7 +188,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.post('/api/auth/matrix/change-password', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session?.logtoSub) {
       return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
     }
@@ -211,7 +211,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   /** 设置 Matrix 密码（仅 Logto 已登录）：Admin API 直接设置，用户无需知晓之前的随机初始密码 */
   app.post('/api/auth/matrix/set-password', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session?.logtoSub) {
       return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
     }
@@ -233,7 +233,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 
   /** 修改 Logto 密码（需 Logto 已登录，无需当前密码；使用 Management API） */
   app.post('/api/auth/logto/change-password', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session?.logtoSub) {
       return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
     }

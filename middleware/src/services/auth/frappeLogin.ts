@@ -39,7 +39,7 @@ export async function loginWithPassword(usr: string, pwd: string): Promise<Login
   const sid = res.headers.get('set-cookie')?.match(/sid=([^;]+)/)?.[1];
   if (!sid) return { ok: false, error: '登录成功但未返回会话' };
   const fullName = data.full_name || usr;
-  const session = saveSession({
+  const session = await saveSession({
     type: 'frappe',
     user: fullName,
     frappeSid: sid,
@@ -69,7 +69,7 @@ export async function loginWithToken(token: string): Promise<LoginResult> {
       ? data.message
       : (data.message as { message?: string } | undefined)?.message ?? (data.message as string) ?? '';
   if (!user) return { ok: false, error: '无法获取当前用户' };
-  const session = saveSession({
+  const session = await saveSession({
     type: 'token',
     user,
     frappeToken: token,

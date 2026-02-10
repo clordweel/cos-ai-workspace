@@ -7,8 +7,8 @@ import { getChatAdapter } from '../adapters/index.js';
 import { getSessionFromCookie, getStableUserId } from '../services/auth.js';
 import { messagesToMarkdown } from '../services/exportMarkdown.js';
 
-function resolveUserId(req: { headers: { cookie?: string }; body?: unknown; query?: unknown }): string {
-  const session = getSessionFromCookie(req.headers.cookie);
+async function resolveUserId(req: { headers: { cookie?: string }; body?: unknown; query?: unknown }): Promise<string> {
+  const session = await getSessionFromCookie(req.headers.cookie);
   if (session) return getStableUserId(session);
   const fromBody = (req.body as { user_id?: string })?.user_id;
   const fromQuery = (req.query as { user_id?: string; user?: string })?.user_id ?? (req.query as { user_id?: string; user?: string })?.user;
@@ -22,7 +22,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     if (!message) {
       return reply.code(400).send({ error: 'message is required' });
     }
-    const userId = resolveUserId(req);
+    const userId = await resolveUserId(req);
 
     const adapter = getChatAdapter();
     const useAdapter = adapter && adapter.supportsStreaming();
@@ -88,7 +88,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         message: '请使用支持 listSessions 的 CHAT_PROVIDER（如 mock）',
       });
     }
-    const userId = resolveUserId(req);
+    const userId = await resolveUserId(req);
     try {
       const list = await adapter.listSessions({ userId });
       return reply.send({ sessions: list });
@@ -119,7 +119,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       if (!sessionId) {
         return reply.code(400).send({ error: 'session id is required' });
       }
-      const userId = resolveUserId(req);
+      const userId = await resolveUserId(req);
       const limit = req.query?.limit ?? 50;
       const beforeId = req.query?.before_id;
       try {

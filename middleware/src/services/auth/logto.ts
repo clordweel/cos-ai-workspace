@@ -122,7 +122,7 @@ export async function handleLogtoCallback(
     ...(meData.picture && { avatar: meData.picture }),
   };
   const expiresIn = Math.max(Number(tokenData.expires_in) || 3600, 60);
-  const session = saveSession({
+  const session = await saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
@@ -161,7 +161,7 @@ export async function createSessionFromLogtoAccessToken(
     ...(meData.picture && { avatar: meData.picture }),
   };
   // sync-session 仅带 accessToken，无 refresh_token，设 1 小时过期
-  const session = saveSession({
+  const session = await saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
@@ -209,7 +209,7 @@ export async function getLogtoAccessTokenForSession(
   };
   if (!refreshData.access_token) return null;
   const newExpiresIn = Math.max(Number(refreshData.expires_in) || 3600, 60);
-  updateSession(session.sessionId, {
+  await updateSession(session.sessionId, {
     logtoAccessToken: refreshData.access_token,
     ...(refreshData.refresh_token && { logtoRefreshToken: refreshData.refresh_token }),
     logtoTokenExpiresAt: now + newExpiresIn * 1000,

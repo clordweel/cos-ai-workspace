@@ -7,7 +7,7 @@ import { createFromDraft } from '../services/cosClient.js';
 
 export async function materialRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/material/confirm', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session) {
       return reply.code(401).send({ error: '需要登录' });
     }

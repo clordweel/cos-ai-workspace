@@ -7,7 +7,7 @@ import { runDiagnostics } from '../services/diagnostics.js';
 
 export async function diagnosticsRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/diagnostics', async (req, reply) => {
-    const session = getSessionFromCookie(req.headers.cookie);
+    const session = await getSessionFromCookie(req.headers.cookie);
     if (!session) {
       return reply.code(401).send({ ok: false, checks: [], error: '未登录' });
     }
