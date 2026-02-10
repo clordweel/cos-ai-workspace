@@ -6,6 +6,13 @@
 
 ## 2026-02-10
 
+### Agent 2026 最佳实践：工作流与结构优化
+
+- **规则与导航**：新增 `.cursor/rules/agent-workflow.mdc`（Plan 优先、动态上下文、约 20 轮或新功能时新会话）；根目录新增 `AGENTS.md` 供 AI 快速定位架构/状态/文档与工作流约定；新增 `.cursor/plans/` 与 README，用于存放 Plan Mode 产出的实现计划。
+- **项目规则**：`project-global.mdc` 增加「代码结构（便于 Agent 导航）」：单文件约 300 行内、文件名语义化、相关文件就近放置。
+- **中间层 auth 拆分**：`services/auth.ts` 拆为 `auth/sessionStore.ts`（会话存储与 Cookie）、`auth/frappeLogin.ts`（用户名密码/Token 登录）、`auth/logto.ts`（Logto SSO 与 Matrix 同步），入口 `auth.ts` 仅 re-export，便于按需阅读与修改。
+- **前端**：`useAppView` 的类型与常量抽至 `composables/useAppViewConstants.ts`，控制单文件行数；新增 `.cursor/plans/split-space-page.md` 作为后续拆分 `pages/space/[[id]].vue`（约 920 行）的参考计划。
+
 ### 会话多用户支持
 
 - **中间层**：会话/消息/流式发送按「当前用户」隔离。`userId` 优先从 Cookie 会话推导（`getStableUserId(session)`：Logto 用 `logtoSub`，Frappe/Token 用 `user`），无会话时使用 body/query 的 `user_id` 或 `'default'`。`GET /api/auth/me` 增加返回字段 `userId`。

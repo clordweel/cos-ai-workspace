@@ -33,6 +33,16 @@ alwaysApply: true
 - 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理应用区（`isPanelOpen`、`isContentVisible`、`currentView`：`home` | `contacts` | `bots` | `settings` | `auth` | `app`）。Layout 向子组件 provide `isSessionExpanded`。认证唯一入口为 Logto；用户偏好用 `useUserPreferences()`，与 Logto customData 同步。
 - 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。
 
+## 会话与上下文
+- **单次会话 scope 尽量单一**：例如只改 `frontend` 或只改 `middleware`，避免同一对话里跨多模块、多需求。
+- **新需求先看文档再动手**：先看 `docs/PROJECT_STATUS.md` 与 `docs/ARCHITECTURE.md`，再改代码；细节用 @ 引用具体文件或行号，减少无关上下文。
+- **大改动拆子任务**：每个子任务单独会话完成，用 git 提交 / PR 串起来；长会话适时收尾，新会话用「基于某 commit/PR 继续」接棒。
+
+## 代码结构（便于 Agent 导航）
+- **单文件尽量控制在约 300 行内**：过长时按职责拆成多个模块或 composable，避免单文件堆积过多逻辑。
+- **文件名语义化**：如 `password-hashing.ts`、`sessionStore.ts` 等比泛用 `helpers.ts` 更利于语义搜索与按需加载。
+- **相关文件就近放置**：同领域逻辑放在同一目录（如 `middleware/src/services/auth/`），减少跨目录遍历。
+
 ## 仓库与文档
 - 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；多维度状态见 `docs/PROJECT_STATUS.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC、AUTH_AND_USER_CONFIG、LOGTO_MATRIX_AUTH_FLOW、CONFIG_AND_AUTH_RESEARCH）。
 - **提交信息**：遵循 **`.cursor/rules/git-commit.mdc`**（`type(scope): 描述`，scope 用实际目录如 `frontend`、`middleware`）。
