@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { Home, Users, Bot, Settings, X, Plus, LogIn } from 'lucide-vue-next'
+import { Home, Users, Bot, Settings, X, Plus, LogIn, User } from 'lucide-vue-next'
 import type { AppTab } from '~/composables/useAppView'
 
 const { tabs, activeTabId, addTab, closeTab, switchTab, isSidebarPinned, sidebarPinnedExpanded, isSidebarHovered, appSidebarExpanded, scheduleSidebarExpand, scheduleSidebarLeave } = useAppView()
@@ -155,11 +155,13 @@ const VIEW_ICONS: Record<string, typeof Home> = {
   bots: Bot,
   settings: Settings,
   auth: LogIn,
+  profile: User,
   app: Home,
 }
 
-/** 认证标签在未登录时不可关闭 */
+/** 用户信息标签固定不可关闭；认证标签在未登录时不可关闭 */
 function canCloseTab(tab: AppTab) {
+  if (tab.view === 'profile') return false
   if (tabs.value.length <= 1) return false
   if (tab.isAuthRequired && !isAuthenticated.value) return false
   return true

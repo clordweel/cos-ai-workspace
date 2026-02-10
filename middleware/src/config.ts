@@ -17,6 +17,7 @@ export interface Config {
   chat: { provider: string };
   matrix: {
     baseUrl: string;
+    serverName: string;
     userId: string;
     accessToken: string;
     password: string;
@@ -32,6 +33,9 @@ export interface Config {
     endpoint: string;
     appId: string;
     appSecret: string;
+    /** 用于 Management API（如修改用户密码）的 M2M 应用；不填则用 appId/appSecret */
+    m2mAppId: string;
+    m2mAppSecret: string;
   };
   /** 中间层对外访问根 URL，用于拼 Logto redirect_uri；不设则从请求头/主机推导 */
   middlewarePublicOrigin: string;
@@ -47,6 +51,13 @@ export const config: Config = {
 
   matrix: {
     baseUrl: (process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').replace(/\/$/, ''),
+    serverName: process.env.MATRIX_SERVER_NAME || (() => {
+      try {
+        return new URL(process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').hostname;
+      } catch {
+        return 'localhost';
+      }
+    })(),
     userId: process.env.MATRIX_USER_ID || '',
     accessToken: process.env.MATRIX_ACCESS_TOKEN || '',
     password: process.env.MATRIX_PASSWORD || '',
@@ -68,6 +79,8 @@ export const config: Config = {
     endpoint: (process.env.LOGTO_ENDPOINT || '').replace(/\/$/, ''),
     appId: process.env.LOGTO_APP_ID || '',
     appSecret: process.env.LOGTO_APP_SECRET || '',
+    m2mAppId: process.env.LOGTO_M2M_APP_ID || process.env.LOGTO_APP_ID || '',
+    m2mAppSecret: process.env.LOGTO_M2M_APP_SECRET || process.env.LOGTO_APP_SECRET || '',
   },
 
   middlewarePublicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || '').replace(/\/$/, ''),

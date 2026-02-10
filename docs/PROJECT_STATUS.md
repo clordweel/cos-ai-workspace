@@ -52,13 +52,14 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **用户可见** | 仅 Logto | 前端无账号密码/Token 表单；唯一入口「登录」→ Logto |
-| **中间层** | Logto + 保留 Frappe 接口 | `/api/auth/logto`、callback、/me、logout 已用；POST login/token 仍在，未移除 |
+| **用户可见** | 仅 Logto | 前端唯一入口「登录」→ Logto；认证页可提供 Matrix 登录（用户名/邮箱/手机号+密码），需配置 `NUXT_PUBLIC_MATRIX_BASE_URL` |
+| **中间层** | Logto + 保留 Frappe 接口 | `/api/auth/logto`、callback、/me、logout 已用；`GET /api/auth/me` 在 Logto 且配置 M2M 时附带 `preferences`；`PATCH /api/auth/me/preferences` 部分更新 Logto customData（先 GET 再合并再 PATCH）；POST login/token 仍在，未移除 |
 | **Session** | 含 type、user、logtoSub、frappeSid/frappeToken 等 | 与 ERPNext 仍耦合；通用化见 `docs/AUTH_GENERIC_LOGTO_DESIGN.md` |
-| **系统配置** | 仅 env | 无独立配置库；Matrix 仅作聊天后端，不负责系统/用户配置 |
-| **用户配置** | 无持久化 | 无用户偏好/连接器存储；连接器设计见 `docs/CONFIG_AND_AUTH_RESEARCH.md` |
+| **系统配置** | 仅 env | 无独立配置库；Matrix 仅作聊天后端，不负责系统配置 |
+| **用户配置** | Logto customData | 用户偏好（主题、字体档位、通知开关）存 Logto 自定义数据，经 Management API（M2M）读写；前端 `useUserPreferences()` 与 `GET/PATCH /api/auth/me(preferences)` 对接；未登录用本地/color-mode。**勿在 customData 存敏感信息** |
+| **Matrix 同步** | 从 Logto 同步 | Logto 登录成功后中间层将用户同步到 Synapse（创建/更新）；所需变量见 `docs/AUTH_AND_USER_CONFIG.md`；Matrix 密码设置与修改流程见 `docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 
-详见 `docs/CONFIG_AND_AUTH_RESEARCH.md`、`docs/AUTH_GENERIC_LOGTO_DESIGN.md`。
+详见 **`docs/AUTH_AND_USER_CONFIG.md`**（原则、API、customData 约定、Matrix 同步配置）、**`docs/LOGTO_MATRIX_AUTH_FLOW.md`**（Matrix 密码流程）；另见 `docs/CONFIG_AND_AUTH_RESEARCH.md`、`docs/AUTH_GENERIC_LOGTO_DESIGN.md`。
 
 ---
 
@@ -68,6 +69,8 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 |------|------|------|
 | **总览** | `PROJECT.md` | 技术栈、仓库结构、核心要求 |
 | **架构** | `docs/ARCHITECTURE.md` | 数据流、约束、适配器与认证 |
+| **认证与用户配置** | `docs/AUTH_AND_USER_CONFIG.md` | Logto 统一认证、用户偏好 customData、API、Matrix 同步配置 |
+| **Logto + Matrix 流程** | `docs/LOGTO_MATRIX_AUTH_FLOW.md` | Matrix 密码设置/修改、与 Logto 的关系 |
 | **前端** | `docs/FRONTEND_SPEC.md` | 布局、目录、视图、主题、扩展 |
 | **鉴权** | `docs/FRONTEND_AUTH_AND_PERMISSIONS.md` | 免认证/需认证/分权限、usePermissions |
 | **扩展** | `docs/APP_EXTENSIONS.md` | 应用扩展契约、注册、懒加载 |

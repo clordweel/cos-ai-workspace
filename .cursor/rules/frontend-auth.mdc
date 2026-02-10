@@ -8,6 +8,7 @@ alwaysApply: false
 
 ## 规范文档
 - 完整约定见 **docs/FRONTEND_AUTH_AND_PERMISSIONS.md**。编辑鉴权/权限相关逻辑时请遵循该文档。
+- **认证与用户配置统一由 Logto**：用户信息与偏好（customData）见 **docs/AUTH_AND_USER_CONFIG.md**；前端通过 `useAuth()`、`useUserPreferences()` 消费。
 
 ## 三类操作
 - **免认证**：不依赖 `isAuthenticated`，不调用 `requireAuth()`。

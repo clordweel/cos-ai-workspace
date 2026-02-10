@@ -7,11 +7,16 @@ import {
   loginWithPassword,
   loginWithToken,
   getSessionFromCookie,
+  getStableUserId,
   logoutSession,
   getCookieName,
   getLogtoAuthUrl,
   handleLogtoCallback,
+  createSessionFromLogtoAccessToken,
 } from '../services/auth.js';
+import { matrixLoginWithIdentifier, matrixChangePassword } from '../services/matrixAuth.js';
+import { getMatrixUserIdForLogtoSub, setMatrixPasswordByAdmin } from '../services/matrixUserSync.js';
+import { logtoUpdateUserPassword, getLogtoUserCustomData, patchLogtoUserCustomData } from '../services/logtoManagement.js';
 
 function getRedirectUriBase(req: { headers: Record<string, string | undefined>; protocol: string; hostname: string; port?: string | number }): string {
   if (config.middlewarePublicOrigin) {
@@ -72,13 +77,157 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       return reply.code(401).send({ ok: false, error: '未登录' });
     }
     const user = session.userProfile ?? session.user;
-    return reply.send({ ok: true, user, type: session.type });
+    const userId = getStableUserId(session);
+    const payload: { ok: true; user: unknown; userId: string; type: string; preferences?: Record<string, unknown> } = {
+      ok: true,
+      user,
+      userId,
+      type: session.type,
+    };
+    if (session.logtoSub) {
+      const prefRes = await getLogtoUserCustomData(session.logtoSub);
+      if (prefRes.ok && Object.keys(prefRes.customData).length > 0) {
+        payload.preferences = prefRes.customData;
+      }
+    }
+    return reply.send(payload);
+  });
+
+  app.patch('/api/auth/me/preferences', async (req, reply) => {
+    const session = getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as Record<string, unknown>) || {};
+    const patch: Record<string, unknown> = {};
+    if (body.theme !== undefined) patch.theme = body.theme;
+    if (body.uiFontSizeStep !== undefined) patch.uiFontSizeStep = Number(body.uiFontSizeStep);
+    if (body.notificationsEnabled !== undefined) patch.notificationsEnabled = Boolean(body.notificationsEnabled);
+    if (Object.keys(patch).length === 0) {
+      return reply.code(400).send({ ok: false, error: '请提供要更新的偏好字段' });
+    }
+    // Logto PATCH custom-data 会完全覆盖，故先拉取再合并后写入
+    const current = await getLogtoUserCustomData(session.logtoSub);
+    const merged = current.ok ? { ...current.customData, ...patch } : patch;
+    const result = await patchLogtoUserCustomData(session.logtoSub, merged);
+    if (!result.ok) {
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
+        ok: false,
+        error: result.error,
+      });
+    }
+    return reply.send({ ok: true, preferences: result.customData });
   });
 
   app.post('/api/auth/logout', async (req, reply) => {
     const session = getSessionFromCookie(req.headers.cookie);
     if (session) logoutSession(session.sessionId);
     reply.clearCookie(cookieName, { path: '/' }).send({ ok: true });
+  });
+
+  app.post('/api/auth/matrix/login', async (req, reply) => {
+    const body = (req.body as { identifier?: string; user_id?: string; password?: string; country?: string }) || {};
+    const identifier = body.identifier?.trim() || body.user_id?.trim();
+    const password = body.password;
+    const country = body.country?.trim();
+    if (!identifier || !password) {
+      return reply.code(400).send({ ok: false, error: '请填写用户名/邮箱/手机号和密码' });
+    }
+    const result = await matrixLoginWithIdentifier(identifier, password, country || undefined);
+    if (!result.ok) {
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 401).send({
+        ok: false,
+        error: result.error,
+      });
+    }
+    return reply.send({
+      ok: true,
+      access_token: result.access_token,
+      user_id: result.user_id,
+      device_id: result.device_id,
+      base_url: result.base_url,
+    });
+  });
+
+  app.post('/api/auth/matrix/change-password', async (req, reply) => {
+    const session = getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as { current_password?: string; new_password?: string }) || {};
+    const currentPassword = body.current_password;
+    const newPassword = body.new_password;
+    if (!currentPassword || !newPassword) {
+      return reply.code(400).send({ ok: false, error: '请填写当前密码和新密码' });
+    }
+    const matrixUserId = getMatrixUserIdForLogtoSub(session.logtoSub);
+    const result = await matrixChangePassword(matrixUserId, currentPassword, newPassword);
+    if (!result.ok) {
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
+        ok: false,
+        error: result.error,
+      });
+    }
+    return reply.send({ ok: true });
+  });
+
+  /** 设置 Matrix 密码（仅 Logto 已登录）：Admin API 直接设置，用户无需知晓之前的随机初始密码 */
+  app.post('/api/auth/matrix/set-password', async (req, reply) => {
+    const session = getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as { new_password?: string }) || {};
+    const newPassword = body.new_password;
+    if (!newPassword) {
+      return reply.code(400).send({ ok: false, error: '请填写新密码' });
+    }
+    const matrixUserId = getMatrixUserIdForLogtoSub(session.logtoSub);
+    const result = await setMatrixPasswordByAdmin(matrixUserId, newPassword);
+    if (!result.ok) {
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
+        ok: false,
+        error: result.error,
+      });
+    }
+    return reply.send({ ok: true });
+  });
+
+  /** 修改 Logto 密码（需 Logto 已登录，无需当前密码；使用 Management API） */
+  app.post('/api/auth/logto/change-password', async (req, reply) => {
+    const session = getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as { new_password?: string }) || {};
+    const newPassword = body.new_password;
+    if (!newPassword) {
+      return reply.code(400).send({ ok: false, error: '请填写新密码' });
+    }
+    const result = await logtoUpdateUserPassword(session.logtoSub, newPassword);
+    if (!result.ok) {
+      return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
+        ok: false,
+        error: result.error,
+      });
+    }
+    return reply.send({ ok: true });
+  });
+
+  /** 使用 @logto/nuxt 回调后的 access token 同步中间层 session（设 Cookie） */
+  app.post('/api/auth/logto/sync-session', async (req, reply) => {
+    const authHeader = req.headers.authorization;
+    const token = typeof authHeader === 'string' && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7).trim()
+      : '';
+    if (!token) {
+      return reply.code(401).send({ ok: false, error: '缺少 Authorization: Bearer <token>' });
+    }
+    const result = await createSessionFromLogtoAccessToken(token);
+    if (!result.ok) {
+      return reply.code(401).send({ ok: false, error: result.error });
+    }
+    reply.setCookie(cookieName, result.sessionId, COOKIE_OPTS).send({ ok: true });
   });
 
   app.get('/api/auth/logto', async (req, reply) => {

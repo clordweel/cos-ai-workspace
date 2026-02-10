@@ -18,6 +18,7 @@
   "dependencies": {
     "@fastify/cookie": "^10.x",
     "@fastify/cors": "^10.x",
+    "@logto/api": "^1.36.0",
     "dify-client": "^3.0.0",
     "dotenv": "^16.6.1",
     "fastify": "^5.x",

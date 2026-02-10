@@ -22,11 +22,17 @@ alwaysApply: true
 - 写入路径：**意图 → 参数/草稿 → 用户确认 → 权限校验 → 再写入**。物料创建走「草稿 → 确认 → create_from_draft」。
 - 中间层负责 CORS 及 `Access-Control-Allow-*` 等头部，确保前后端通信无跨域错误。
 
+## 认证与用户配置
+- **认证与用户信息**：统一由 **Logto** 处理。前端通过 Logto 登录，中间层在回调中写 Cookie；用户姓名、邮箱、头像等来自 Logto，经 `GET /api/auth/me` 返回。
+- **用户偏好**：主题、字体档位、通知开关等存 **Logto 自定义数据（customData）**，经 Management API 读写；前端 `useUserPreferences()` 登录后从 `/api/auth/me` 的 `preferences` 加载，修改经 `PATCH /api/auth/me/preferences` 写回；未登录时使用本地 localStorage / color-mode。
+- **Matrix**：仅作会话/聊天后端，用户身份以 Logto 为准；Logto 登录成功后中间层将用户同步到 Synapse（创建/更新），所需配置见文档。**勿在 customData 中存敏感信息**（JWT 为 base64、易被截获）。
+- 详见 **`docs/AUTH_AND_USER_CONFIG.md`**；Matrix 同步与密码流程见 **`docs/LOGTO_MATRIX_AUTH_FLOW.md`**。
+
 ## 前端约定
 - 布局与组件详见 **`.cursor/rules/frontend-spec.mdc`**（在编辑 `frontend/**` 时生效）。主布局为 `layouts/workspace.vue`（会话区 + 应用区），会话页为 `pages/space/[[id]].vue`。
-- 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理应用区（`isPanelOpen`、`isContentVisible`、`currentView`：`home` | `contacts` | `bots` | `settings` | `auth` | `app`）。Layout 向子组件 provide `isSessionExpanded`。认证唯一入口为 Logto。
+- 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理应用区（`isPanelOpen`、`isContentVisible`、`currentView`：`home` | `contacts` | `bots` | `settings` | `auth` | `app`）。Layout 向子组件 provide `isSessionExpanded`。认证唯一入口为 Logto；用户偏好用 `useUserPreferences()`，与 Logto customData 同步。
 - 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。
 
 ## 仓库与文档
-- 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；多维度状态见 `docs/PROJECT_STATUS.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC、CONFIG_AND_AUTH_RESEARCH）。
+- 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；多维度状态见 `docs/PROJECT_STATUS.md`；架构与 API 见 `docs/`（ARCHITECTURE、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC、AUTH_AND_USER_CONFIG、LOGTO_MATRIX_AUTH_FLOW、CONFIG_AND_AUTH_RESEARCH）。
 - **提交信息**：遵循 **`.cursor/rules/git-commit.mdc`**（`type(scope): 描述`，scope 用实际目录如 `frontend`、`middleware`）。

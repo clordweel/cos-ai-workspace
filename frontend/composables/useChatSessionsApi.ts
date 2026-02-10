@@ -43,15 +43,16 @@ export function useChatSessionsApi() {
 
   /**
    * 拉取会话列表并合并到当前会话状态
-   * @param userId - 与中间层 user_id 一致，默认 'default'
+   * @param userId - 与中间层 user_id 一致；不传时用当前登录用户 id（多用户隔离），未登录为 'default'
    * @returns 是否成功（501/502 时为 false，不抛错）
    */
-  async function loadSessions(userId = 'default'): Promise<boolean> {
+  async function loadSessions(userId?: string): Promise<boolean> {
+    const uid = (userId ?? (useAuth().userId as { value?: string })?.value) || 'default'
     const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
     if (!base) return false
     try {
       const res = await fetch(
-        `${base}/api/sessions?user_id=${encodeURIComponent(userId)}`,
+        `${base}/api/sessions?user_id=${encodeURIComponent(uid)}`,
         { credentials: 'include' },
       )
       if (res.status === 501 || res.status === 502) return false
@@ -72,20 +73,21 @@ export function useChatSessionsApi() {
   /**
    * 拉取某会话历史消息并写入当前状态
    * @param sessionId - 会话 id（与 GET :id 一致，如 Dify 的 conversation_id）
-   * @param userId - 默认 'default'
+   * @param userId - 不传时用当前登录用户 id，未登录为 'default'
    * @param limit - 条数，默认 50
    * @returns 是否成功
    */
   async function loadSessionMessages(
     sessionId: string,
-    userId = 'default',
+    userId?: string,
     limit = 50,
   ): Promise<boolean> {
+    const uid = (userId ?? (useAuth().userId as { value?: string })?.value) || 'default'
     const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
     if (!base) return false
     try {
       const res = await fetch(
-        `${base}/api/sessions/${encodeURIComponent(sessionId)}/messages?user_id=${encodeURIComponent(userId)}&limit=${limit}`,
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/messages?user_id=${encodeURIComponent(uid)}&limit=${limit}`,
         { credentials: 'include' },
       )
       if (res.status === 501 || res.status === 502) return false

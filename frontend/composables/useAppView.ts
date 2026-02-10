@@ -1,4 +1,4 @@
-export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth' | 'app'
+export type AppView = 'home' | 'contacts' | 'bots' | 'settings' | 'auth' | 'profile' | 'app'
 
 /** 侧栏「标签」：类似浏览器标签，可多开、切换、关闭 */
 export interface AppTab {
@@ -16,6 +16,7 @@ const VIEW_TITLES: Record<Exclude<AppView, 'app'>, string> = {
   bots: '机器人',
   settings: '设置',
   auth: '认证登录',
+  profile: '用户信息',
 }
 
 function tabTitle(view: AppView, appId?: string): string {
@@ -30,12 +31,13 @@ function tabTitle(view: AppView, appId?: string): string {
   return view === 'app' ? '应用' : VIEW_TITLES[view]
 }
 
+const defaultProfileTab: AppTab = { id: 'tab-profile-default', view: 'profile', title: '用户信息' }
 const defaultHomeTab: AppTab = { id: 'tab-home-default', view: 'home', title: '首页' }
 
-/** 已打开的标签列表（侧栏展示顺序）；默认一个首页标签 */
-const tabs = ref<AppTab[]>([defaultHomeTab])
+/** 已打开的标签列表（侧栏展示顺序）；用户信息固定在顶部，默认首项为「用户信息」+「首页」 */
+const tabs = ref<AppTab[]>([defaultProfileTab, defaultHomeTab])
 /** 当前选中的标签 id；null 表示无标签（面板可关闭） */
-const activeTabId = ref<string | null>(defaultHomeTab.id)
+const activeTabId = ref<string | null>(defaultProfileTab.id)
 
 /** 应用区是否展示 */
 const isPanelOpen = ref(true)
@@ -101,12 +103,20 @@ export function useAppView() {
     return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   }
 
-  /** 新增一个标签并选中（不复用同 view 的标签，类似浏览器新开） */
+  /** 新增一个标签并选中（不复用同 view 的标签）。用户信息固定于顶部，新标签插在首页之后。 */
   function addTab(view: AppView, appId?: string, opts?: { isAuthRequired?: boolean }) {
     const id = genId()
     const title = tabTitle(view, appId)
     const newTab: AppTab = { id, view, title, appId, isAuthRequired: opts?.isAuthRequired }
-    tabs.value = [...tabs.value, newTab]
+    const list = tabs.value
+    const profileIndex = list.findIndex((t) => t.view === 'profile')
+    if (profileIndex >= 0) {
+      const afterProfile = list.slice(0, profileIndex + 1)
+      const rest = list.slice(profileIndex + 1)
+      tabs.value = [...afterProfile, newTab, ...rest]
+    } else {
+      tabs.value = [defaultProfileTab, newTab, ...list]
+    }
     activeTabId.value = id
     isPanelOpen.value = true
     isContentVisible.value = true
@@ -125,18 +135,18 @@ export function useAppView() {
     return addTab('auth', undefined, { isAuthRequired: true })
   }
 
-  /** 关闭指定标签；若为当前标签则切换到相邻标签。认证标签（isAuthRequired）在未登录时不可关闭。 */
+  /** 关闭指定标签；若为当前标签则切换到相邻标签。用户信息（profile）与认证标签不可关闭。 */
   function closeTab(id: string, options?: { force?: boolean }) {
     const list = tabs.value
     const tab = list.find((t) => t.id === id)
     if (!tab) return
+    if (tab.view === 'profile') return
     if (tab.isAuthRequired && !options?.force) return
     const index = list.findIndex((t) => t.id === id)
     const nextList = list.filter((t) => t.id !== id)
     if (nextList.length === 0) {
-      isPanelOpen.value = false
-      tabs.value = []
-      activeTabId.value = null
+      tabs.value = [defaultProfileTab]
+      activeTabId.value = defaultProfileTab.id
       return
     }
     tabs.value = nextList
@@ -166,11 +176,14 @@ export function useAppView() {
     if (view) {
       addTab(view)
     } else if (tabs.value.length === 0) {
-      addTab('home')
+      tabs.value = [defaultProfileTab, defaultHomeTab]
+      activeTabId.value = defaultProfileTab.id
+    } else if (!activeTabId.value && tabs.value.length > 0) {
+      activeTabId.value = tabs.value[0].id
     }
   }
 
-  /** 打开/切换到「首页」标签：若已有首页标签则选中，否则新建 */
+  /** 打开/切换到「首页」标签：若已有首页标签则选中，否则新建。用户信息始终在首项。 */
   function openNavPage() {
     isPanelOpen.value = true
     isContentVisible.value = true
@@ -184,7 +197,7 @@ export function useAppView() {
 
   function closePanel() {
     isPanelOpen.value = false
-    tabs.value = []
+    tabs.value = [defaultProfileTab]
     activeTabId.value = null
   }
   function toggleContentPanel() {

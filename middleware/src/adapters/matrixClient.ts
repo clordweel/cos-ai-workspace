@@ -19,6 +19,11 @@ export class MatrixApiError extends Error {
 
 let cachedToken: string | null = null;
 
+/** 供 Synapse Admin API 等复用：获取当前 Matrix 认证 token（需为管理员账号） */
+export async function getMatrixAccessToken(): Promise<string> {
+  return getAccessToken();
+}
+
 async function getAccessToken(): Promise<string> {
   if (cachedToken) return cachedToken;
   const { matrix } = config;

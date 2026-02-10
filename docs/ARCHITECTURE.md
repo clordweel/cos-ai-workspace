@@ -15,7 +15,7 @@
                                     ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  Node.js 中间层 (Fastify + TypeScript)                                    │
-│  • 鉴权 / 会话：Logto 唯一入口，Cookie 会话                               │
+│  • 鉴权 / 会话：Logto 唯一入口，Cookie 会话；用户偏好经 Logto customData   │
 │  • 聊天适配器：mock / matrix（可扩展 Dify），SSE 流式 → 前端               │
 │  • 编排：意图/工具 → 调用 cos / ERPNext API                               │
 │  • 写入前：二次确认 / 权限校验                                            │
@@ -48,5 +48,6 @@
 ## 关键约束
 
 - **前端不直连** Frappe/ERPNext/Dify，仅连中间层；认证唯一入口为 **Logto**（前端可承载登录/回调页）。
+- **用户身份与偏好**：以 Logto 为准；偏好（主题、字体、通知等）存 Logto **customData**，中间层经 Management API 读写；Matrix 仅作聊天后端，用户自 Logto 同步。详见 `docs/AUTH_AND_USER_CONFIG.md`。
 - **所有 AI 对话** 经中间层**聊天适配器**统一走 **SSE**，保证打字机效果。
 - **写入路径** 必须经过：意图识别 → 参数提取 → 确认/权限 → 再写入。

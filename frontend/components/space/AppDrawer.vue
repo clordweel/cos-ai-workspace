@@ -32,9 +32,11 @@
         </button>
       </div>
       <div class="app-drawer-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pl-4 pr-4 pt-2 pb-8 relative z-10">
-        <!-- 用户信息区块：卡片式样式 -->
-        <div
-          class="drawer-user-block mb-4 flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-500/50 bg-white/60 dark:bg-zinc-700/50 backdrop-blur-md px-3 py-2.5"
+        <!-- 用户信息入口：点击打开个人信息应用 -->
+        <button
+          type="button"
+          class="drawer-user-block mb-4 w-full flex items-center gap-3 rounded-xl border border-zinc-200/60 dark:border-zinc-500/50 bg-white/60 dark:bg-zinc-700/50 backdrop-blur-md px-3 py-2.5 text-left hover:bg-white/80 dark:hover:bg-zinc-700/70 hover:border-zinc-300 dark:hover:border-zinc-500 transition-colors cursor-pointer"
+          @click="emit('select', profileAppItem)"
         >
           <span
             class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-zinc-200/80 dark:border-zinc-500/80 bg-zinc-100 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300"
@@ -56,7 +58,7 @@
               {{ isAuthenticated ? (userEmail || '已登录') : '点击登录以使用更多功能' }}
             </p>
           </div>
-        </div>
+        </button>
         <!-- 常用 -->
         <div class="mb-1">
           <p class="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5 px-0.5">常用</p>
@@ -150,6 +152,14 @@ export interface DrawerAppItem {
   icon: Component
   view?: string
   appId?: string
+}
+
+/** 抽屉顶部用户卡片点击时发出，用于打开个人信息视图 */
+const profileAppItem: DrawerAppItem = {
+  id: 'profile',
+  title: '用户信息',
+  icon: User,
+  view: 'profile',
 }
 
 defineProps<{

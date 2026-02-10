@@ -79,6 +79,150 @@
               </li>
             </ul>
           </template>
+          <template v-else-if="currentView === 'profile'">
+            <div class="profile-panel space-y-4">
+              <section>
+                <h3 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-3">个人信息</h3>
+                <div
+                  v-if="isAuthenticated"
+                  class="rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-4"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full overflow-hidden bg-zinc-200 dark:bg-zinc-600 text-zinc-600 dark:text-zinc-300 text-xl font-medium"
+                    >
+                      <img
+                        v-if="authUserAvatar"
+                        :src="authUserAvatar"
+                        alt=""
+                        class="h-full w-full object-cover"
+                      >
+                      <span v-else>{{ authProfileInitial }}</span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <p class="text-base font-semibold text-zinc-800 dark:text-zinc-100 truncate">
+                        {{ authProfileName || '未设置姓名' }}
+                      </p>
+                      <p v-if="authProfileEmail" class="text-sm text-zinc-500 dark:text-zinc-400 truncate">
+                        {{ authProfileEmail }}
+                      </p>
+                      <p class="text-xs text-zinc-400 dark:text-zinc-500 mt-0.5">
+                        用户 ID：<code class="bg-zinc-200/80 dark:bg-zinc-700 px-1 rounded">{{ userId || '—' }}</code>
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-600">
+                    <a
+                      href="/logto?refresh=1"
+                      class="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                    >
+                      重新授权以更新资料
+                    </a>
+                    <button
+                      type="button"
+                      class="rounded-lg border border-zinc-300 dark:border-zinc-600 px-3 py-1.5 text-xs font-medium text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                      @click="logout"
+                    >
+                      退出登录
+                    </button>
+                  </div>
+                  <!-- 修改 Logto 密码（无需当前密码，仅新密码+确认） -->
+                  <section class="pt-4 border-t border-zinc-200 dark:border-zinc-600">
+                    <h4 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">修改 Logto 密码</h4>
+                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">无需当前密码，填写新密码即可修改 Logto 登录密码。</p>
+                    <form class="space-y-2" @submit.prevent="submitLogtoChangePassword">
+                      <input
+                        v-model="logtoPasswordNew"
+                        type="password"
+                        placeholder="新密码"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        autocomplete="new-password"
+                      >
+                      <input
+                        v-model="logtoPasswordConfirm"
+                        type="password"
+                        placeholder="确认新密码"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        autocomplete="new-password"
+                      >
+                      <p v-if="logtoPasswordError" class="text-xs text-red-600 dark:text-red-400">{{ logtoPasswordError }}</p>
+                      <p v-if="logtoPasswordSuccess" class="text-xs text-emerald-600 dark:text-emerald-400">Logto 密码已修改</p>
+                      <button
+                        type="submit"
+                        class="rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium px-3 py-2 disabled:opacity-50"
+                        :disabled="logtoPasswordLoading"
+                      >
+                        {{ logtoPasswordLoading ? '提交中…' : '修改 Logto 密码' }}
+                      </button>
+                    </form>
+                  </section>
+                  <!-- Matrix 密码：设置（首次/忘记时） -->
+                  <section v-if="matrixBaseUrl" class="pt-4 border-t border-zinc-200 dark:border-zinc-600">
+                    <h4 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1">设置 Matrix 密码</h4>
+                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">
+                      通过 Logto 登录后，系统已在 Matrix 中创建账号（初始密码随机且未告知）。在此设置密码后即可用「用户名/邮箱/手机号 + 密码」进行 Matrix 登录。
+                    </p>
+                    <form class="space-y-2" @submit.prevent="submitMatrixSetPassword">
+                      <input
+                        v-model="matrixSetPasswordNew"
+                        type="password"
+                        placeholder="新密码（至少 8 位）"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        autocomplete="new-password"
+                      >
+                      <input
+                        v-model="matrixSetPasswordConfirm"
+                        type="password"
+                        placeholder="确认新密码"
+                        class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                        autocomplete="new-password"
+                      >
+                      <p v-if="matrixSetPasswordError" class="text-xs text-red-600 dark:text-red-400">{{ matrixSetPasswordError }}</p>
+                      <p v-if="matrixSetPasswordSuccess" class="text-xs text-emerald-600 dark:text-emerald-400">已设置，请牢记密码以便 Matrix 登录</p>
+                      <button
+                        type="submit"
+                        class="rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium px-3 py-2 disabled:opacity-50"
+                        :disabled="matrixSetPasswordLoading"
+                      >
+                        {{ matrixSetPasswordLoading ? '提交中…' : '设置 Matrix 密码' }}
+                      </button>
+                    </form>
+                  </section>
+                </div>
+                <!-- 未登录：骨架占位 + 去认证登录 -->
+                <div
+                  v-else
+                  class="rounded-xl border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-4"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="h-14 w-14 shrink-0 rounded-full bg-zinc-200 dark:bg-zinc-600 animate-pulse"
+                      aria-hidden
+                    />
+                    <div class="min-w-0 flex-1 space-y-2">
+                      <div class="h-4 w-32 rounded bg-zinc-200 dark:bg-zinc-600 animate-pulse" />
+                      <div class="h-3 w-48 rounded bg-zinc-200/80 dark:bg-zinc-600/80 animate-pulse" />
+                      <div class="h-3 w-24 rounded bg-zinc-200/60 dark:bg-zinc-600/60 animate-pulse" />
+                    </div>
+                  </div>
+                  <div class="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-600">
+                    <div class="h-3 w-full max-w-[8rem] rounded bg-zinc-200/60 dark:bg-zinc-600/60 animate-pulse" />
+                    <div class="h-3 w-full max-w-[6rem] rounded bg-zinc-200/40 dark:bg-zinc-600/40 animate-pulse" />
+                  </div>
+                  <div class="pt-3">
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mb-3">登录后查看与编辑个人信息</p>
+                    <button
+                      type="button"
+                      class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2.5 px-3"
+                      @click="goToAuth"
+                    >
+                      去认证登录
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </template>
           <template v-else-if="currentView === 'auth'">
             <div class="auth-panel space-y-4">
               <div v-if="isAuthenticated" class="rounded-xl bg-emerald-50/80 dark:bg-emerald-900/20 p-4">
@@ -110,8 +254,44 @@
                   class="w-full rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium py-2.5 px-3"
                   @click="login"
                 >
-                  登录
+                  Logto 登录
                 </button>
+                <!-- Matrix 登录：用户名/邮箱/手机号 & 密码（始终显示区域，未配置时仅提示） -->
+                <div class="pt-4 mt-4 border-t border-zinc-200 dark:border-zinc-600 space-y-2">
+                  <p class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Matrix 登录</p>
+                  <p v-if="!matrixBaseUrl" class="text-[11px] text-zinc-500 dark:text-zinc-400">
+                    请配置 NUXT_PUBLIC_MATRIX_BASE_URL 后使用
+                  </p>
+                  <form v-else class="space-y-2" @submit.prevent="submitMatrixLogin">
+                    <input
+                      v-model="matrixLoginIdentifier"
+                      type="text"
+                      placeholder="用户名、邮箱或手机号"
+                      class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                      autocomplete="username"
+                    >
+                    <input
+                      v-model="matrixLoginPassword"
+                      type="password"
+                      placeholder="密码"
+                      class="w-full rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-700 px-3 py-2 text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400"
+                      autocomplete="current-password"
+                    >
+                    <p v-if="matrixLoginError" class="text-xs text-red-600 dark:text-red-400">
+                      {{ matrixLoginError }}
+                    </p>
+                    <p v-if="matrixLoginSuccess" class="text-xs text-emerald-600 dark:text-emerald-400">
+                      Matrix 已登录
+                    </p>
+                    <button
+                      type="submit"
+                      class="w-full rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-sm font-medium py-2.5 px-3 hover:bg-zinc-50 dark:hover:bg-zinc-600 disabled:opacity-50"
+                      :disabled="matrixLoginLoading"
+                    >
+                      {{ matrixLoginLoading ? '登录中…' : 'Matrix 登录' }}
+                    </button>
+                  </form>
+                </div>
               </template>
             </div>
           </template>
@@ -140,7 +320,7 @@
                 <div class="rounded-md border border-zinc-200 dark:border-zinc-600 divide-y divide-zinc-100 dark:divide-zinc-600">
                   <label class="flex items-center justify-between gap-2 px-3 py-2 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors">
                     <span class="text-sm text-zinc-800 dark:text-zinc-200">通知</span>
-                    <Checkbox id="settings-notify" :checked="notificationsEnabled" @update:checked="notificationsEnabled = $event" />
+                    <Checkbox id="settings-notify" :checked="notificationsEnabled" @update:checked="setNotificationsEnabled($event)" />
                   </label>
                 </div>
               </section>
@@ -227,6 +407,8 @@ import { Bot, Stethoscope, Loader2, CheckCircle2, AlertCircle, Star } from 'luci
 
 const router = useRouter()
 const apiBase = useApiBase()
+const config = useRuntimeConfig()
+const matrixBaseUrl = (config.public?.matrixBaseUrl as string) || ''
 
 const diagnosticsLoading = ref(false)
 const diagnosticsResult = ref<{
@@ -257,7 +439,7 @@ async function runDiagnostics() {
     diagnosticsLoading.value = false
   }
 }
-const { currentView, activeTab, addTab } = useAppView()
+const { currentView, activeTab, addTab, openAuthTab } = useAppView()
 const { list: appExtensionsList, get: getAppExtension } = useAppExtensions()
 const { isFavorite, toggle: toggleFavorite } = useAppFavorites()
 
@@ -281,7 +463,7 @@ const currentAppExt = computed(() => {
 const { contacts, bots } = useContactsAndBots()
 const { themeMode, setTheme } = useTheme()
 const { ensureChat } = useChatSessions()
-const { login, logout, isAuthenticated, user } = useAuth()
+const { login, logout, isAuthenticated, user, userId } = useAuth()
 const authUserDisplay = computed(() => {
   const u = user.value
   if (typeof u === 'string') return u
@@ -292,15 +474,174 @@ const authUserDisplay = computed(() => {
   }
   return ''
 })
+const authProfileName = computed(() => {
+  const u = user.value
+  if (typeof u === 'string') return u
+  if (u && typeof u === 'object' && 'name' in u) return (u as { name?: string }).name ?? ''
+  return ''
+})
+const authProfileEmail = computed(() => {
+  const u = user.value
+  if (u && typeof u === 'object' && 'email' in u) return (u as { email?: string }).email ?? ''
+  return ''
+})
+const authUserAvatar = computed(() => {
+  const u = user.value
+  if (u && typeof u === 'object' && 'avatar' in u) return (u as { avatar?: string }).avatar ?? ''
+  return ''
+})
+const authProfileInitial = computed(() => {
+  const name = authProfileName.value || authProfileEmail.value
+  return name ? name.charAt(0).toUpperCase() : '?'
+})
 const route = useRoute()
 const logtoQueryError = computed(() => (route.query?.auth_error ? decodeURIComponent(String(route.query.auth_error)) : ''))
 
-const notificationsEnabled = ref(true)
+const { notificationsEnabled, setNotificationsEnabled } = useUserPreferences()
+
+/** Matrix 设置密码（首次/忘记时，无需当前密码） */
+const matrixSetPasswordNew = ref('')
+const matrixSetPasswordConfirm = ref('')
+const matrixSetPasswordError = ref('')
+const matrixSetPasswordSuccess = ref(false)
+const matrixSetPasswordLoading = ref(false)
+async function submitMatrixSetPassword() {
+  matrixSetPasswordError.value = ''
+  matrixSetPasswordSuccess.value = false
+  const newPwd = matrixSetPasswordNew.value
+  const confirm = matrixSetPasswordConfirm.value
+  if (!newPwd || newPwd.length < 8) {
+    matrixSetPasswordError.value = '新密码至少 8 位'
+    return
+  }
+  if (newPwd !== confirm) {
+    matrixSetPasswordError.value = '两次输入不一致'
+    return
+  }
+  matrixSetPasswordLoading.value = true
+  try {
+    const res = await fetch(`${apiBase}/api/auth/matrix/set-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ new_password: newPwd }),
+    })
+    const data = await res.json().catch(() => ({})) as { ok?: boolean; error?: string }
+    if (res.ok && data.ok) {
+      matrixSetPasswordSuccess.value = true
+      matrixSetPasswordNew.value = ''
+      matrixSetPasswordConfirm.value = ''
+    } else {
+      matrixSetPasswordError.value = data.error || '设置失败'
+    }
+  } catch (e) {
+    matrixSetPasswordError.value = e instanceof Error ? e.message : '网络错误'
+  } finally {
+    matrixSetPasswordLoading.value = false
+  }
+}
+
+/** 修改 Logto 密码（无需当前密码） */
+const logtoPasswordNew = ref('')
+const logtoPasswordConfirm = ref('')
+const logtoPasswordError = ref('')
+const logtoPasswordSuccess = ref(false)
+const logtoPasswordLoading = ref(false)
+async function submitLogtoChangePassword() {
+  logtoPasswordError.value = ''
+  logtoPasswordSuccess.value = false
+  if (!logtoPasswordNew.value || logtoPasswordNew.value !== logtoPasswordConfirm.value) {
+    logtoPasswordError.value = '请确认新密码与确认框一致'
+    return
+  }
+  if (logtoPasswordNew.value.length < 8) {
+    logtoPasswordError.value = '新密码至少 8 位'
+    return
+  }
+  logtoPasswordLoading.value = true
+  try {
+    const res = await fetch(`${apiBase}/api/auth/logto/change-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ new_password: logtoPasswordNew.value }),
+    })
+    const data = await res.json().catch(() => ({})) as { ok?: boolean; error?: string }
+    if (res.ok && data.ok) {
+      logtoPasswordSuccess.value = true
+      logtoPasswordNew.value = ''
+      logtoPasswordConfirm.value = ''
+    } else {
+      logtoPasswordError.value = data.error || '修改失败'
+    }
+  } catch (e) {
+    logtoPasswordError.value = e instanceof Error ? e.message : '网络错误'
+  } finally {
+    logtoPasswordLoading.value = false
+  }
+}
+
+/** Matrix 登录：用户名/邮箱/手机号 & 密码 */
+const matrixLoginIdentifier = ref('')
+const matrixLoginPassword = ref('')
+const matrixLoginError = ref('')
+const matrixLoginSuccess = ref(false)
+const matrixLoginLoading = ref(false)
+async function submitMatrixLogin() {
+  matrixLoginError.value = ''
+  matrixLoginSuccess.value = false
+  const identifier = matrixLoginIdentifier.value.trim()
+  const password = matrixLoginPassword.value
+  if (!identifier || !password) {
+    matrixLoginError.value = '请填写用户名/邮箱/手机号和密码'
+    return
+  }
+  matrixLoginLoading.value = true
+  try {
+    const res = await fetch(`${apiBase}/api/auth/matrix/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ identifier, password }),
+    })
+    const data = await res.json().catch(() => ({})) as {
+      ok?: boolean
+      error?: string
+      access_token?: string
+      user_id?: string
+      device_id?: string
+      base_url?: string
+    }
+    if (!res.ok || !data.ok || !data.access_token) {
+      matrixLoginError.value = data.error || 'Matrix 登录失败'
+      return
+    }
+    const { loginWithToken } = useMatrixClient()
+    await loginWithToken(
+      data.access_token,
+      data.user_id ?? identifier,
+      data.device_id ?? '',
+      data.base_url || matrixBaseUrl,
+      true
+    )
+    matrixLoginSuccess.value = true
+    matrixLoginPassword.value = ''
+  } catch (e) {
+    matrixLoginError.value = e instanceof Error ? e.message : '网络错误'
+  } finally {
+    matrixLoginLoading.value = false
+  }
+}
 
 function openChat(type: 'contact' | 'bot', id: string, name: string) {
   const chatId = type === 'contact' ? `contact-${id}` : `bot-${id}`
   ensureChat(chatId, name)
   router.push(`/space/${chatId}`)
+}
+
+/** 未登录时从个人信息页跳转到认证登录标签 */
+function goToAuth() {
+  openAuthTab()
 }
 
 </script>

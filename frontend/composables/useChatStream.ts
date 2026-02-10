@@ -18,6 +18,8 @@ export function useChatStream() {
       onThinkingDelta?: (delta: string) => void
       /** 流结束时带上完整思考内容，便于前端保留 */
       onThinkingDone?: (fullText: string) => void
+      /** Matrix 等后端创建新会话时推送，便于前端将会话从临时 id 迁移到 backend_session_id */
+      onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void
     }
   ): Promise<void> {
     const res = await fetch(`${apiBase}/api/chat/stream`, {
@@ -26,7 +28,7 @@ export function useChatStream() {
       body: JSON.stringify({
         message,
         conversation_id: options?.conversationId,
-        user_id: options?.userId ?? 'default',
+        user_id: (options?.userId ?? (useAuth().userId as { value?: string })?.value) || 'default',
       }),
       credentials: 'include',
       signal: options?.signal,
@@ -54,7 +56,12 @@ export function useChatStream() {
         if (line.startsWith('data: ')) {
           try {
             const data = JSON.parse(line.slice(6))
-            if (lastEvent === 'status' && data?.status === 'thinking') {
+            if (lastEvent === 'session_created' && data?.session_id) {
+              options?.onSessionCreated?.({
+                session_id: data.session_id,
+                backend_session_id: data.backend_session_id,
+              })
+            } else if (lastEvent === 'status' && data?.status === 'thinking') {
               options?.onThinking?.()
             } else if (lastEvent === 'thinking') {
               if (data?.delta != null) options?.onThinkingDelta?.(String(data.delta))
@@ -77,7 +84,12 @@ export function useChatStream() {
     if (buffer.startsWith('data: ')) {
       try {
         const data = JSON.parse(buffer.slice(6))
-        if (lastEvent === 'thinking') {
+        if (lastEvent === 'session_created' && data?.session_id) {
+          options?.onSessionCreated?.({
+            session_id: data.session_id,
+            backend_session_id: data.backend_session_id,
+          })
+        } else if (lastEvent === 'thinking') {
           if (data?.delta != null) options?.onThinkingDelta?.(String(data.delta))
           if (data?.fullText != null) options?.onThinkingDone?.(String(data.fullText))
         } else if (lastEvent === 'message' && data?.delta != null) {

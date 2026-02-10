@@ -58,6 +58,7 @@
   - 侧栏延迟逻辑：`scheduleSidebarExpand()`（nav mouseenter 时调用）、`scheduleSidebarLeave()`（nav/工具栏 mouseleave）、`cancelSidebarLeave()`（工具栏 mouseenter，取消延迟收起）。  
   - 卡片栈：`appStack`、`pushCard`、`goBack`、`removeCard`、`canGoBack`。  
 - Layout 向子组件 provide **`isSessionExpanded`**（computed：当应用区关闭或应用内容区折叠时为 true），用于 space 页切换列表/聊天布局。
+- **认证与用户偏好**：认证用 `useAuth()`（唯一入口 Logto）；用户偏好用 `useUserPreferences()`（主题、字体、通知），登录后与 Logto customData 同步。详见 **`docs/AUTH_AND_USER_CONFIG.md`**。
 
 ## UX 原则（De-ERP）
 

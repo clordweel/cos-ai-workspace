@@ -37,6 +37,42 @@
             />
           </ul>
         </section>
+        <!-- Mock 会话折叠区：与置顶区同结构，便于开发前样式调试 -->
+        <section
+          v-if="showMockSection"
+          class="session-list-mock border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
+        >
+          <button
+            type="button"
+            class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
+            @click="emit('update:mockCollapsed', !mockCollapsed)"
+          >
+            <component :is="mockCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <span class="flex-1">Mock 会话</span>
+            <span
+              v-if="mockChats.length > 0"
+              class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums"
+            >
+              {{ mockChats.length }}
+            </span>
+          </button>
+          <ul v-show="!mockCollapsed && mockChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
+            <SessionListItem
+              v-for="c in mockChats"
+              :key="c.id"
+              :item="c"
+              :is-active="c.id === chatId && isSessionExpanded"
+              :is-mock="true"
+              :is-pinned="pinnedIds.includes(c.id)"
+              :date-label="getChatDateLabel(c.id)"
+              @click="emit('session-click', c.id)"
+              @toggle-pin="emit('toggle-pin', c.id)"
+              @rename="emit('rename', c.id)"
+              @close="emit('close', c.id)"
+            />
+          </ul>
+        </section>
         <section class="flex-1 min-h-0 flex flex-col">
           <template v-if="activeChats.length !== 0">
             <ul class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full">
@@ -152,6 +188,10 @@ defineProps<{
   listPaddingTop: string
   pinnedCollapsed: boolean
   pinnedChats: DisplayChatItem[]
+  /** 仅当 showMockSection 为 true 时展示；与置顶区同结构的 Mock 折叠区，便于样式调试 */
+  showMockSection?: boolean
+  mockCollapsed?: boolean
+  mockChats?: DisplayChatItem[]
   activeChats: DisplayChatItem[]
   pendingChats: DisplayChatItem[]
   pinnedIds: string[]
@@ -165,6 +205,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:pinnedCollapsed': [value: boolean]
+  'update:mockCollapsed': [value: boolean]
   'session-click': [id: string]
   'toggle-pin': [id: string]
   rename: [id: string]

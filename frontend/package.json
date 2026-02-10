@@ -9,11 +9,13 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@logto/nuxt": "^1.2.8",
     "@radix-icons/vue": "^1.0.0",
     "@tanstack/vue-virtual": "^3.13.18",
     "@vueuse/core": "^14.2.0",
     "clsx": "^2.1.1",
     "lucide-vue-next": "^0.563.0",
+    "matrix-js-sdk": "^39.0.0",
     "nuxt": "^3.14.0",
     "radix-vue": "^1.9.17",
     "reka-ui": "^2.8.0",

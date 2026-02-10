@@ -4,6 +4,19 @@
 
 ---
 
+## 2026-02-10
+
+### 会话多用户支持
+
+- **中间层**：会话/消息/流式发送按「当前用户」隔离。`userId` 优先从 Cookie 会话推导（`getStableUserId(session)`：Logto 用 `logtoSub`，Frappe/Token 用 `user`），无会话时使用 body/query 的 `user_id` 或 `'default'`。`GET /api/auth/me` 增加返回字段 `userId`。
+- **auth**：新增 `getStableUserId(session)`；`/api/auth/me` 返回 `userId` 供前端与多用户逻辑使用。
+- **chat 路由**：`GET /api/sessions`、`GET /api/sessions/:id/messages`、`POST /api/chat/stream` 均通过 `resolveUserId(req)` 得到 `userId` 并传入适配器，不再仅依赖前端传入的 `user_id`。
+- **Mock 适配器**：按 `userId` 隔离会话与消息；每个用户独立会话列表与消息历史；`streamMessage` 无 `sessionId` 时为该用户创建新会话并写入消息。
+- **前端**：`useAuth` 增加只读 `userId`（由 `/api/auth/me` 的 `userId` 同步）；`useChatSessionsApi` 的 `loadSessions`/`loadSessionMessages` 与 `useChatStream` 的 `streamChat` 在未显式传 `userId` 时使用当前登录用户的 `userId`，请求均带 `credentials: 'include'` 以便中间层从 Cookie 识别用户。
+- **说明**：Matrix 适配器仍为单 bot 账号，`listSessions` 返回该 bot 的全体房间，暂未按应用用户隔离；后续可做「每用户 Matrix 凭证」或「房间归属标记」实现真正多用户 Matrix。
+
+---
+
 ## 2026-02-09
 
 ### Nuxt 承载 Logto 认证：登录与回调走前端主地址

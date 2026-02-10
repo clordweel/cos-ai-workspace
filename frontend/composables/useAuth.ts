@@ -10,9 +10,13 @@ export type AuthUser = string | AuthUserProfile | null
 
 const isAuthenticated = ref(false)
 const user = ref<AuthUser>(null)
+/** 稳定用户 id，供会话等多用户隔离使用（Logto 为 sub，其余为用户名），未登录为空 */
+const userId = ref<string>('')
 const authLoading = ref(true)
 /** 当前用户权限列表，由 /api/auth/me 的 data.permissions 同步，未实现时为空数组 */
 const permissions = ref<string[]>([])
+/** 用户偏好（来自 Logto customData），仅 Logto 登录时有值 */
+const preferences = ref<Record<string, unknown>>({})
 
 export function useAuth() {
   const apiBase = useApiBase()
@@ -26,19 +30,25 @@ export function useAuth() {
       if (res.ok && data.ok && data.user) {
         isAuthenticated.value = true
         user.value = data.user
+        userId.value = typeof (data as { userId?: string }).userId === 'string' ? (data as { userId: string }).userId : ''
         permissions.value = Array.isArray((data as { permissions?: string[] }).permissions)
           ? (data as { permissions: string[] }).permissions
           : []
+        preferences.value = (data as { preferences?: Record<string, unknown> }).preferences ?? {}
         return true
       }
       isAuthenticated.value = false
       user.value = null
+      userId.value = ''
       permissions.value = []
+      preferences.value = {}
       return false
     } catch {
       isAuthenticated.value = false
       user.value = null
+      userId.value = ''
       permissions.value = []
+      preferences.value = {}
       return false
     } finally {
       authLoading.value = false
@@ -58,7 +68,9 @@ export function useAuth() {
     } finally {
       isAuthenticated.value = false
       user.value = null
+      userId.value = ''
       permissions.value = []
+      preferences.value = {}
     }
   }
 
@@ -73,14 +85,22 @@ export function useAuth() {
     return false
   }
 
+  /** 更新本地 preferences 缓存（由 useUserPreferences 在 PATCH 成功后调用） */
+  function setPreferences(data: Record<string, unknown>) {
+    preferences.value = data
+  }
+
   return {
     isAuthenticated: readonly(isAuthenticated),
     user: readonly(user),
+    userId: readonly(userId),
     authLoading: readonly(authLoading),
     permissions: readonly(permissions),
+    preferences: readonly(preferences),
     fetchUser,
     login,
     logout,
     requireAuth,
+    setPreferences,
   }
 }

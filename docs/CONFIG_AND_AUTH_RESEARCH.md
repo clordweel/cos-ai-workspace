@@ -49,7 +49,8 @@
 ### 3.2 Session 与「用户配置」
 
 - **Session 内容**（`auth.ts`）：`sessionId`、`type: 'frappe'|'token'|'logto'`、`user`、`userProfile?`、**`frappeSid?`**、**`frappeToken?`**、`logtoSub?`、`expiresAt`。
-- **无单独用户配置存储**：无「用户偏好」「用户级连接绑定」等持久化；仅内存 Session + Cookie。
+- **用户偏好**（主题、字体档位、通知开关）：已持久化在 **Logto 自定义数据（customData）**，经 Management API 读写；中间层 `GET /api/auth/me` 可附带 `preferences`，`PATCH /api/auth/me/preferences` 部分更新。详见 **`docs/AUTH_AND_USER_CONFIG.md`**。
+- **用户级连接绑定**等：仍无单独存储；连接器设计见本文后续章节。
 
 因此：
 - **Logto**：只负责「是谁」（OIDC 登录 + `/api/auth/me` 的 user/type）；**支持不够**可理解为：无 refresh_token 静默刷新、无「连接器」落地（绑定 ERP/第三方），仅身份一层。

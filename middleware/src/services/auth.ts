@@ -1,7 +1,9 @@
 /**
  * 认证服务：Frappe 用户名密码 / Token、Logto SSO；会话存 cookie，需认证的请求从 cookie 取会话
+ * Logto 登录成功后同步注册 Matrix 用户（CHAT_PROVIDER=matrix 时）
  */
 import { config } from '../config.js';
+import { ensureMatrixUser } from './matrixUserSync.js';
 
 const COOKIE_NAME = 'auth_session';
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 天
@@ -130,6 +132,15 @@ export async function loginWithToken(token: string): Promise<LoginResult> {
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
   return { ok: true, sessionId, user };
+}
+
+/**
+ * 供会话等需要「按用户隔离」的逻辑使用：返回当前请求对应的稳定用户 id
+ * Logto 用 sub，Frappe/Token 用 user（用户名），未登录为 'default'
+ */
+export function getStableUserId(session: Session | null | undefined): string {
+  if (!session) return 'default';
+  return session.logtoSub ?? session.user;
 }
 
 /**
@@ -280,6 +291,80 @@ export async function handleLogtoCallback(
     logtoSub: meData.sub,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
+
+  // 会话落地 Matrix：Logto 用户同步注册到 Synapse（不阻塞登录，失败仅打日志）
+  if (config.chat?.provider === 'matrix' && meData.sub) {
+    ensureMatrixUser(meData.sub, displayName, meData.email).then((out) => {
+      if (out.ok) {
+        if (out.created) {
+          console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${meData.sub})`);
+        }
+        // 已存在则静默（PUT 返回 200）
+      } else {
+        console.warn(`[auth] Matrix 用户同步失败 (Logto sub: ${meData.sub}): ${out.error}`);
+      }
+    }).catch((err) => {
+      console.warn('[auth] Matrix 用户同步异常:', err instanceof Error ? err.message : err);
+    });
+  }
+
+  return { ok: true, sessionId, user: displayName };
+}
+
+/**
+ * 使用 Logto access token 创建中间层会话（供 @logto/nuxt 回调后同步 session 用）
+ * 调用 /oidc/me 取用户信息后建会话，并触发 Matrix 同步
+ */
+export async function createSessionFromLogtoAccessToken(
+  accessToken: string
+): Promise<LogtoCallbackResultOk | LogtoCallbackResultFail> {
+  const { endpoint } = config.logto || {};
+  if (!endpoint) {
+    return { ok: false, error: '未配置 Logto' };
+  }
+  const meRes = await fetch(`${endpoint}/oidc/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!meRes.ok) {
+    return { ok: false, error: 'Token 无效或已过期' };
+  }
+  const meData = (await meRes.json().catch(() => ({}))) as {
+    name?: string;
+    sub?: string;
+    username?: string;
+    email?: string;
+    picture?: string;
+  };
+  if (!meData.sub) {
+    return { ok: false, error: '无法获取用户信息' };
+  }
+  const displayName = meData.name || meData.username || meData.sub || 'Logto User';
+  const userProfile: UserProfile = {
+    name: displayName,
+    ...(meData.email && { email: meData.email }),
+    ...(meData.picture && { avatar: meData.picture }),
+  };
+  const sessionId = generateSessionId();
+  sessions.set(sessionId, {
+    type: 'logto',
+    user: displayName,
+    userProfile,
+    logtoSub: meData.sub,
+    expiresAt: Date.now() + SESSION_TTL_MS,
+  });
+
+  if (config.chat?.provider === 'matrix' && meData.sub) {
+    ensureMatrixUser(meData.sub, displayName, meData.email).then((out) => {
+      if (out.ok && out.created) {
+        console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${meData.sub})`);
+      } else if (!out.ok) {
+        console.warn(`[auth] Matrix 用户同步失败 (Logto sub: ${meData.sub}): ${out.error}`);
+      }
+    }).catch((err) => {
+      console.warn('[auth] Matrix 用户同步异常:', err instanceof Error ? err.message : err);
+    });
+  }
+
   return { ok: true, sessionId, user: displayName };
 }
 

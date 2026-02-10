@@ -9,6 +9,7 @@ export type ThemeMode = 'light' | 'dark' | 'system'
  */
 export function useTheme() {
   const colorMode = useColorMode()
+  const { isAuthenticated, preferences } = useAuth()
 
   if (import.meta.client) {
     watch(
@@ -16,6 +17,16 @@ export function useTheme() {
       (value) => {
         const meta = document.querySelector('meta[name="theme-color"]')
         if (meta) meta.setAttribute('content', value === 'dark' ? '#0a0a0a' : '#fafafa')
+      },
+      { immediate: true },
+    )
+    // Logto 登录后应用 customData 中的 theme
+    watch(
+      () => (isAuthenticated.value && preferences.value?.theme ? preferences.value.theme as ThemeMode : null),
+      (theme) => {
+        if (theme && (theme === 'light' || theme === 'dark' || theme === 'system')) {
+          colorMode.preference = theme
+        }
       },
       { immediate: true },
     )
@@ -33,6 +44,10 @@ export function useTheme() {
     themeMode,
     setTheme(mode: ThemeMode) {
       colorMode.preference = mode
+      if (isAuthenticated.value) {
+        const { savePreferences } = useUserPreferences()
+        void savePreferences({ theme: mode })
+      }
     },
   }
 }

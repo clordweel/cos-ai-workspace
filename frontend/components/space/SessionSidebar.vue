@@ -10,6 +10,9 @@
         :list-padding-top="listPaddingTop"
         :pinned-collapsed="pinnedCollapsed"
         :pinned-chats="pinnedChats"
+        :show-mock-section="showMockSection"
+        :mock-collapsed="mockCollapsed"
+        :mock-chats="mockChats"
         :active-chats="activeChats"
         :pending-chats="pendingChats"
         :pinned-ids="pinnedIds"
@@ -20,6 +23,7 @@
         :get-non-read-count="getNonReadCount"
         :is-mock="isMock"
         @update:pinned-collapsed="emit('update:pinnedCollapsed', $event)"
+        @update:mock-collapsed="emit('update:mockCollapsed', $event)"
         @session-click="emit('session-click', $event)"
         @toggle-pin="emit('toggle-pin', $event)"
         @rename="emit('rename', $event)"
@@ -73,6 +77,9 @@ defineProps<{
   toolbarTop: string
   pinnedCollapsed: boolean
   pinnedChats: DisplayChatItem[]
+  showMockSection?: boolean
+  mockCollapsed?: boolean
+  mockChats?: DisplayChatItem[]
   activeChats: DisplayChatItem[]
   pendingChats: DisplayChatItem[]
   pinnedIds: string[]
@@ -91,6 +98,7 @@ defineProps<{
 
 const emit = defineEmits<{
   'update:pinnedCollapsed': [value: boolean]
+  'update:mockCollapsed': [value: boolean]
   'update:searchQuery': [value: string]
   'update:listViewTab': [value: 'active' | 'favorites' | 'pending' | 'settings']
   'session-click': [id: string]

@@ -35,7 +35,11 @@ alwaysApply: false
 - **结构**：遵循 [Nuxt 安装文档](https://www.shadcn-vue.com/docs/installation/nuxt)：Tailwind 使用 `@tailwindcss/vite` + `~/assets/css/tailwind.css`，`nuxt.config` 中 `modules: ['shadcn-nuxt']`、`css` 与 `vite.plugins` 按文档配置；UI 组件目录为 `@/components/ui`，由 `components.json` 与 CLI 维护。
 - **Vue 内使用 @apply**：若在 SFC 的 `<style>` 中使用 `@apply`，须在样式块顶部加 `@reference "~/assets/css/tailwind.css";`（Tailwind v4 要求）。
 
+## 认证与用户偏好
+- **认证**：`useAuth()`（`user`、`userId`、`isAuthenticated`、`fetchUser`）；唯一入口 Logto，详见全局规则与 `docs/AUTH_AND_USER_CONFIG.md`。
+- **用户偏好**：`useUserPreferences()`（主题、字体档位、通知开关、`savePreferences`）；登录后与 Logto customData 同步，未登录用本地 localStorage/color-mode。`useTheme`、`useUISettings` 已对接；设置页在 `AppPanel.vue`。
+
 ## 关键文件
 - 布局/页：`layouts/workspace.vue`、`pages/space/[[id]].vue`
 - 组件：`SessionListHeader.vue`、`WorkspaceAppNav.vue`、`AppPanel.vue`、`ChatMessageBubble.vue`、`TaskCard/*`
-- 状态：`composables/useWorkspaceLayout.ts`（布局模式与空间分配）、`useAppView.ts`、`useChatSessions.ts`、`useChatStream.ts`
+- 状态：`composables/useWorkspaceLayout.ts`（布局模式与空间分配）、`useAppView.ts`、`useChatSessions.ts`、`useChatStream.ts`、`useAuth.ts`、`useUserPreferences.ts`

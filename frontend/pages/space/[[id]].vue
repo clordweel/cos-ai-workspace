@@ -21,6 +21,9 @@
         :toolbar-top="toolbarTop"
         :pinned-collapsed="pinnedCollapsed"
         :pinned-chats="pinnedChats"
+        :show-mock-section="mockSessionListEnabled"
+        :mock-collapsed="mockCollapsed"
+        :mock-chats="mockChats"
         :active-chats="activeChats"
         :pending-chats="pendingChats"
         :pinned-ids="pinnedIds"
@@ -36,6 +39,7 @@
         :is-mock="isMockSession"
         :drawer-app-active="drawerAppActive"
         @update:pinned-collapsed="pinnedCollapsed = $event"
+        @update:mock-collapsed="mockCollapsed = $event"
         @update:search-query="setSearchQuery"
         @update:list-view-tab="setListViewTab"
         @session-click="onSessionItemClick"
@@ -208,7 +212,7 @@ const pinnedCollapsed = ref(false)
 const { sessionAreaFontScale } = useUISettings()
 /** 应用抽屉项：内置视图（view）、扩展应用（appId）或 mock（无 view/appId，点击跳转全部应用） */
 type DrawerAppItem =
-  | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' }
+  | { id: string; title: string; icon: typeof Home; view: 'home' | 'auth' | 'contacts' | 'bots' | 'settings' | 'profile' }
   | { id: string; title: string; icon: import('vue').Component; appId: string }
   | { id: string; title: string; icon: import('vue').Component }
 
@@ -216,7 +220,7 @@ const { list: appExtensionsList } = useAppExtensions()
 const { isAuthenticated } = useAuth()
 const { favoriteIds } = useAppFavorites()
 
-/** 抽屉常用：固定 5 项 */
+/** 抽屉常用：导航、认证、联系人、机器人、设置（用户信息由抽屉顶部用户卡片进入） */
 const drawerCommonApps = computed<DrawerAppItem[]>(() => [
   { id: 'home', title: '导航', view: 'home', icon: Home },
   { id: 'auth', title: '认证登录', view: 'auth', icon: LogIn },
@@ -332,14 +336,17 @@ const {
   ensureChat,
   createNewChat,
   getConversationId,
+  setConversationId,
   getNonReadCount,
   markChatAsRead,
 } = useChatSessions()
 
 const { loadSessions, loadSessionMessages } = useChatSessionsApi()
-/** 是否像后端会话 id（UUID 或 Mock 适配器的 mock-session-*） */
+/** 是否像后端会话 id（UUID、Mock 的 mock-session-*、Matrix 的 !xxx:domain） */
 function isBackendSessionId(id: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || id.startsWith('mock-session-')
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
+    || id.startsWith('mock-session-')
+    || (id.startsWith('!') && id.includes(':'))
 }
 
 /** 顶栏三点菜单：导出 / 转发等（占位，暂不实现具体功能） */
@@ -435,12 +442,14 @@ const filteredChats = computed(() => {
 
 import type { MockSessionItem } from '~/mock'
 import {
-  MOCK_SESSION_LIST_ENABLED,
+  useMockSessionListEnabled,
   getMockSessionById,
   getMockSessionList,
   isMockSession,
   seedMockMessages,
 } from '~/composables/useMockSessions'
+
+const mockSessionListEnabled = useMockSessionListEnabled()
 
 type DisplayChatItem = { id: string; title: string; type?: MockSessionItem['type']; updatedAt?: number; participants?: MockSessionItem['participants'] }
 
@@ -455,9 +464,10 @@ const displayChats = computed<DisplayChatItem[]>(() => {
     title: c.title,
     updatedAt: c.updatedAt,
   }))
-  if (!MOCK_SESSION_LIST_ENABLED) return real
+  if (!mockSessionListEnabled.value) return real
+  const realIds = new Set(real.map((c) => c.id))
   const mockList = getMockSessionList()
-    .filter((m) => !mockHiddenIds.value.includes(m.id))
+    .filter((m) => !mockHiddenIds.value.includes(m.id) && !realIds.has(m.id))
     .map((m) => ({
       ...m,
       title: mockTitleOverrides.value[m.id] ?? m.title,
@@ -471,9 +481,20 @@ const pinnedIds = ref<string[]>(['mock-private-zhangsan', 'mock-group-product'])
 const pinnedChats = computed<DisplayChatItem[]>(() =>
   displayChats.value.filter((c) => pinnedIds.value.includes(c.id)),
 )
-/** 活动区会话：当前会话自动在顶部，其余按原序 */
+/** Mock 会话折叠区：仅展示未置顶的 mock 会话，与置顶区同结构便于样式调试 */
+const mockCollapsed = ref(false)
+const mockChats = computed<DisplayChatItem[]>(() => {
+  if (!mockSessionListEnabled.value) return []
+  return displayChats.value.filter(
+    (c) => isMockSession(c.id) && !pinnedIds.value.includes(c.id),
+  )
+})
+/** 活动区会话：当前会话自动在顶部，其余按原序。启用 mock 时活动区仅含真实会话，mock 在「Mock 会话」折叠区展示 */
 const activeChats = computed<DisplayChatItem[]>(() => {
-  const list = displayChats.value.filter((c) => !pinnedIds.value.includes(c.id))
+  const base = mockSessionListEnabled.value
+    ? displayChats.value.filter((c) => !isMockSession(c.id))
+    : displayChats.value
+  const list = base.filter((c) => !pinnedIds.value.includes(c.id))
   const current = chatId.value
   if (!current) return list
   const idx = list.findIndex((c) => c.id === current)
@@ -494,6 +515,12 @@ function isMockSession(id: string) {
   return id.startsWith('mock-')
 }
 
+/** 仅绝对日期，用于 SSR/首屏，避免与客户端「今天/昨天」相对格式造成 hydration 不匹配 */
+function formatChatDateAbsolute(ts: number): string {
+  const d = new Date(ts)
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
 function formatChatDate(ts: number): string {
   const d = new Date(ts)
   const today = new Date()
@@ -503,11 +530,17 @@ function formatChatDate(ts: number): string {
   if (d.toDateString() === yesterday.toDateString()) return '昨天'
   return `${d.getMonth() + 1}月${d.getDate()}日`
 }
+
+const isMounted = ref(false)
+onMounted(() => {
+  isMounted.value = true
+})
+
 function getChatDateLabel(id: string): string {
   const mock = getMockSessionById(id)
-  if (mock) return formatChatDate(mock.updatedAt)
-  const c = chats.value.find((x) => x.id === id)
-  return c?.updatedAt ? formatChatDate(c.updatedAt) : ''
+  const ts = mock ? mock.updatedAt : chats.value.find((x) => x.id === id)?.updatedAt
+  if (ts == null) return ''
+  return isMounted.value ? formatChatDate(ts) : formatChatDateAbsolute(ts)
 }
 
 const chatTitle = computed(() => {
@@ -591,7 +624,7 @@ onMounted(() => {
   }
   // 拉取标准化会话列表并合并（当前后端不支持时静默跳过）
   loadSessions().catch(() => {})
-  if (MOCK_SESSION_LIST_ENABLED) seedMockMessages(getMessages, setMessages)
+  if (mockSessionListEnabled.value) seedMockMessages(getMessages, setMessages)
 })
 
 watch(() => route.query.app, (app) => {
@@ -631,15 +664,16 @@ function scrollToLastMessage(behavior: ScrollBehavior = 'smooth') {
   }
 }
 
-/** 仅追加助手占位并流式回复，不追加用户消息（供 send / retry 复用） */
+/** 仅追加助手占位并流式回复，不追加用户消息（供 send / retry 复用）。收到 session_created 时迁移到后端会话 id（会话落地）。 */
 async function streamReply(id: string, text: string) {
-  appendMessage(id, { role: 'assistant', content: '', thinking: '' })
+  let currentId = id
+  appendMessage(currentId, { role: 'assistant', content: '', thinking: '' })
   nextTick(() => scrollToLastMessage())
   streaming.value = true
   streamAbortRef.value = new AbortController()
   streamContentBuffer.value = ''
   const placeholder = '思考中…'
-  updateLastMessage(id, (m) => { m.content = placeholder })
+  updateLastMessage(currentId, (m) => { m.content = placeholder })
 
   let streamEnded = false
   let currentDelayMs = STREAM_TYPEWRITER_INTERVAL_MS
@@ -650,7 +684,7 @@ async function streamReply(id: string, text: string) {
     if (buf) {
       const take = buf.slice(0, STREAM_TYPEWRITER_CHARS_PER_TICK)
       streamContentBuffer.value = buf.slice(STREAM_TYPEWRITER_CHARS_PER_TICK)
-      updateLastMessage(id, (m) => {
+      updateLastMessage(currentId, (m) => {
         const base = m.content === placeholder ? '' : m.content
         m.content = base + take
         if (!m.contentChunks) m.contentChunks = []
@@ -661,11 +695,11 @@ async function streamReply(id: string, text: string) {
 
     if (buf === '' && streamEnded) {
       typewriterTimerId = null
-      updateLastMessage(id, (m) => { m.contentChunks = undefined })
-      const list = getMessages(id)
+      updateLastMessage(currentId, (m) => { m.contentChunks = undefined })
+      const list = getMessages(currentId)
       const last = list[list.length - 1]
       if (last && !last.content) {
-        updateLastMessage(id, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
+        updateLastMessage(currentId, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
       }
       streamAbortRef.value = null
       streaming.value = false
@@ -692,22 +726,33 @@ async function streamReply(id: string, text: string) {
       },
       {
         signal: streamAbortRef.value?.signal,
-        conversationId: getConversationId(id),
+        conversationId: getConversationId(currentId),
+        onSessionCreated: (payload) => {
+          const realId = payload.backend_session_id ?? payload.session_id
+          if (realId === currentId) return
+          const title = chats.value.find((c) => c.id === currentId)?.title ?? '新会话'
+          ensureChat(realId, title)
+          setMessages(realId, getMessages(currentId))
+          setConversationId(realId, realId)
+          chats.value = chats.value.filter((c) => c.id !== currentId)
+          currentId = realId
+          router.replace(`/space/${realId}`)
+        },
         onThinking: () => {
           streamContentBuffer.value = ''
-          updateLastMessage(id, (m) => {
+          updateLastMessage(currentId, (m) => {
             m.content = placeholder
             m.contentChunks = undefined
           })
         },
         onThinkingDelta: (delta) => {
-          updateLastMessage(id, (m) => {
+          updateLastMessage(currentId, (m) => {
             if (!m.thinking) m.thinking = ''
             m.thinking += delta
           })
         },
         onThinkingDone: (fullText) => {
-          updateLastMessage(id, (m) => { if (fullText) m.thinking = fullText })
+          updateLastMessage(currentId, (m) => { if (fullText) m.thinking = fullText })
         },
       }
     )
@@ -717,7 +762,7 @@ async function streamReply(id: string, text: string) {
     const friendly = /failed to fetch|networkerror|network error/i.test(msg)
       ? '网络错误，请确认中间层已启动且可访问（检查 NUXT_PUBLIC_API_BASE 或代理）'
       : msg
-    updateLastMessage(id, (m) => {
+    updateLastMessage(currentId, (m) => {
       m.content = `请求失败：${friendly}`
     })
   } finally {
@@ -726,7 +771,7 @@ async function streamReply(id: string, text: string) {
         clearTimeout(typewriterTimerId)
         typewriterTimerId = null
       }
-      updateLastMessage(id, (m) => { m.contentChunks = undefined })
+      updateLastMessage(currentId, (m) => { m.contentChunks = undefined })
       streamAbortRef.value = null
       streaming.value = false
     }
