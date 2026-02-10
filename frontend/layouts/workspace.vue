@@ -87,10 +87,8 @@ const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggle
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
 const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isXl } = useWorkspaceLayout()
 
-/** 按实际视口判断 xl：客户端同步取初值（刷新首屏即正确），再在 onMounted 里监听变化 */
-const isXlFromViewport = ref(
-  import.meta.client ? window.matchMedia('(min-width: 1280px)').matches : false
-)
+/** 按实际视口判断 xl：与 SSR 一致初值为 false，仅在 onMounted 后更新，避免水合时 grid-template-columns 不一致 */
+const isXlFromViewport = ref(false)
 onMounted(() => {
   const mq = window.matchMedia('(min-width: 1280px)')
   const update = () => { isXlFromViewport.value = mq.matches }
