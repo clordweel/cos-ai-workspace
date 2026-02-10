@@ -1,0 +1,21 @@
+---
+description: 前端鉴权与权限：免认证 / 需认证 / 分权限 的约定与实现
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# 前端鉴权与权限
+
+## 规范文档
+- 完整约定见 **docs/FRONTEND_AUTH_AND_PERMISSIONS.md**。编辑鉴权/权限相关逻辑时请遵循该文档。
+
+## 三类操作
+- **免认证**：不依赖 `isAuthenticated`，不调用 `requireAuth()`。
+- **需认证**：用 `useAuth().isAuthenticated` / `requireAuth()`；请求带 `credentials: 'include'`；收到 401 时统一 `useAuth().requireAuth()`。
+- **分权限**：用 `usePermissions().can(permission)` 控制按钮/菜单；权限来自 `/api/auth/me` 的 `permissions`（未实现时 `can()` 恒为 false）。
+
+## 推荐用法
+- 应用扩展是否可访问：**`usePermissions().canAccessApp(app)`**（已考虑 `app.requireAuth`）。
+- 操作前需登录：**`usePermissions().requireAuth()`** 或 **`useAuth().requireAuth()`**，返回 false 时中止操作。
+- 按权限显示/禁用：**`v-if="can('perm')"`** / **`:disabled="!can('perm')"`**。
+- 敏感 API 调用后若 `res.status === 401`，调用 **`useAuth().requireAuth()`** 并向上抛错或提示。

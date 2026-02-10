@@ -193,7 +193,7 @@ export function getLogtoAuthUrl(
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid profile',
+    scope: 'openid',
     state: state || generateSessionId(),
   });
   return { ok: true, url: `${endpoint}/oidc/auth?${params.toString()}`, state: params.get('state') };

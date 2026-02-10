@@ -36,6 +36,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
+      logtoEndpoint: process.env.NUXT_PUBLIC_LOGTO_ENDPOINT ?? '',
+      logtoAppId: process.env.NUXT_PUBLIC_LOGTO_APP_ID ?? '',
     },
   },
   vite: {

@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-02-09
+
+### Nuxt 承载 Logto 认证：登录与回调走前端主地址
+
+- **前端**：新增 `/logto`（发起登录，302 到 Logto）、`/logto-callback`（接收 code 后 302 到中间层换 token）；`useAuth().login()` 改为跳转当前页同源 `/logto`。需配置 `NUXT_PUBLIC_LOGTO_ENDPOINT`、`NUXT_PUBLIC_LOGTO_APP_ID`（与中间层一致，不包含 secret）。
+- **中间层**：`GET /api/auth/logto/callback` 支持 query 参数 `redirect_uri`；当由 Nuxt 回调带入时，用该 `redirect_uri` 向 Logto 换 token，并依其 origin 做最终 302。保留无 `redirect_uri` 时的原有行为（中间层直接回调）。
+- **Logto**：Nuxt 承载时在控制台 Redirect URIs 填「前端主地址」如 `https://yourapp.com/logto-callback` 或 `http://localhost:3001/logto-callback`。反向代理同域时用户全程只接触前端域名。
+- **文档**：`.env.example` 与 `docs/REVERSE_PROXY_SINGLE_DOMAIN.md` 已区分「Nuxt 承载」与「中间层直接回调」两种配置方式。
+
+### 前端：认证通用化，仅保留 Logto 唯一入口
+
+- **useAuth**：移除 `loginWithPassword`、`loginWithToken`；唯一登录方式为 `login()`，跳转中间层 `GET /api/auth/logto`（Logto 授权后回调回前端）。注释改为「项目唯一认证入口为 Logto」。
+- **认证面板**：应用区「认证登录」标签内不再展示账号密码 / Token / 单点登录 三选一；未登录时仅展示说明与一个「登录」按钮，点击即调用 `login()`；已登录仍展示当前用户与退出按钮。Logto 回调错误继续通过 `auth_error` 查询参数展示。
+- **文档**：设计见 `docs/AUTH_GENERIC_LOGTO_DESIGN.md`；`docs/FRONTEND_AUTH_AND_PERMISSIONS.md` 已引用。中间层尚未移除 POST /api/auth/login、/api/auth/token 前，前端已不再调用。
+
+---
+
 ## 2026-02-08
 
 ### 前端：应用区扩展标准化

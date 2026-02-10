@@ -33,6 +33,8 @@ export interface Config {
     appId: string;
     appSecret: string;
   };
+  /** 中间层对外访问根 URL，用于拼 Logto redirect_uri；不设则从请求头/主机推导 */
+  middlewarePublicOrigin: string;
 }
 
 export const config: Config = {
@@ -67,4 +69,6 @@ export const config: Config = {
     appId: process.env.LOGTO_APP_ID || '',
     appSecret: process.env.LOGTO_APP_SECRET || '',
   },
+
+  middlewarePublicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || '').replace(/\/$/, ''),
 };

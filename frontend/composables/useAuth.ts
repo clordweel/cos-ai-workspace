@@ -1,9 +1,12 @@
 /**
- * 认证状态与登录方式：用户名密码、Token、Logto SSO；会话由中间层 Cookie 保持
+ * 认证状态：项目唯一认证入口为 Logto，会话由中间层 Cookie 保持
+ * 可选：/api/auth/me 返回 permissions 时分权限控制用
  */
 const isAuthenticated = ref(false)
 const user = ref<string | null>(null)
 const authLoading = ref(true)
+/** 当前用户权限列表，由 /api/auth/me 的 data.permissions 同步，未实现时为空数组 */
+const permissions = ref<string[]>([])
 
 export function useAuth() {
   const apiBase = useApiBase()
@@ -17,65 +20,29 @@ export function useAuth() {
       if (res.ok && data.ok && data.user) {
         isAuthenticated.value = true
         user.value = data.user
+        permissions.value = Array.isArray((data as { permissions?: string[] }).permissions)
+          ? (data as { permissions: string[] }).permissions
+          : []
         return true
       }
       isAuthenticated.value = false
       user.value = null
+      permissions.value = []
       return false
     } catch {
       isAuthenticated.value = false
       user.value = null
+      permissions.value = []
       return false
     } finally {
       authLoading.value = false
     }
   }
 
-  /** 用户名密码登录 */
-  async function loginWithPassword(usr: string, pwd: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch(`${apiBase}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ usr: usr.trim(), pwd }),
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data.ok) {
-        isAuthenticated.value = true
-        user.value = data.user
-        return { ok: true }
-      }
-      return { ok: false, error: data.error || '登录失败' }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : '网络错误' }
-    }
-  }
-
-  /** Token 登录 */
-  async function loginWithToken(token: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch(`${apiBase}/api/auth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.trim() }),
-        credentials: 'include',
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data.ok) {
-        isAuthenticated.value = true
-        user.value = data.user
-        return { ok: true }
-      }
-      return { ok: false, error: data.error || 'Token 无效' }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : '网络错误' }
-    }
-  }
-
-  /** 跳转至 Logto 登录（中间层会 302 到 Logto，回调后重定向回前端） */
-  function loginWithLogto() {
-    window.location.href = `${apiBase}/api/auth/logto`
+  /** 登录：跳转至 Nuxt 承载的 Logto 入口 /logto（当前页同源），由前端发起授权并接收回调 */
+  function login() {
+    if (typeof window === 'undefined') return
+    window.location.href = `${window.location.origin}/logto`
   }
 
   /** 登出 */
@@ -85,6 +52,7 @@ export function useAuth() {
     } finally {
       isAuthenticated.value = false
       user.value = null
+      permissions.value = []
     }
   }
 
@@ -103,10 +71,9 @@ export function useAuth() {
     isAuthenticated: readonly(isAuthenticated),
     user: readonly(user),
     authLoading: readonly(authLoading),
+    permissions: readonly(permissions),
     fetchUser,
-    loginWithPassword,
-    loginWithToken,
-    loginWithLogto,
+    login,
     logout,
     requireAuth,
   }
