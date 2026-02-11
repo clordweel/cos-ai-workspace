@@ -118,3 +118,4 @@
 - **Dify 适配器验收**：`DIFY_ADAPTER_ACCEPTANCE.md`（验收步骤与通过标准）。
 - **会话部分后端服务选择调研**：`SESSION_BACKEND_SERVICE_SELECTION.md`（现状、会话/请求级选择的后端需求与可选方案）。
 - **会话适配器选型：Matrix 优先**：`SESSION_ADAPTER_MATRIX.md`（核心流程与 Matrix 映射、适配器契约与实现要点）。
+- **会话设计与 Matrix 对比分析**：`SESSION_MATRIX_ANALYSIS.md`（身份冲突、未实现 Matrix 能力、可选方案）。
