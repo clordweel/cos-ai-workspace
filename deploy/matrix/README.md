@@ -29,6 +29,41 @@
    docker compose up -d
    ```
 
+## MAS（Matrix Authentication Service）部署（可选）
+
+MAS 将 Matrix 认证委托到独立服务，支持 OAuth2/OIDC、Personal Session 等，便于中间层无密码获取 token。详见 `docs/MAS_AND_AS_RESEARCH.md`。
+
+### 前置条件
+
+- 已完成 `./bootstrap.sh`，存在 `data/homeserver.yaml`
+- `.env` 中已设置 `SYNAPSE_SERVER_NAME`、`POSTGRES_PASSWORD`
+
+### 部署步骤
+
+```bash
+chmod +x bootstrap-mas.sh
+./bootstrap-mas.sh
+```
+
+脚本会：
+
+1. 生成 MAS 配置（`mas-config/config.yaml`、`override.yaml`）
+2. 配置 passwords 支持 bcrypt（兼容 Synapse 迁移）
+3. 停止 Synapse/MAS 后临时暴露数据库端口，执行 `syn2mas` 将现有用户迁移到 MAS
+4. 写入 Synapse `matrix_authentication_service`，启动 nginx、Synapse、MAS
+
+### 部署后
+
+- Matrix 端口仍为 8008，经 nginx 转发：`/login`、`/logout`、`/refresh` 由 MAS 处理
+- 迁移后用户可用原 Synapse 密码登录
+- 保存 `.env` 中的 `MAS_SECRET`，中间层接入 Personal Session 时需用
+- **Admin API（如 set-password）**：bootstrap 已加入 `policy.data.admin_users: ["admin"]` 并设置 `can_request_admin`。若仍报 "You are not a server admin"，可在工作区 `.env` 配置 `MATRIX_ACCESS_TOKEN`（使用 `mas-cli manage issue-compatibility-token` 或 Synapse Admin 签发的 admin token）。详见 `docs/LOGTO_MATRIX_USERNAME_MAPPING.md`
+
+### 已知限制
+
+- `syn2mas` 需 host 网络访问数据库，bootstrap 会临时暴露 postgres:5433、mas-postgres:5434，迁移后自动移除
+- 若 Synapse 有 Logto 等 OIDC 用户，迁移时会加 `--ignore-missing-auth-providers`，需后续在 MAS 中配置对应 upstream
+
 ## 配置说明
 
 | 变量 | 必填 | 说明 |

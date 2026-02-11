@@ -2,6 +2,8 @@
 
 > 研究 Matrix Authentication Service (MAS) 和 Application Service (AS) 能否改善当前「密码缓存 + Admin 设密登录」的会话 token 获取流程。
 
+**部署状态**：MAS 已在 `deploy/matrix/` 整合部署，支持 syn2mas 用户迁移。详见 `deploy/matrix/README.md`「MAS 部署」章节。
+
 ---
 
 ## 一、当前局面回顾
