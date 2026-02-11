@@ -5,8 +5,9 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { getChatAdapter } from '../adapters/index.js';
-import { getSessionFromCookie, getStableUserId } from '../services/auth.js';
-import { getMatrixUserId } from '../services/matrixUserSync.js';
+import { getSessionFromCookie, getStableUserId, updateSession } from '../services/auth.js';
+import { getMatrixUserId, getMatrixUserIdForSession, ensureMatrixUser } from '../services/matrixUserSync.js';
+import { verifyMatrixTokenUserId } from '../adapters/matrixClient.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import { config } from '../config.js';
 import { messagesToMarkdown } from '../services/exportMarkdown.js';
@@ -18,6 +19,12 @@ async function resolveUserId(req: { headers: { cookie?: string }; body?: unknown
   const fromQuery = (req.query as { user_id?: string; user?: string })?.user_id ?? (req.query as { user_id?: string; user?: string })?.user;
   return fromBody ?? fromQuery ?? 'default';
 }
+
+const MATRIX_TOKEN_ERROR_MESSAGES: Record<string, string> = {
+  user_not_synced: '用户未同步到 Matrix，请联系管理员',
+  user_deactivated: 'Matrix 用户已停用，无法使用会话',
+  token_failed: '无法使用会话，请稍后重试',
+};
 
 /** Matrix 时会话 API 需 Logto + matrixAccessToken；无 token 时先尝试自动获取，仍无则 401，返回 true 表示已 401；成功后可能已改写 session 的 matrixAccessToken */
 async function requireMatrixToken(
@@ -31,16 +38,35 @@ async function requireMatrixToken(
     return true;
   }
   if (!session.matrixAccessToken) {
-    await ensureMatrixTokenForSession(session);
+    if (session.logtoSub) {
+      await ensureMatrixUser(
+        session.logtoSub,
+        session.userProfile?.name ?? session.user,
+        session.userProfile?.email,
+        session.userProfile?.phone,
+        session.userProfile?.username
+      ).catch(() => {});
+    }
+    const ensured = await ensureMatrixTokenForSession(session);
     const fresh = await getSessionFromCookie(req.headers.cookie);
     if (fresh?.matrixAccessToken) {
       session.matrixAccessToken = fresh.matrixAccessToken;
       session.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
     }
+    if (!session.matrixAccessToken) {
+      const errMsg =
+        ensured && 'error' in ensured
+          ? MATRIX_TOKEN_ERROR_MESSAGES[ensured.error] ?? ensured.message ?? '无法使用会话，请稍后重试'
+          : '无法使用会话，请稍后重试';
+      reply.code(401).send({ error: errMsg });
+      return true;
+    }
   }
-  if (!session.matrixAccessToken) {
-    reply.code(401).send({ error: '无法使用会话，请稍后重试' });
-    return true;
+  // 确保使用最新 session（避免竞态导致使用错误的 token）
+  const latest = await getSessionFromCookie(req.headers.cookie);
+  if (latest?.matrixAccessToken) {
+    session.matrixAccessToken = latest.matrixAccessToken;
+    session.matrixTokenExpiresAt = latest.matrixTokenExpiresAt;
   }
   return false;
 }
@@ -64,6 +90,11 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
 
     const session = await getSessionFromCookie(req.headers.cookie);
     if (await requireMatrixToken(req, session, reply)) return;
+
+    // Matrix 适配器必须使用当前用户 token，否则消息会归属到 admin
+    if (adapter?.name === 'matrix' && !session?.matrixAccessToken) {
+      return reply.code(401).send({ error: '需要 Matrix 会话，请刷新后重试' });
+    }
 
     const userId = await resolveUserId(req);
 
@@ -95,7 +126,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         send,
         flush,
         matrixAccessToken: session?.matrixAccessToken,
-        currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
+        currentUserMxid: session?.logtoSub
+          ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
+          : undefined,
       });
     } catch (e) {
       req.log.error(e);
@@ -126,6 +159,33 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
     const session = await getSessionFromCookie(req.headers.cookie);
     if (await requireMatrixToken(req, session, reply)) return;
+
+    // 校验 token 属于当前用户，避免误用 admin token 导致返回 admin 的房间列表
+    const expectedMxid = getMatrixUserIdForSession(
+      session!.logtoSub,
+      session!.userProfile?.username,
+      session!.matrixUserId
+    );
+    const tokenValid = await verifyMatrixTokenUserId(session!.matrixAccessToken!, expectedMxid);
+    if (!tokenValid) {
+      session!.matrixAccessToken = undefined;
+      session!.matrixTokenExpiresAt = undefined;
+      await updateSession(session!.sessionId, {
+        matrixAccessToken: undefined,
+        matrixTokenExpiresAt: undefined,
+      });
+      const ensured = await ensureMatrixTokenForSession(session!);
+      const fresh = await getSessionFromCookie(req.headers.cookie);
+      if (fresh?.matrixAccessToken) {
+        session!.matrixAccessToken = fresh.matrixAccessToken;
+        session!.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
+      }
+      if (!session!.matrixAccessToken) {
+        return reply.code(401).send({
+          error: 'Matrix token 已失效，请刷新后重试',
+        });
+      }
+    }
 
     const userId = await resolveUserId(req);
     try {
@@ -175,7 +235,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           limit: Number(limit) || 50,
           beforeId: beforeId || undefined,
           matrixAccessToken: session?.matrixAccessToken,
-          currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
+          currentUserMxid: session?.logtoSub
+          ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
+          : undefined,
         });
         return reply.send({ messages });
       } catch (e) {
@@ -206,7 +268,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         userId,
         title: body.title,
         matrixAccessToken: session?.matrixAccessToken,
-        currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
+        currentUserMxid: session?.logtoSub
+          ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
+          : undefined,
       });
       return reply.send(created);
     } catch (e) {

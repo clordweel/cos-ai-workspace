@@ -73,6 +73,10 @@ policy:
     # 使 admin 用户密码登录时获得 urn:synapse:admin:*，供 Synapse Admin API（如 set-password）使用
     admin_users:
       - admin
+
+# 允许登录用户修改自己的 Matrix 密码（解决 "Password change disabled"）
+account:
+  password_change_allowed: true
 YAML
 
 # 启用 adminapi 资源（在第一个 resources 块中追加，若不存在）
@@ -201,6 +205,12 @@ echo "设置 MAS admin 用户 can_request_admin..."
 docker compose -f docker-compose.yml -f docker-compose.mas.yml exec -T mas-postgres \
   psql -U "${MAS_POSTGRES_USER:-mas}" -d "${MAS_POSTGRES_DB:-mas}" -c \
   "UPDATE users SET can_request_admin = true WHERE username = 'admin';" 2>/dev/null || true
+
+# 10. 生成 .well-known/matrix/client 供 Element 自动发现
+echo "生成 .well-known/matrix/client..."
+mkdir -p well-known/matrix
+BASE_URL="http://${SYNAPSE_SERVER_NAME}:${SYNAPSE_HTTP_PORT:-8008}"
+echo "{\"m.homeserver\":{\"base_url\":\"${BASE_URL}\"}}" > well-known/matrix/client
 
 echo "MAS 部署完成。Matrix 端口: ${SYNAPSE_HTTP_PORT:-8008}（经 nginx 转发）"
 echo "请将 MAS_SECRET 保存，中间层接入 MAS Personal Session 时需要"

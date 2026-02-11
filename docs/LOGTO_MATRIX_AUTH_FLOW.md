@@ -28,7 +28,7 @@
 | 情况 | 行为 | 401 提示 |
 |------|------|----------|
 | **MAS 中不存在** | 回退到 Admin 设密；若 Synapse 404 则 `ensureMatrixUser` 创建 | — |
-| **MAS 中已停用** | `getMasUserByUsername` 跳过该用户，回退到 Admin；Admin 路径可能仍失败 | `Matrix 用户已停用，无法使用会话` |
+| **MAS 中已停用** | 首次请求时回退到 Admin 失败 → `Matrix 用户已停用`；**Logto 重新授权后**，`ensureMatrixUser` 会调用 MAS reactivate + 设密并继续同步，账号自动恢复 | — |
 | **ensureMatrixUser 失败** | 无法创建用户，返回 401 | `用户未同步到 Matrix，请联系管理员` |
 | **其他失败**（登录错误等） | 返回 401 | `无法使用会话，请稍后重试` |
 

@@ -18,8 +18,16 @@ import {
 } from '../services/auth.js';
 import { loginAsUser } from '../adapters/matrixClient.js';
 import { matrixLoginWithIdentifier, matrixChangePassword } from '../services/matrixAuth.js';
-import { getMatrixUserId, setMatrixPasswordByAdmin } from '../services/matrixUserSync.js';
-import { setStoredMatrixPassword } from '../services/matrixPasswordStore.js';
+import {
+  getMatrixUserIdForSession,
+  setMatrixPasswordByAdmin,
+  ensureMatrixUser,
+  deactivateMatrixUser,
+} from '../services/matrixUserSync.js';
+import {
+  setStoredMatrixPassword,
+  deleteStoredMatrixPassword,
+} from '../services/matrixPasswordStore.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import {
   logtoUpdateUserPassword,
@@ -31,7 +39,6 @@ import {
   getPreferencesFromCustomData,
   mergePreferencesIntoCustomData,
 } from '../services/logtoManagement.js';
-import { ensureMatrixUser } from '../services/matrixUserSync.js';
 import { formatPhoneForDisplay } from '../utils/phoneFormat.js';
 
 const ACCOUNT_CENTER_DISABLED = 'Account center is not enabled';
@@ -132,15 +139,38 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     }
     if (config.chat?.provider === 'matrix' && session.logtoSub) {
+      // 每次 /me 时重试用户同步，弥补 Logto 回调时的失败或竞态；409 恢复后需更新 session.matrixUserId
+      const ensured = await ensureMatrixUser(
+        session.logtoSub,
+        session.userProfile?.name ?? session.user,
+        session.userProfile?.email,
+        session.userProfile?.phone,
+        session.userProfile?.username
+      ).catch((e) => {
+        req.log.warn(e, 'ensureMatrixUser 重试失败');
+        return null;
+      });
+      let resolvedMatrixUserId = session.matrixUserId;
+      if (ensured?.ok && ensured.matrixUserId) {
+        resolvedMatrixUserId = ensured.matrixUserId;
+        if (resolvedMatrixUserId !== session.matrixUserId) {
+          await updateSession(session.sessionId, { matrixUserId: resolvedMatrixUserId });
+        }
+      }
+
       let token = session.matrixAccessToken;
       if (!token) {
-        const ensured = await ensureMatrixTokenForSession(session);
-        if (ensured) token = ensured.access_token;
+        const tokenResult = await ensureMatrixTokenForSession(session);
+        if (tokenResult && 'access_token' in tokenResult) token = tokenResult.access_token;
       }
       if (token) {
         payload.matrixSyncToken = token;
         payload.matrix_base_url = config.matrix.baseUrl;
-        payload.matrix_user_id = getMatrixUserId(session.logtoSub, session.userProfile?.username);
+        payload.matrix_user_id = getMatrixUserIdForSession(
+          session.logtoSub,
+          session.userProfile?.username,
+          resolvedMatrixUserId
+        );
       }
     }
     return reply.send(payload);
@@ -165,7 +195,14 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       const current = await getLogtoUserCustomDataViaAccountApi(token);
       const toWrite = current.ok ? mergePreferencesIntoCustomData(current.customData, patch) : { preferences: patch };
       result = await patchLogtoUserCustomDataViaAccountApi(token, toWrite);
-      if (!result.ok && (result.error?.includes(ACCOUNT_CENTER_DISABLED) || result.statusCode === 403)) {
+      // Token 失效（401）或 Account center 未启用（403）时回退到 M2M
+      if (
+        !result.ok &&
+        (result.statusCode === 401 ||
+          result.statusCode === 403 ||
+          result.error?.includes(ACCOUNT_CENTER_DISABLED) ||
+          /token.*not active|token.*invalid|token.*expired/i.test(result.error ?? ''))
+      ) {
         const m2mCurrent = await getLogtoUserCustomData(session.logtoSub);
         const toWriteM2m = m2mCurrent.ok ? mergePreferencesIntoCustomData(m2mCurrent.customData, patch) : { preferences: patch };
         result = await patchLogtoUserCustomData(session.logtoSub, toWriteM2m);
@@ -273,7 +310,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!currentPassword || !newPassword) {
       return reply.code(400).send({ ok: false, error: '请填写当前密码和新密码' });
     }
-    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
+    const matrixUserId = getMatrixUserIdForSession(
+      session.logtoSub,
+      session.userProfile?.username,
+      session.matrixUserId
+    );
     const result = await matrixChangePassword(matrixUserId, currentPassword, newPassword);
     if (!result.ok) {
       return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
@@ -295,9 +336,29 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!newPassword) {
       return reply.code(400).send({ ok: false, error: '请填写新密码' });
     }
-    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
+    // 先 ensure 以解析 409 场景下的正确 MXID，再设密
+    const ensured = await ensureMatrixUser(
+      session.logtoSub,
+      session.userProfile?.name ?? session.user,
+      session.userProfile?.email,
+      session.userProfile?.phone,
+      session.userProfile?.username
+    );
+    const matrixUserId =
+      ensured.ok ? ensured.matrixUserId : getMatrixUserIdForSession(
+        session.logtoSub,
+        session.userProfile?.username,
+        session.matrixUserId
+      );
+    if (ensured.ok && ensured.matrixUserId && ensured.matrixUserId !== session.matrixUserId) {
+      await updateSession(session.sessionId, { matrixUserId: ensured.matrixUserId });
+    }
     const result = await setMatrixPasswordByAdmin(matrixUserId, newPassword);
     if (!result.ok) {
+      req.log.warn(
+        { matrixUserId, statusCode: result.statusCode, error: result.error },
+        'setMatrixPasswordByAdmin 失败（403 多为 token 缺 admin 权限或过期，请重签 MATRIX_ACCESS_TOKEN）'
+      );
       return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
         ok: false,
         error: result.error,
@@ -317,6 +378,39 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true });
   });
 
+  /** 彻底删除（注销）Matrix 账号：Synapse deactivate + erase，清除会话中的 token 与密码缓存 */
+  app.post('/api/auth/matrix/deactivate', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const matrixUserId = getMatrixUserIdForSession(
+      session.logtoSub,
+      session.userProfile?.username,
+      session.matrixUserId
+    );
+    // 禁止注销配置中的 Matrix 管理员账号，避免误操作导致 Synapse Admin 无法登录
+    const adminUserId = config.matrix?.userId?.trim();
+    if (adminUserId && matrixUserId === adminUserId) {
+      return reply.code(403).send({
+        ok: false,
+        error: '无法注销：当前账号为 Matrix 管理员，注销将导致 Synapse Admin 无法登录。若确需操作，请先在 .env 中更换 MATRIX_USER_ID。',
+      });
+    }
+    const result = await deactivateMatrixUser(matrixUserId);
+    if (!result.ok) {
+      const code = result.statusCode && result.statusCode >= 400 ? result.statusCode : 400;
+      return reply.code(code).send({ ok: false, error: result.error });
+    }
+    await deleteStoredMatrixPassword(session.logtoSub);
+    await updateSession(session.sessionId, {
+      matrixAccessToken: undefined,
+      matrixTokenExpiresAt: undefined,
+      matrixUserId: undefined,
+    });
+    return reply.send({ ok: true });
+  });
+
   /** Matrix 登录（已有密码、当前会话无 token 时）：body { password }，成功则写入 session.matrixAccessToken */
   app.post('/api/auth/matrix/session-login', async (req, reply) => {
     const session = await getSessionFromCookie(req.headers.cookie);
@@ -328,7 +422,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!password) {
       return reply.code(400).send({ ok: false, error: '请填写 Matrix 密码' });
     }
-    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
+    const matrixUserId = getMatrixUserIdForSession(
+      session.logtoSub,
+      session.userProfile?.username,
+      session.matrixUserId
+    );
     try {
       const loginResult = await loginAsUser(matrixUserId, password);
       const expiresInMs = loginResult.expires_in_ms ?? 24 * 60 * 60 * 1000;

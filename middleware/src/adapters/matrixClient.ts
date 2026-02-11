@@ -152,13 +152,30 @@ export interface MatrixRoomSummary {
 }
 
 /**
+ * 校验 token 是否属于指定用户（用于避免错误使用 admin token）
+ * @returns true 表示 token 属于该用户，false 表示不匹配需重新获取
+ */
+export async function verifyMatrixTokenUserId(
+  userToken: string,
+  expectedUserId: string
+): Promise<boolean> {
+  const res = await matrixFetchWithToken('/account/whoami', {}, userToken);
+  const data = (await res.json().catch(() => ({}))) as { user_id?: string; error?: string };
+  if (!res.ok) return false;
+  const actual = data.user_id?.trim();
+  const expected = expectedUserId?.trim();
+  return !!actual && !!expected && actual === expected;
+}
+
+/**
  * 获取当前用户已加入的房间 ID 列表
- * @param userToken 可选，每用户 token；不传则用管理员 token
+ * @param userToken 必填，当前用户 token（禁止传 admin token，否则会返回 admin 的房间）
  */
 export async function getJoinedRooms(userToken?: string): Promise<string[]> {
-  const res = userToken
-    ? await matrixFetchWithToken('/joined_rooms', {}, userToken)
-    : await matrixFetch('/joined_rooms');
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('getJoinedRooms 需要用户 token', 0);
+  }
+  const res = await matrixFetchWithToken('/joined_rooms', {}, userToken);
   const data = (await res.json()) as { joined_rooms?: string[]; error?: string };
   if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
   return data.joined_rooms || [];

@@ -33,6 +33,8 @@ export interface Session {
   matrixAccessToken?: string;
   /** Matrix token 过期时间戳 ms，可选 */
   matrixTokenExpiresAt?: number;
+  /** 解析后的 Matrix user_id（当 external_id 冲突时，ensureMatrixUser 会更新已有用户并返回其 MXID） */
+  matrixUserId?: string;
   expiresAt: number;
 }
 
@@ -119,9 +121,10 @@ export async function saveSession(data: SessionData): Promise<Session> {
   return { sessionId, ...data };
 }
 
+/** 稳定用户标识：优先 username，其次 logtoSub，最后 session.user，供会话隔离、API user_id 等使用 */
 export function getStableUserId(session: Session | null | undefined): string {
   if (!session) return 'default';
-  return session.logtoSub ?? session.user;
+  return session.userProfile?.username ?? session.logtoSub ?? session.user;
 }
 
 /** 更新已有会话的部分字段 */

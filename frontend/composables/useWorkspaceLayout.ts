@@ -99,6 +99,8 @@ export function useWorkspaceLayout() {
    * - md～lg 且应用区展开：'288px 1fr'，会话列仅 288px（仅列表，聊天被挤出）
    * - 其他：'1fr auto' 或 '1fr 0fr'
    * layout 内用 isXlFromViewport 覆盖为 effectiveGridColumns，保证挂载后 xl 正确。
+   *
+   * SSR/水合：未挂载时使用固定值，避免 useBreakpoint 在客户端已更新而服务端恒为 false 导致水合不一致。
    */
   const gridTemplateColumns = computed(() => {
     const open = isPanelOpen.value
@@ -106,6 +108,8 @@ export function useWorkspaceLayout() {
     if (!open) return '1fr 0fr'
     if (isMounted.value && !isMd.value && !isLg.value) return '1fr 0fr'
     if (open && contentVisible) {
+      /* 未挂载时用 288px 1fr 与 SSR 一致，避免水合 mismatch */
+      if (!isMounted.value) return `${SESSION_LIST_WIDTH_PX}px 1fr`
       if (isXl.value) return '1fr auto'
       return `${SESSION_LIST_WIDTH_PX}px 1fr`
     }

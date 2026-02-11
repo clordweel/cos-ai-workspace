@@ -22,6 +22,13 @@ export interface Config {
     accessToken: string;
     password: string;
   };
+  /** MAS Personal Session：配置后优先用 MAS Admin API 签发 token，不再依赖密码/Admin 设密 */
+  mas: {
+    /** MAS 根 URL，与 MATRIX_BASE_URL 同源（nginx 已将 /api、/oauth2 转 MAS） */
+    baseUrl: string;
+    clientId: string;
+    clientSecret: string;
+  };
   dify: { apiBase: string; apiKey: string };
   cos: {
     baseUrl: string;
@@ -65,6 +72,11 @@ export const config: Config = {
     userId: process.env.MATRIX_USER_ID || '',
     accessToken: process.env.MATRIX_ACCESS_TOKEN || '',
     password: process.env.MATRIX_PASSWORD || '',
+  },
+  mas: {
+    baseUrl: (process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').replace(/\/$/, ''),
+    clientId: process.env.MAS_ADMIN_CLIENT_ID || '',
+    clientSecret: process.env.MAS_ADMIN_CLIENT_SECRET || '',
   },
 
   dify: {

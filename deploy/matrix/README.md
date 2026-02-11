@@ -55,9 +55,16 @@ chmod +x bootstrap-mas.sh
 ### 部署后
 
 - Matrix 端口仍为 8008，经 nginx 转发：`/login`、`/logout`、`/refresh` 由 MAS 处理
+- **Element 自动发现**：bootstrap 会生成 `well-known/matrix/client`，解决「Failed to get autodiscovery configuration」。存量部署可执行 `./generate-well-known.sh` 后 `docker compose ... restart nginx`
 - 迁移后用户可用原 Synapse 密码登录
 - 保存 `.env` 中的 `MAS_SECRET`，中间层接入 Personal Session 时需用
-- **Admin API（如 set-password）**：bootstrap 已加入 `policy.data.admin_users: ["admin"]` 并设置 `can_request_admin`。若仍报 "You are not a server admin"，可在工作区 `.env` 配置 `MATRIX_ACCESS_TOKEN`（使用 `mas-cli manage issue-compatibility-token` 或 Synapse Admin 签发的 admin token）。详见 `docs/LOGTO_MATRIX_USERNAME_MAPPING.md`
+- **Admin API（如 set-password）**：bootstrap 已加入 `policy.data.admin_users: ["admin"]` 并设置 `can_request_admin`。若仍报 "You are not a server admin"，可在工作区 `.env` 配置 `MATRIX_ACCESS_TOKEN`。签发方式：在 Matrix 部署机执行 `./issue-admin-token.sh`，将输出的 token 写入 `.env`。详见 `docs/LOGTO_MATRIX_USERNAME_MAPPING.md`
+- **密码修改功能**：bootstrap 已写入 `account.password_change_allowed: true`。若 Synapse 返回「Password change disabled」（MAS 下常见），中间层会自动回退到 MAS Admin API 设密，需配置 `MAS_ADMIN_CLIENT_ID`、`MAS_ADMIN_CLIENT_SECRET`。存量部署且仍失败时，在 `mas-config/override.yaml` 增加：
+  ```yaml
+  account:
+    password_change_allowed: true
+  ```
+  然后执行 `docker compose -f docker-compose.yml -f docker-compose.mas.yml restart mas`
 
 ### 已知限制
 
@@ -146,7 +153,7 @@ Synapse 本身无官方 Web 管理界面，可使用第三方 **Synapse Admin** 
 
 - **项目**：[etkecc/synapse-admin](https://github.com/etkecc/synapse-admin)（维护中的 Synapse 管理台）
 - **使用方式**：
-  - **CDN 版**：打开 <https://admin.etke.cc>，输入 Homeserver URL（如 `http://10.1.1.15:8008`）及管理员 Matrix 账号/密码登录
+  - **CDN 版**：打开 <https://admin.etke.cc>。MAS 下「凭证」可能不显示用户名/密码输入框，请用**「Access Token」**标签，在部署机执行 `./issue-admin-token.sh admin` 获取 token 后粘贴登录
   - **自建**：将 Synapse Admin 部署到自有域名（如 `https://matrix.你的域名/admin`），详见项目 README
 - **功能**：用户列表与权限、房间查看/删除、媒体管理；部分版本支持服务器状态与定时任务
 

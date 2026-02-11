@@ -102,9 +102,20 @@ export async function getLogtoUserCustomDataViaAccountApi(
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) {
+      const body = await res.text();
+      const errMsg = body
+        ? (() => {
+            try {
+              const o = JSON.parse(body) as { error?: string; message?: string };
+              return o.error ?? o.message ?? body.slice(0, 200);
+            } catch {
+              return body.slice(0, 200);
+            }
+          })()
+        : res.statusText;
       return {
         ok: false,
-        error: res.statusText || '获取 my-account 失败',
+        error: errMsg || '获取 my-account 失败',
         statusCode: res.status,
       };
     }
@@ -137,7 +148,16 @@ export async function patchLogtoUserCustomDataViaAccountApi(
     });
     if (!res.ok) {
       const body = await res.text();
-      const errMsg = body ? (() => { try { const o = JSON.parse(body); return (o as { message?: string }).message || body; } catch { return body.slice(0, 200); } })() : res.statusText;
+      const errMsg = body
+        ? (() => {
+            try {
+              const o = JSON.parse(body) as { error?: string; message?: string };
+              return o.error ?? o.message ?? body.slice(0, 200);
+            } catch {
+              return body.slice(0, 200);
+            }
+          })()
+        : res.statusText;
       if (res.status === 400) {
         console.warn('[logto] PATCH my-account 400:', errMsg, 'body 前 200 字:', body.slice(0, 200));
       }

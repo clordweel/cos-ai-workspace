@@ -46,6 +46,7 @@ function buildLoginIdentifier(
 /**
  * 使用用户名 / 邮箱 / 手机号 + 密码登录 Matrix
  * identifier 自动推断：含 @ 为邮箱，纯数字（或 + 开头）为手机号，否则为用户名（localpart）
+ * MAS 下邮箱登录可能不被支持，首次用邮箱失败时会回退为用邮箱前缀作为用户名重试
  */
 export async function matrixLoginWithIdentifier(
   identifier: string,
@@ -57,22 +58,38 @@ export async function matrixLoginWithIdentifier(
   }
   const id = buildLoginIdentifier(identifier, country);
   const url = `${config.matrix.baseUrl}${basePath}/login`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      type: 'm.login.password',
-      identifier: id,
-      password,
-    }),
-  });
-  const data = (await res.json().catch(() => ({}))) as {
+  const doLogin = (loginId: Record<string, unknown>) => {
+    return fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'm.login.password',
+        identifier: loginId,
+        password,
+      }),
+    });
+  };
+  let res = await doLogin(id);
+  let data = (await res.json().catch(() => ({}))) as {
     access_token?: string;
     user_id?: string;
     device_id?: string;
     error?: string;
     errcode?: string;
   };
+  // MAS 下邮箱登录可能返回 "does not support login using email address"，用邮箱前缀作为用户名回退
+  const raw = String(identifier).trim();
+  const emailNotSupported =
+    raw.includes('@') &&
+    !res.ok &&
+    data.error?.toLowerCase().includes('email');
+  if (emailNotSupported) {
+    const localpart = raw.split('@')[0];
+    if (localpart) {
+      res = await doLogin({ type: 'm.id.user', user: localpart });
+      data = (await res.json().catch(() => ({}))) as typeof data;
+    }
+  }
   if (!res.ok || !data.access_token) {
     return {
       ok: false,

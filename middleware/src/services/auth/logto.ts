@@ -3,7 +3,7 @@
  */
 import { config } from '../../config.js';
 import { formatPhoneForDisplay } from '../../utils/phoneFormat.js';
-import { ensureMatrixUser } from '../matrixUserSync.js';
+import { ensureMatrixUser, isMatrixConfigured } from '../matrixUserSync.js';
 import {
   generateSessionId,
   saveSession,
@@ -81,22 +81,7 @@ function extractPhoneFromMeData(meData: Record<string, unknown>): string | undef
   return undefined;
 }
 
-function syncMatrixUser(sub: string, displayName: string, email?: string, phone?: string, username?: string): void {
-  if (config.chat?.provider !== 'matrix') return;
-  ensureMatrixUser(sub, displayName, email, phone, username)
-    .then((out) => {
-      if (out.ok && out.created) {
-        console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${sub})`);
-      } else if (!out.ok) {
-        console.warn(`[auth] Matrix 用户同步失败 (Logto sub: ${sub}): ${out.error}`);
-      }
-    })
-    .catch((err) => {
-      console.warn('[auth] Matrix 用户同步异常:', err instanceof Error ? err.message : err);
-    });
-}
-
-/** Logto 回调：用 code 换 token，再取用户信息，创建会话 */
+/** Logto 回调：用 code 换 token，再取用户信息，创建会话；会 await Matrix 用户同步后再返回，确保重定向前用户已创建 */
 export async function handleLogtoCallback(
   code: string,
   redirectUri: string
@@ -161,7 +146,24 @@ export async function handleLogtoCallback(
     logtoTokenExpiresAt: Date.now() + expiresIn * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
-  if (logtoSub) syncMatrixUser(logtoSub, displayName, email, phone, username);
+  if (logtoSub) {
+    const out = await ensureMatrixUser(logtoSub, displayName, email, phone, username)
+      .catch((err) => {
+        console.warn('[auth] Matrix 用户同步异常:', err instanceof Error ? err.message : err, err);
+        return null;
+      });
+    if (out?.ok) {
+      if (out.created) {
+        console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${logtoSub} username: ${username || '-'})`);
+      } else {
+        console.info(`[auth] Matrix 用户已存在: ${out.matrixUserId} (Logto sub: ${logtoSub})`);
+      }
+    } else if (out && !out.ok) {
+      console.warn(
+        `[auth] Matrix 用户同步失败 (Logto sub: ${logtoSub} username: ${username || '-'}): status=${(out as { statusCode?: number }).statusCode} err=${out.error}`
+      );
+    }
+  }
   return { ok: true, sessionId: session.sessionId, user: displayName };
 }
 
@@ -174,7 +176,24 @@ export async function createSessionFromLogtoAccessToken(
   const meRes = await fetch(`${endpoint}/oidc/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!meRes.ok) return { ok: false, error: 'Token 无效或已过期' };
+  if (!meRes.ok) {
+    const body = await meRes.text();
+    const logtoErr =
+      body &&
+      (() => {
+        try {
+          const o = JSON.parse(body) as { error?: string; message?: string };
+          return o.error ?? o.message;
+        } catch {
+          return undefined;
+        }
+      })();
+    const msg =
+      /token.*not active|token.*invalid|token.*expired/i.test(logtoErr ?? '')
+        ? '登录已失效，请重新登录'
+        : logtoErr || 'Token 无效或已过期';
+    return { ok: false, error: msg };
+  }
   const meData = (await meRes.json().catch(() => ({}))) as Record<string, unknown>;
   const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
   if (!logtoSub) return { ok: false, error: '无法获取用户信息' };
@@ -203,7 +222,19 @@ export async function createSessionFromLogtoAccessToken(
     logtoTokenExpiresAt: Date.now() + 3600 * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
-  syncMatrixUser(logtoSub, displayName, email, phone, username);
+  if (logtoSub && isMatrixConfigured()) {
+    await ensureMatrixUser(logtoSub, displayName, email, phone, username)
+      .then((out) => {
+        if (out.ok && out.created) {
+          console.info(`[auth] sync-session Matrix 用户已创建: ${out.matrixUserId}`);
+        } else if (!out.ok) {
+          console.warn(`[auth] sync-session Matrix 同步失败: ${out.error}`);
+        }
+      })
+      .catch((err) => {
+        console.warn('[auth] sync-session Matrix 同步异常:', err instanceof Error ? err.message : err);
+      });
+  }
   return { ok: true, sessionId: session.sessionId, user: displayName };
 }
 
