@@ -71,6 +71,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **架构** | `docs/ARCHITECTURE.md` | 数据流、约束、适配器与认证 |
 | **认证与用户配置** | `docs/AUTH_AND_USER_CONFIG.md` | Logto 统一认证、用户偏好 customData、API、Matrix 同步配置 |
 | **Logto + Matrix 流程** | `docs/LOGTO_MATRIX_AUTH_FLOW.md` | Matrix 密码设置/修改、与 Logto 的关系 |
+| **MAS 与 AS 调研** | `docs/MAS_AND_AS_RESEARCH.md` | MAS/Appservice 对改进 Matrix token 获取的可行性 |
 | **前端** | `docs/FRONTEND_SPEC.md` | 布局、目录、视图、主题、扩展 |
 | **鉴权** | `docs/FRONTEND_AUTH_AND_PERMISSIONS.md` | 免认证/需认证/分权限、usePermissions |
 | **扩展** | `docs/APP_EXTENSIONS.md` | 应用扩展契约、注册、懒加载 |
