@@ -17,6 +17,12 @@ const authLoading = ref(true)
 const permissions = ref<string[]>([])
 /** 用户偏好（来自 Logto customData），仅 Logto 登录时有值 */
 const preferences = ref<Record<string, unknown>>({})
+/** Matrix sync 用 token（混合方案：仅用于前端 sync/typing/已读），来自 /api/auth/me */
+const matrixSyncToken = ref<string>('')
+/** Matrix 服务 base URL，与 matrixSyncToken 配套 */
+const matrixBaseUrl = ref<string>('')
+/** 当前用户 MXID（与 matrixSyncToken 配套，用于 createClient） */
+const matrixUserId = ref<string>('')
 
 export function useAuth() {
   const apiBase = useApiBase()
@@ -35,6 +41,15 @@ export function useAuth() {
           ? (data as { permissions: string[] }).permissions
           : []
         preferences.value = (data as { preferences?: Record<string, unknown> }).preferences ?? {}
+        matrixSyncToken.value = typeof (data as { matrixSyncToken?: string }).matrixSyncToken === 'string'
+          ? (data as { matrixSyncToken: string }).matrixSyncToken
+          : ''
+        matrixBaseUrl.value = typeof (data as { matrix_base_url?: string }).matrix_base_url === 'string'
+          ? (data as { matrix_base_url: string }).matrix_base_url
+          : ''
+        matrixUserId.value = typeof (data as { matrix_user_id?: string }).matrix_user_id === 'string'
+          ? (data as { matrix_user_id: string }).matrix_user_id
+          : ''
         return true
       }
       isAuthenticated.value = false
@@ -42,6 +57,9 @@ export function useAuth() {
       userId.value = ''
       permissions.value = []
       preferences.value = {}
+      matrixSyncToken.value = ''
+      matrixBaseUrl.value = ''
+      matrixUserId.value = ''
       return false
     } catch {
       isAuthenticated.value = false
@@ -49,6 +67,9 @@ export function useAuth() {
       userId.value = ''
       permissions.value = []
       preferences.value = {}
+      matrixSyncToken.value = ''
+      matrixBaseUrl.value = ''
+      matrixUserId.value = ''
       return false
     } finally {
       authLoading.value = false
@@ -71,6 +92,9 @@ export function useAuth() {
       userId.value = ''
       permissions.value = []
       preferences.value = {}
+      matrixSyncToken.value = ''
+      matrixBaseUrl.value = ''
+      matrixUserId.value = ''
     }
   }
 
@@ -97,6 +121,9 @@ export function useAuth() {
     authLoading: readonly(authLoading),
     permissions: readonly(permissions),
     preferences: readonly(preferences),
+    matrixSyncToken: readonly(matrixSyncToken),
+    matrixBaseUrl: readonly(matrixBaseUrl),
+    matrixUserId: readonly(matrixUserId),
     fetchUser,
     login,
     logout,

@@ -10,15 +10,20 @@ import {
   getStableUserId,
   logoutSession,
   getCookieName,
+  updateSession,
   getLogtoAuthUrl,
   handleLogtoCallback,
   createSessionFromLogtoAccessToken,
   getLogtoAccessTokenForSession,
 } from '../services/auth.js';
+import { loginAsUser } from '../adapters/matrixClient.js';
 import { matrixLoginWithIdentifier, matrixChangePassword } from '../services/matrixAuth.js';
-import { getMatrixUserIdForLogtoSub, setMatrixPasswordByAdmin } from '../services/matrixUserSync.js';
+import { getMatrixUserId, setMatrixPasswordByAdmin } from '../services/matrixUserSync.js';
+import { setStoredMatrixPassword } from '../services/matrixPasswordStore.js';
+import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import {
   logtoUpdateUserPassword,
+  logtoUpdateUserProfile,
   getLogtoUserCustomDataViaAccountApi,
   patchLogtoUserCustomDataViaAccountApi,
   getLogtoUserCustomData,
@@ -26,6 +31,8 @@ import {
   getPreferencesFromCustomData,
   mergePreferencesIntoCustomData,
 } from '../services/logtoManagement.js';
+import { ensureMatrixUser } from '../services/matrixUserSync.js';
+import { formatPhoneForDisplay } from '../utils/phoneFormat.js';
 
 const ACCOUNT_CENTER_DISABLED = 'Account center is not enabled';
 
@@ -89,7 +96,16 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     const user = session.userProfile ?? session.user;
     const userId = getStableUserId(session);
-    const payload: { ok: true; user: unknown; userId: string; type: string; preferences?: Record<string, unknown> } = {
+    const payload: {
+      ok: true;
+      user: unknown;
+      userId: string;
+      type: string;
+      preferences?: Record<string, unknown>;
+      matrixSyncToken?: string;
+      matrix_base_url?: string;
+      matrix_user_id?: string;
+    } = {
       ok: true,
       user,
       userId,
@@ -113,6 +129,18 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
       if (customData !== null) {
         payload.preferences = getPreferencesFromCustomData(customData);
+      }
+    }
+    if (config.chat?.provider === 'matrix' && session.logtoSub) {
+      let token = session.matrixAccessToken;
+      if (!token) {
+        const ensured = await ensureMatrixTokenForSession(session);
+        if (ensured) token = ensured.access_token;
+      }
+      if (token) {
+        payload.matrixSyncToken = token;
+        payload.matrix_base_url = config.matrix.baseUrl;
+        payload.matrix_user_id = getMatrixUserId(session.logtoSub, session.userProfile?.username);
       }
     }
     return reply.send(payload);
@@ -157,6 +185,53 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ ok: true, preferences: getPreferencesFromCustomData(result.customData) });
   });
 
+  /** 更新用户资料（邮箱、手机号），需 Logto 登录且配置 M2M */
+  app.patch('/api/auth/me/profile', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as { email?: string; phone?: string }) || {};
+    const patch: { primaryEmail?: string | null; primaryPhone?: string | null } = {};
+    if (body.email !== undefined) {
+      const v = body.email?.trim();
+      patch.primaryEmail = v && /^\S+@\S+\.\S+$/.test(v) ? v : (v === '' ? null : undefined);
+      if (v && !patch.primaryEmail) {
+        return reply.code(400).send({ ok: false, error: '邮箱格式不正确' });
+      }
+    }
+    if (body.phone !== undefined) {
+      const raw = body.phone?.trim();
+      patch.primaryPhone = raw || null;
+    }
+    if (Object.keys(patch).length === 0) {
+      return reply.code(400).send({ ok: false, error: '请提供要更新的字段（email 或 phone）' });
+    }
+    const result = await logtoUpdateUserProfile(session.logtoSub, patch);
+    if (!result.ok) {
+      return reply
+        .code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 503)
+        .send({ ok: false, error: result.error });
+    }
+    const nextProfile = { ...session.userProfile, name: session.userProfile?.name ?? session.user };
+    if (patch.primaryEmail !== undefined) nextProfile.email = patch.primaryEmail ?? undefined;
+    if (patch.primaryPhone !== undefined) {
+      const formatted = patch.primaryPhone ? formatPhoneForDisplay(patch.primaryPhone) : '';
+      nextProfile.phone = formatted || undefined;
+    }
+    await updateSession(session.sessionId, { userProfile: nextProfile });
+    if (config.chat?.provider === 'matrix' && (patch.primaryEmail !== undefined || patch.primaryPhone !== undefined)) {
+      ensureMatrixUser(
+        session.logtoSub,
+        nextProfile.name,
+        nextProfile.email,
+        nextProfile.phone,
+        nextProfile.username
+      ).catch((e) => req.log.warn(e, '更新 profile 后 Matrix 同步失败'));
+    }
+    return reply.send({ ok: true });
+  });
+
   app.post('/api/auth/logout', async (req, reply) => {
     const session = await getSessionFromCookie(req.headers.cookie);
     if (session) await logoutSession(session.sessionId);
@@ -198,7 +273,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!currentPassword || !newPassword) {
       return reply.code(400).send({ ok: false, error: '请填写当前密码和新密码' });
     }
-    const matrixUserId = getMatrixUserIdForLogtoSub(session.logtoSub);
+    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
     const result = await matrixChangePassword(matrixUserId, currentPassword, newPassword);
     if (!result.ok) {
       return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
@@ -220,7 +295,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     if (!newPassword) {
       return reply.code(400).send({ ok: false, error: '请填写新密码' });
     }
-    const matrixUserId = getMatrixUserIdForLogtoSub(session.logtoSub);
+    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
     const result = await setMatrixPasswordByAdmin(matrixUserId, newPassword);
     if (!result.ok) {
       return reply.code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 400).send({
@@ -228,7 +303,47 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         error: result.error,
       });
     }
+    try {
+      const loginResult = await loginAsUser(matrixUserId, newPassword);
+      const expiresInMs = loginResult.expires_in_ms ?? 24 * 60 * 60 * 1000;
+      await updateSession(session.sessionId, {
+        matrixAccessToken: loginResult.access_token,
+        matrixTokenExpiresAt: Date.now() + expiresInMs,
+      });
+      await setStoredMatrixPassword(session.logtoSub, newPassword);
+    } catch (e) {
+      req.log.warn(e, 'Matrix 用户登录（存 token）失败，密码已设置');
+    }
     return reply.send({ ok: true });
+  });
+
+  /** Matrix 登录（已有密码、当前会话无 token 时）：body { password }，成功则写入 session.matrixAccessToken */
+  app.post('/api/auth/matrix/session-login', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as { password?: string }) || {};
+    const password = body.password;
+    if (!password) {
+      return reply.code(400).send({ ok: false, error: '请填写 Matrix 密码' });
+    }
+    const matrixUserId = getMatrixUserId(session.logtoSub, session.userProfile?.username);
+    try {
+      const loginResult = await loginAsUser(matrixUserId, password);
+      const expiresInMs = loginResult.expires_in_ms ?? 24 * 60 * 60 * 1000;
+      await updateSession(session.sessionId, {
+        matrixAccessToken: loginResult.access_token,
+        matrixTokenExpiresAt: Date.now() + expiresInMs,
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const code = (e as { statusCode?: number }).statusCode;
+      return reply
+        .code(code && code >= 400 ? code : 401)
+        .send({ ok: false, error: msg || 'Matrix 登录失败' });
+    }
   });
 
   /** 修改 Logto 密码（需 Logto 已登录，无需当前密码；使用 Management API） */

@@ -2,10 +2,10 @@
 
 > 用户认证与配置管理统一由 Logto；Matrix 仅作会话后端，从 Logto 同步用户。整体原则与 Matrix 所需配置见 [AUTH_AND_USER_CONFIG.md](./AUTH_AND_USER_CONFIG.md)。
 
-## 问题：用户如何知晓 Matrix 密码？
+## 会话用 Matrix token（无需用户再输入 Matrix 密码）
 
-- 用户通过 **Logto** 登录后，中间层会在 Synapse 中**自动创建/更新**对应用户（Admin API）。
-- 新建用户时，Synapse 要求必填密码，中间层会生成**随机初始密码**且**不存储、不告知用户**，因此用户默认**不知道**自己在 Matrix 里的密码。
+- 用户通过 **Logto** 登录后，中间层会在 Synapse 中**自动创建/更新**对应用户（Admin API），并生成随机初始密码（不存、不告知）。
+- **本应用内会话**：用户仅需 Logto 登录。中间层在 `GET /api/auth/me` 或会话 API 首次调用时，若无 Matrix token 则自动用 Admin API 为该用户设随机密码并登录，将 `matrixAccessToken` 写入会话；前端不展示任何 Matrix 登录或「设置 Matrix 密码」入口。
 
 ## 流程梳理
 
@@ -16,34 +16,22 @@
 3. 若该 Logto 用户在 Matrix 中**不存在**：用 Admin API 创建用户，并设置**随机初始密码**（不存、不告知）。
 4. 若已存在：仅更新 displayname / threepids / external_ids，**不修改密码**。
 
-### 2. 用户如何获得/使用 Matrix 密码？
+### 2. 会话用 token 的自动获取
 
-| 场景 | 做法 |
-|------|------|
-| **首次使用 / 忘记当前密码** | 已 Logto 登录时，在应用区「用户信息」→ **「设置 Matrix 密码」**。中间层用 **Admin API 直接设置** 该用户的 Matrix 密码（无需当前密码），设置成功后用户即知晓自己设置的密码，可用于 Matrix 登录或后续修改。 |
-| **修改 Logto 登录密码** | 「用户信息」→ **「修改 Logto 密码」**，仅填写新密码 + 确认，无需当前密码；中间层用 Logto Management API 直接更新。 |
-| **用密码登录 Matrix（含 Element 等）** | 在认证登录页使用 **「Matrix 登录」** 表单（用户名/邮箱/手机号 + 密码），或任意 Matrix 客户端用同一账号与密码登录。 |
+- 当 `GET /api/auth/me` 或会话相关 API（如 `GET /api/sessions`、`POST /api/chat/stream`）被调用且会话有 `logtoSub` 但无 `matrixAccessToken` 时，中间层调用 `ensureMatrixTokenForSession(session)`：用 Admin API 为该用户设**新的随机密码**并调用 Matrix Client-Server 登录，将返回的 `access_token` 写入会话。用户无需在前端进行任何 Matrix 登录或设置密码操作。
 
 ### 3. 接口与前端入口
 
 | 能力 | 接口 | 说明 |
 |------|------|------|
 | 修改 Logto 密码 | `POST /api/auth/logto/change-password` | 需 Logto 登录；body: `{ new_password }`；无需当前密码，使用 Management API。 |
-| 设置 Matrix 密码 | `POST /api/auth/matrix/set-password` | 需 Logto 登录；body: `{ new_password }`；中间层用 Admin API 为该用户设密。 |
-| Matrix 登录 | `POST /api/auth/matrix/login` | 无需 Logto；body: `{ identifier, password }`（identifier 支持用户名/邮箱/手机号）。 |
+| 设置 Matrix 密码（可选） | `POST /api/auth/matrix/set-password` | 需 Logto 登录；body: `{ new_password }`。若需在 Element 等客户端用同一 Matrix 账号，可调此接口设可知密码；本应用内会话不依赖此项。 |
+| Matrix 登录（可选） | `POST /api/auth/matrix/login` | 无需 Logto；body: `{ identifier, password }`。前端已移除该入口；本应用仅用 Logto 登录。 |
 
 前端入口：
 
-- **用户信息**（应用区首标签，侧栏底部头像/用户）：已 Logto 登录时展示「修改 Logto 密码」；配置 Matrix 时另展示「设置 Matrix 密码」。
-- **认证登录**：Logto 登录按钮 + Matrix 登录表单（用户名/邮箱/手机号 + 密码）。
-
-## 推荐使用顺序（Logto 用户）
-
-1. 使用 **Logto 登录** 进入工作台。
-2. 打开 **用户信息** → 在「设置 Matrix 密码」中**设置并牢记**密码。
-3. 之后可用该密码在认证页进行 **Matrix 登录**。修改 Logto 登录密码在「用户信息」→ **修改 Logto 密码**（仅新密码 + 确认，无需当前密码）。
-
-这样既保证 Synapse 新建用户时有合法密码，又让用户通过「设置 Matrix 密码」一步获得可知、可用的密码。
+- **用户信息**（应用区首标签）：已 Logto 登录时展示「修改 Logto 密码」；**不再展示**「设置 Matrix 密码」或 Matrix 登录。
+- **认证登录**：仅 **Logto 登录** 按钮。
 
 ## SDK 使用
 

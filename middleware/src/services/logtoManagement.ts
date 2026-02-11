@@ -231,6 +231,52 @@ export async function patchLogtoUserCustomData(
 }
 
 /**
+ * 使用 Management API 更新用户资料（邮箱、手机号等）
+ * primaryPhone 需为 E.164 数字格式（不含 +），如 8613800138000
+ */
+export async function logtoUpdateUserProfile(
+  userId: string,
+  patch: { primaryEmail?: string | null; primaryPhone?: string | null }
+): Promise<{ ok: true } | { ok: false; error: string; statusCode?: number }> {
+  if (!userId?.trim()) {
+    return { ok: false, error: '用户 ID 为空', statusCode: 400 };
+  }
+  if (!isConfigured()) {
+    return { ok: false, error: '未配置 Logto M2M', statusCode: 503 };
+  }
+  const body: Record<string, string | null> = {};
+  if (patch.primaryEmail !== undefined) {
+    body.primaryEmail = patch.primaryEmail && patch.primaryEmail.trim() ? patch.primaryEmail.trim() : null;
+  }
+  if (patch.primaryPhone !== undefined) {
+    const raw = patch.primaryPhone?.trim();
+    const digits = raw ? raw.replace(/\D/g, '') : '';
+    body.primaryPhone = digits ? digits : null;
+  }
+  if (Object.keys(body).length === 0) {
+    return { ok: false, error: '请提供要更新的字段', statusCode: 400 };
+  }
+  try {
+    const client = getApiClient();
+    const res = await client.PATCH('/api/users/{userId}', {
+      params: { path: { userId: userId.trim() } },
+      body: body as Record<string, never>,
+    });
+    if (res.error) {
+      return {
+        ok: false,
+        error: (res.error as { message?: string })?.message || res.response?.statusText || '更新用户资料失败',
+        statusCode: res.response?.status,
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg, statusCode: 500 };
+  }
+}
+
+/**
  * 使用 Management API 修改用户密码（无需当前密码）
  * @param userId - Logto 用户 ID（如 session.logtoSub）
  * @param newPassword - 新密码

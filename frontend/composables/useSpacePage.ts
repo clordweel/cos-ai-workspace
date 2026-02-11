@@ -92,6 +92,7 @@ export function useSpacePage() {
     if (app === 'contacts' || app === 'bots') openPanel(app as any)
   })
 
+  const { authLoading } = useAuth()
   onMounted(() => {
     const t = setTimeout(() => { showChatPlaceholderOnFirstLoad.value = false }, 120)
     onBeforeUnmount(() => clearTimeout(t))
@@ -113,8 +114,18 @@ export function useSpacePage() {
       if (app === 'contacts' || app === 'bots') openPanel(app)
     }
 
-    loadSessions().catch(() => {})
     if (mockSessionListEnabled.value) seedMockMessages(getMessages, setMessages)
+    const { hasSyncToken, startSyncClient } = useMatrixSyncClient()
+    if (hasSyncToken.value) startSyncClient().catch(() => {})
+
+    function whenAuthReady() {
+      loadSessions().catch(() => {})
+    }
+    if (!authLoading.value) {
+      whenAuthReady()
+    } else {
+      watch(authLoading, (loading) => { if (loading === false) whenAuthReady() }, { once: true })
+    }
   })
 
   onMounted(() => {
@@ -140,6 +151,7 @@ export function useSpacePage() {
     appContentVisible,
     showAppPanel,
     openAddParticipant,
+    openPanel,
     ...listApi,
     ...paneApi,
   }

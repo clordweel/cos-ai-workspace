@@ -195,6 +195,7 @@ const {
   appContentVisible,
   showAppPanel,
   openAddParticipant,
+  openPanel,
   listViewTab,
   listPaddingTop,
   toolbarTop,

@@ -26,6 +26,7 @@
 |------|------|
 | `GET /api/auth/me` | 返回当前会话 user、userId、type；**Logto 登录时**并配置 M2M 时，附加 `preferences`（来自 Logto customData）。 |
 | `PATCH /api/auth/me/preferences` | 需 Logto 登录；body 部分字段 `theme`、`uiFontSizeStep`、`notificationsEnabled`，部分更新 Logto customData。 |
+| `PATCH /api/auth/me/profile` | 需 Logto 登录且配置 M2M；body 可选 `email`、`phone`，更新 Logto 用户 primaryEmail/primaryPhone，并同步至 Matrix。 |
 
 ## 前端
 
@@ -44,6 +45,6 @@ Matrix 仅作为聊天/会话后端，**用户身份与资料以 Logto 为准**�
 | `MATRIX_SERVER_NAME` | MXID 域名（如 `10.1.1.15`），与 Synapse `server_name` 一致。 |
 | `MATRIX_USER_ID` / `MATRIX_PASSWORD` 或 `MATRIX_ACCESS_TOKEN` | 中间层调用 Synapse 时使用的管理员账号（Admin API 创建/更新用户）。 |
 
-同步逻辑：Logto 回调成功后，中间层调用 `ensureMatrixUser(logtoSub, displayName, email)`，不存在则创建并设随机初始密码（不存、不告知），已存在则仅更新 displayname/threepids。用户可通过「设置 Matrix 密码」获得可知密码，详见 [LOGTO_MATRIX_AUTH_FLOW.md](./LOGTO_MATRIX_AUTH_FLOW.md)。
+同步逻辑：Logto 回调成功后，中间层调用 `ensureMatrixUser(logtoSub, displayName, email, phone, username)`。**Matrix localpart 优先使用 Logto username**（有则 `@username:server`，无则回退 `@sanitized_logtoSub:server`）。不存在则创建并设随机初始密码（不存、不告知），已存在则仅更新 displayname、threepids（含 email、msisdn）。手机号需在 Logto 授权 scope 中请求 `phone`，且用户在 Logto 中已绑定主手机号（primaryPhone）；中间层会从 /oidc/me 的 phone、primaryPhone、custom_data 等字段提取。**会话用 Matrix token**：用户仅需 Logto 登录；中间层在 `GET /api/auth/me` 或会话 API 首次调用时自动用 Admin API 设随机密码并登录，将 token 写入会话，无需用户再输入 Matrix 密码。详见 [LOGTO_MATRIX_AUTH_FLOW.md](./LOGTO_MATRIX_AUTH_FLOW.md)。
 
 前端如需直连 Matrix（如 matrix-js-sdk、认证页 Matrix 登录）：配置 `NUXT_PUBLIC_MATRIX_BASE_URL`（与 `MATRIX_BASE_URL` 同源即可）。

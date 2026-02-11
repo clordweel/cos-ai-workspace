@@ -2,6 +2,7 @@
  * Logto SSO：授权 URL、回调换 token、用 access token 建会话；登录成功后同步 Matrix 用户
  */
 import { config } from '../../config.js';
+import { formatPhoneForDisplay } from '../../utils/phoneFormat.js';
 import { ensureMatrixUser } from '../matrixUserSync.js';
 import {
   generateSessionId,
@@ -33,12 +34,12 @@ export function getLogtoAuthUrl(
   if (!endpoint || !appId) {
     return { ok: false, error: '未配置 Logto（LOGTO_ENDPOINT / LOGTO_APP_ID）' };
   }
-  // custom_data：Account API PATCH /api/my-account 读写 customData 所需（不传 resource，避免「resource indicator missing or unknown」）
+  // custom_data：Account API PATCH /api/my-account 读写 customData 所需；phone 用于同步手机号到 Matrix
   const params = new URLSearchParams({
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid profile email offline_access custom_data',
+    scope: 'openid profile email phone offline_access custom_data',
     state: state || generateSessionId(),
   });
   if (options?.prompt) params.set('prompt', options.prompt);
@@ -56,9 +57,33 @@ export interface LogtoCallbackResultFail {
   error: string;
 }
 
-function syncMatrixUser(sub: string, displayName: string, email?: string): void {
+/** 从 Logto /oidc/me 响应中提取手机号（兼容多种字段名与结构） */
+function extractPhoneFromMeData(meData: Record<string, unknown>): string | undefined {
+  const v = (x: unknown) => (typeof x === 'string' && x.trim() ? x.trim() : undefined);
+  const phone =
+    v(meData.phone) ??
+    v(meData.primaryPhone) ??
+    v(meData.primary_phone) ??
+    v(meData.phone_number) ??
+    v(meData.phoneNumber);
+  if (phone) return phone;
+  const customData = meData.custom_data as Record<string, unknown> | undefined;
+  if (customData && typeof customData === 'object') {
+    const cd =
+      v(customData.phone) ?? v(customData.primaryPhone) ?? v(customData.primary_phone);
+    if (cd) return cd;
+  }
+  const ids = meData.identifiers as Array<{ type?: string; value?: string }> | undefined;
+  if (Array.isArray(ids)) {
+    const phoneId = ids.find((i) => /phone|msisdn/i.test(String(i?.type ?? '')));
+    if (phoneId?.value) return v(phoneId.value);
+  }
+  return undefined;
+}
+
+function syncMatrixUser(sub: string, displayName: string, email?: string, phone?: string, username?: string): void {
   if (config.chat?.provider !== 'matrix') return;
-  ensureMatrixUser(sub, displayName, email)
+  ensureMatrixUser(sub, displayName, email, phone, username)
     .then((out) => {
       if (out.ok && out.created) {
         console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${sub})`);
@@ -108,31 +133,35 @@ export async function handleLogtoCallback(
   const meRes = await fetch(`${endpoint}/oidc/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  const meData = (await meRes.json().catch(() => ({}))) as {
-    name?: string;
-    sub?: string;
-    username?: string;
-    email?: string;
-    picture?: string;
-  };
-  const displayName = meData.name || meData.username || meData.sub || 'Logto User';
+  const meData = (await meRes.json().catch(() => ({}))) as Record<string, unknown>;
+  const displayName =
+    (meData.name as string) || (meData.username as string) || (meData.sub as string) || 'Logto User';
+  const username = typeof meData.username === 'string' ? meData.username : undefined;
+  const email =
+    (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
+  const phoneRaw = extractPhoneFromMeData(meData);
+  const phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
+  const avatarVal = meData.picture ?? meData.avatar;
   const userProfile: UserProfile = {
     name: displayName,
-    ...(meData.email && { email: meData.email }),
-    ...(meData.picture && { avatar: meData.picture }),
+    ...(username && { username }),
+    ...(email && { email }),
+    ...(phone && { phone }),
+    ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
   };
   const expiresIn = Math.max(Number(tokenData.expires_in) || 3600, 60);
+  const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
   const session = await saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
-    logtoSub: meData.sub,
+    logtoSub,
     logtoAccessToken: accessToken,
     ...(tokenData.refresh_token && { logtoRefreshToken: tokenData.refresh_token }),
     logtoTokenExpiresAt: Date.now() + expiresIn * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
-  if (meData.sub) syncMatrixUser(meData.sub, displayName, meData.email);
+  if (logtoSub) syncMatrixUser(logtoSub, displayName, email, phone, username);
   return { ok: true, sessionId: session.sessionId, user: displayName };
 }
 
@@ -146,31 +175,35 @@ export async function createSessionFromLogtoAccessToken(
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!meRes.ok) return { ok: false, error: 'Token 无效或已过期' };
-  const meData = (await meRes.json().catch(() => ({}))) as {
-    name?: string;
-    sub?: string;
-    username?: string;
-    email?: string;
-    picture?: string;
-  };
-  if (!meData.sub) return { ok: false, error: '无法获取用户信息' };
-  const displayName = meData.name || meData.username || meData.sub || 'Logto User';
+  const meData = (await meRes.json().catch(() => ({}))) as Record<string, unknown>;
+  const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
+  if (!logtoSub) return { ok: false, error: '无法获取用户信息' };
+  const displayName =
+    (meData.name as string) || (meData.username as string) || logtoSub || 'Logto User';
+  const username = typeof meData.username === 'string' ? meData.username : undefined;
+  const email =
+    (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
+  const phoneRaw = extractPhoneFromMeData(meData);
+  const phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
+  const avatarVal = meData.picture ?? meData.avatar;
   const userProfile: UserProfile = {
     name: displayName,
-    ...(meData.email && { email: meData.email }),
-    ...(meData.picture && { avatar: meData.picture }),
+    ...(username && { username }),
+    ...(email && { email }),
+    ...(phone && { phone }),
+    ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
   };
   // sync-session 仅带 accessToken，无 refresh_token，设 1 小时过期
   const session = await saveSession({
     type: 'logto',
     user: displayName,
     userProfile,
-    logtoSub: meData.sub,
+    logtoSub,
     logtoAccessToken: accessToken,
     logtoTokenExpiresAt: Date.now() + 3600 * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
   });
-  if (meData.sub) syncMatrixUser(meData.sub, displayName, meData.email);
+  syncMatrixUser(logtoSub, displayName, email, phone, username);
   return { ok: true, sessionId: session.sessionId, user: displayName };
 }
 

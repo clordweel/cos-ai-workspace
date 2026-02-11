@@ -55,6 +55,7 @@ export function useChatSessionsApi() {
         `${base}/api/sessions?user_id=${encodeURIComponent(uid)}`,
         { credentials: 'include' },
       )
+      if (res.status === 401) return false
       if (res.status === 501 || res.status === 502) return false
       if (!res.ok) return false
       const json = (await res.json()) as { sessions?: ApiSession[] }
@@ -90,6 +91,7 @@ export function useChatSessionsApi() {
         `${base}/api/sessions/${encodeURIComponent(sessionId)}/messages?user_id=${encodeURIComponent(uid)}&limit=${limit}`,
         { credentials: 'include' },
       )
+      if (res.status === 401) return false
       if (res.status === 501 || res.status === 502) return false
       if (!res.ok) return false
       const json = (await res.json()) as { messages?: ApiMessage[] }

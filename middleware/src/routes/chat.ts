@@ -1,10 +1,14 @@
 /**
  * 对话相关：流式 SSE、会话列表/历史（适配器驱动）、导出 Markdown（未登录也可会话）
  * 多用户：userId 优先从 Cookie 会话推导，无会话时用 body/query 或 'default'
+ * Matrix 混合方案：provider 为 matrix 时会话 API 需 Logto 登录且 matrixAccessToken，否则 401
  */
 import type { FastifyInstance } from 'fastify';
 import { getChatAdapter } from '../adapters/index.js';
 import { getSessionFromCookie, getStableUserId } from '../services/auth.js';
+import { getMatrixUserId } from '../services/matrixUserSync.js';
+import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
+import { config } from '../config.js';
 import { messagesToMarkdown } from '../services/exportMarkdown.js';
 
 async function resolveUserId(req: { headers: { cookie?: string }; body?: unknown; query?: unknown }): Promise<string> {
@@ -15,6 +19,32 @@ async function resolveUserId(req: { headers: { cookie?: string }; body?: unknown
   return fromBody ?? fromQuery ?? 'default';
 }
 
+/** Matrix 时会话 API 需 Logto + matrixAccessToken；无 token 时先尝试自动获取，仍无则 401，返回 true 表示已 401；成功后可能已改写 session 的 matrixAccessToken */
+async function requireMatrixToken(
+  req: { headers: { cookie?: string } },
+  session: Awaited<ReturnType<typeof getSessionFromCookie>>,
+  reply: { code: (n: number) => { send: (body: object) => unknown } }
+): Promise<boolean> {
+  if (config.chat?.provider !== 'matrix') return false;
+  if (!session?.logtoSub) {
+    reply.code(401).send({ error: '需要登录' });
+    return true;
+  }
+  if (!session.matrixAccessToken) {
+    await ensureMatrixTokenForSession(session);
+    const fresh = await getSessionFromCookie(req.headers.cookie);
+    if (fresh?.matrixAccessToken) {
+      session.matrixAccessToken = fresh.matrixAccessToken;
+      session.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
+    }
+  }
+  if (!session.matrixAccessToken) {
+    reply.code(401).send({ error: '无法使用会话，请稍后重试' });
+    return true;
+  }
+  return false;
+}
+
 export async function chatRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/chat/stream', async (req, reply) => {
     const body = (req.body as { message?: string; conversation_id?: string; user_id?: string }) || {};
@@ -22,7 +52,6 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     if (!message) {
       return reply.code(400).send({ error: 'message is required' });
     }
-    const userId = await resolveUserId(req);
 
     const adapter = getChatAdapter();
     const useAdapter = adapter && adapter.supportsStreaming();
@@ -32,6 +61,11 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         message: '请设置 CHAT_PROVIDER（如 mock 用于调试）',
       });
     }
+
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (await requireMatrixToken(req, session, reply)) return;
+
+    const userId = await resolveUserId(req);
 
     const origin = req.headers.origin || '*';
     reply.raw.writeHead(200, {
@@ -60,6 +94,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         userId,
         send,
         flush,
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
       });
     } catch (e) {
       req.log.error(e);
@@ -88,9 +124,15 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         message: '请使用支持 listSessions 的 CHAT_PROVIDER（如 mock）',
       });
     }
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (await requireMatrixToken(req, session, reply)) return;
+
     const userId = await resolveUserId(req);
     try {
-      const list = await adapter.listSessions({ userId });
+      const list = await adapter.listSessions({
+        userId,
+        matrixAccessToken: session?.matrixAccessToken,
+      });
       return reply.send({ sessions: list });
     } catch (e) {
       req.log.error(e);
@@ -119,6 +161,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       if (!sessionId) {
         return reply.code(400).send({ error: 'session id is required' });
       }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+
       const userId = await resolveUserId(req);
       const limit = req.query?.limit ?? 50;
       const beforeId = req.query?.before_id;
@@ -129,12 +174,88 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           userId,
           limit: Number(limit) || 50,
           beforeId: beforeId || undefined,
+          matrixAccessToken: session?.matrixAccessToken,
+          currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
         });
         return reply.send({ messages });
       } catch (e) {
         req.log.error(e);
         return reply.code(502).send({
           error: '拉取会话历史失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
+  app.post('/api/sessions', async (req, reply) => {
+    const adapter = getChatAdapter();
+    if (!adapter || typeof adapter.createSession !== 'function') {
+      return reply.code(501).send({
+        error: '当前后端不支持创建会话',
+        message: '请使用支持 createSession 的 CHAT_PROVIDER（如 matrix）',
+      });
+    }
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (await requireMatrixToken(req, session, reply)) return;
+
+    const userId = await resolveUserId(req);
+    const body = (req.body as { title?: string }) || {};
+    try {
+      const created = await adapter.createSession({
+        userId,
+        title: body.title,
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid: session?.logtoSub ? getMatrixUserId(session.logtoSub, session.userProfile?.username) : undefined,
+      });
+      return reply.send(created);
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '创建会话失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
+  app.post<{ Params: { id?: string }; Body: { inviteeUserId?: string } }>(
+    '/api/sessions/:id/invite',
+    async (req, reply) => {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.inviteToSession !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持邀请成员',
+          message: '请使用支持 inviteToSession 的 CHAT_PROVIDER（如 matrix）',
+        });
+      }
+      const sessionId = req.params?.id;
+      if (!sessionId) {
+        return reply.code(400).send({ error: 'session id is required' });
+      }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+
+      const body = (req.body as { inviteeUserId?: string }) || {};
+      const inviteeUserId = body.inviteeUserId?.trim();
+      if (!inviteeUserId) {
+        return reply.code(400).send({ error: 'inviteeUserId is required' });
+      }
+      const inviteeMxid = inviteeUserId.includes(':') ? inviteeUserId : getMatrixUserId(inviteeUserId);
+      const userId = await resolveUserId(req);
+      try {
+        await adapter.inviteToSession({
+          sessionId,
+          backendSessionId: sessionId,
+          userId,
+          inviteeUserId,
+          inviteeMxid,
+          matrixAccessToken: session?.matrixAccessToken,
+        });
+        return reply.send({ ok: true });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '邀请失败',
           message: e instanceof Error ? e.message : String(e),
         });
       }

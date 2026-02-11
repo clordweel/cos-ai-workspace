@@ -40,6 +40,10 @@ export interface StreamMessageParams {
   userId: string;
   send: SSESend;
   flush: SSEFlush;
+  /** Matrix 每用户 token（混合方案） */
+  matrixAccessToken?: string;
+  /** 当前用户 MXID，用于 listMessages 等 role 判断 */
+  currentUserMxid?: string;
 }
 
 export interface StreamMessageResult {
@@ -49,6 +53,8 @@ export interface StreamMessageResult {
 
 export interface ListSessionsParams {
   userId: string;
+  /** Matrix 每用户 token（混合方案） */
+  matrixAccessToken?: string;
 }
 
 export interface ListMessagesParams {
@@ -57,6 +63,25 @@ export interface ListMessagesParams {
   userId: string;
   limit?: number;
   beforeId?: string;
+  matrixAccessToken?: string;
+  /** 当前用户 MXID，用于 role/sources 判断 */
+  currentUserMxid?: string;
+}
+
+export interface CreateSessionParams {
+  userId: string;
+  title?: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
+}
+
+export interface InviteToSessionParams {
+  sessionId: string;
+  backendSessionId?: string;
+  userId: string;
+  inviteeUserId: string;
+  inviteeMxid: string;
+  matrixAccessToken?: string;
 }
 
 /**
@@ -70,4 +95,6 @@ export interface ChatBackendAdapter {
   streamMessage(params: StreamMessageParams): Promise<StreamMessageResult | void>;
   listSessions?(params: ListSessionsParams): Promise<NormalizedSession[]>;
   listMessages?(params: ListMessagesParams): Promise<NormalizedMessage[]>;
+  createSession?(params: CreateSessionParams): Promise<NormalizedSession>;
+  inviteToSession?(params: InviteToSessionParams): Promise<void>;
 }

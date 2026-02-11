@@ -123,9 +123,10 @@ provide('hideChatForApp', hideChatForApp)
 /** 侧边栏和应用内容区都折叠时隐藏左区块（固定按钮）；任一展开或侧栏悬浮/固定则显示 */
 const showPinButton = computed(() => isContentVisible.value || isSidebarPinned.value || isSidebarHovered.value)
 
-onMounted(async () => {
-  await fetchUser()
-  if (!authLoading.value && !isAuthenticated.value) openAuthTab()
+onMounted(() => {
+  fetchUser().then(() => {
+    if (!authLoading.value && !isAuthenticated.value) openAuthTab()
+  })
 })
 
 watch(() => route.query?.auth, (auth) => {

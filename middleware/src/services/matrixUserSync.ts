@@ -5,6 +5,7 @@
  */
 import { config } from '../config.js';
 import { getMatrixAccessToken } from '../adapters/matrixClient.js';
+import { toE164 } from '../utils/phoneFormat.js';
 import { randomBytes } from 'crypto';
 
 const ADMIN_PATH = '/_synapse/admin/v2/users';
@@ -22,9 +23,15 @@ export function toMatrixLocalpart(logtoSub: string): string {
   return sanitized || 'user';
 }
 
-/** 根据 Logto sub 得到对应用户的 Matrix 完整 user_id（@localpart:serverName） */
+/** 根据 Logto sub 或 username 得到 Matrix 完整 user_id（@localpart:serverName） */
+export function getMatrixUserId(logtoSub: string, username?: string): string {
+  const localpart = toMatrixLocalpart(username || logtoSub);
+  return `@${localpart}:${config.matrix.serverName}`;
+}
+
+/** @deprecated 使用 getMatrixUserId(logtoSub, username) */
 export function getMatrixUserIdForLogtoSub(logtoSub: string): string {
-  return `@${toMatrixLocalpart(logtoSub)}:${config.matrix.serverName}`;
+  return getMatrixUserId(logtoSub);
 }
 
 function isMatrixConfigured(): boolean {
@@ -51,18 +58,20 @@ export interface SyncMatrixUserError {
 export type SyncMatrixUserOutcome = SyncMatrixUserResult | SyncMatrixUserError;
 
 /**
- * 确保 Logto 用户在 Matrix 中存在：不存在则创建，存在则更新 displayname/external_ids
+ * 确保 Logto 用户在 Matrix 中存在：不存在则创建，存在则更新 displayname/external_ids/threepids
  * 不阻塞调用方，失败时返回错误（由调用方决定是否忽略）
  */
 export async function ensureMatrixUser(
   logtoSub: string,
   displayName?: string,
-  email?: string
+  email?: string,
+  phone?: string,
+  username?: string
 ): Promise<SyncMatrixUserOutcome> {
   if (!isMatrixConfigured()) {
     return { ok: false, error: 'Matrix 未配置' };
   }
-  const localpart = toMatrixLocalpart(logtoSub);
+  const localpart = toMatrixLocalpart(username || logtoSub);
   const matrixUserId = `@${localpart}:${config.matrix.serverName}`;
   const url = `${config.matrix.baseUrl}${ADMIN_PATH}/${encodeURIComponent(matrixUserId)}`;
   let token: string;
@@ -76,9 +85,10 @@ export async function ensureMatrixUser(
     displayname: displayName ?? localpart,
     external_ids: [{ auth_provider: 'oidc-logto', external_id: logtoSub }],
   };
-  if (email?.trim()) {
-    body.threepids = [{ medium: 'email', address: email.trim() }];
-  }
+  const threepids: Array<{ medium: string; address: string }> = [];
+  if (email?.trim()) threepids.push({ medium: 'email', address: email.trim() });
+  if (phone?.trim()) threepids.push({ medium: 'msisdn', address: toE164(phone) });
+  if (threepids.length) body.threepids = threepids;
   // 先查询是否已存在，仅新建时设置随机密码（不存储）；更新时不再改密码
   const getRes = await fetch(url, {
     method: 'GET',

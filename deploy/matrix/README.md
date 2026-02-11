@@ -117,6 +117,17 @@ Synapse 本身无官方 Web 管理界面，可使用第三方 **Synapse Admin** 
 
 仅需 API 时可直接使用 [Synapse Admin API](https://matrix-org.github.io/synapse/latest/usage/administration/index.html)。
 
+## 开发模式：放宽登录限流
+
+当出现 `M_LIMIT_EXCEEDED`（Too Many Requests）时，通常是 Synapse 对登录请求做了限流。开发环境可放宽限制：
+
+```bash
+chmod +x relax-rate-limits.sh
+./relax-rate-limits.sh
+```
+
+脚本会向 `data/homeserver.yaml` 追加 `rc_login` 配置（per_second/burst_count 设为 10000），并重启 Synapse。**生产环境请勿使用**，保持默认限流以抵御暴力破解。
+
 ## 与项目中间层整合
 
 1. **在 Synapse 上创建用于中间层的 Matrix 用户**（见上方「创建管理员用户」），得到 MXID（如 `@workbench:10.1.1.15`）和密码；或通过 Client-Server API 登录一次取得 `access_token`。

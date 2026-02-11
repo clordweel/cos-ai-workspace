@@ -31,7 +31,7 @@ onMounted(() => {
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid profile email',
+    scope: 'openid profile email phone',
     state,
   })
   const refresh = route.query?.refresh === '1' || route.query?.refresh === ''

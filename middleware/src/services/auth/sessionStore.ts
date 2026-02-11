@@ -9,10 +9,12 @@ const COOKIE_NAME = 'auth_session';
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 天
 const REDIS_KEY_PREFIX = 'sess:';
 
-/** 用户资料（Logto 等返回 name/email/avatar），供 /api/auth/me 返回给前端 */
+/** 用户资料（Logto 等返回 name/username/email/avatar），供 /api/auth/me 返回给前端 */
 export interface UserProfile {
   name: string;
+  username?: string;
   email?: string;
+  phone?: string;
   avatar?: string;
 }
 
@@ -27,6 +29,10 @@ export interface Session {
   logtoAccessToken?: string;
   logtoRefreshToken?: string;
   logtoTokenExpiresAt?: number;
+  /** Matrix 用户 access_token（每用户 Token 混合方案），用于会话 API 与 sync 下发 */
+  matrixAccessToken?: string;
+  /** Matrix token 过期时间戳 ms，可选 */
+  matrixTokenExpiresAt?: number;
   expiresAt: number;
 }
 

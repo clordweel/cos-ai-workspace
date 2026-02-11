@@ -68,6 +68,34 @@ export function useSpaceChatPane(options: {
   const chatUserName = computed(() => '张三')
 
   const { streamChat } = useChatStream()
+  const { sendTyping, sendReadReceipt } = useMatrixSyncClient()
+
+  let typingTimeoutId: ReturnType<typeof setTimeout> | null = null
+  function scheduleTyping(roomId: string, isTyping: boolean) {
+    if (typingTimeoutId) clearTimeout(typingTimeoutId)
+    typingTimeoutId = null
+    if (isTyping) {
+      typingTimeoutId = setTimeout(() => sendTyping(roomId, true), 300)
+    } else {
+      sendTyping(roomId, false)
+    }
+  }
+
+  watch(input, (v) => {
+    const id = chatId.value
+    if (!id) return
+    const roomId = getConversationId(id) ?? id
+    if (v.trim()) scheduleTyping(roomId, true)
+    else sendTyping(roomId, false)
+  })
+
+  watch([chatId, messages], () => {
+    const id = chatId.value
+    if (!id) return
+    const list = getMessages(id)
+    const last = list[list.length - 1]
+    if (last?.id) sendReadReceipt(getConversationId(id) ?? id, last.id)
+  }, { flush: 'post' })
 
   function stopStream() {
     if (streamAbortRef.value) {
@@ -205,6 +233,8 @@ export function useSpaceChatPane(options: {
     const id = chatId.value
     const text = input.value.trim()
     if (!id || !text || streaming.value) return
+    const roomId = getConversationId(id) ?? id
+    sendTyping(roomId, false)
     input.value = ''
     appendMessage(id, { role: 'user', content: text })
     nextTick(() => scrollToLastMessage())
