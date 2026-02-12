@@ -7,7 +7,7 @@
     <div class="shrink-0 p-3 pt-0 bg-white dark:bg-zinc-800 pointer-events-auto">
       <div class="chat-input-card relative rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm overflow-visible">
         <div
-          v-if="streaming"
+          v-if="streaming && showAssistantToolbar"
           class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 dark:border-zinc-700"
         >
           <div class="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
@@ -97,7 +97,7 @@
               ref="textareaRef"
               :value="modelValue"
               rows="2"
-              placeholder="说点什么？输入 @ 可引用联系人或机器人"
+              placeholder="说点什么？输入 @ 可提及联系人或机器人"
               class="chat-input-textarea chat-input-text-scale min-h-[72px] w-full resize-none border-0 bg-transparent pl-3 pr-1 py-3 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
               :disabled="streaming"
               @input="onTextareaInput"
@@ -114,7 +114,7 @@
                   <button
                     type="button"
                     class="flex h-6 items-center justify-between gap-1.5 rounded-md border border-zinc-200 dark:border-zinc-600 bg-transparent px-2 py-1 text-[10px] font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 transition-colors outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 dark:focus-visible:ring-zinc-500 [&_svg]:shrink-0 [&_svg]:opacity-70"
-                    title="插入 @ / # / 命令"
+                    title="插入 @ 提及、# 来源、/ 命令"
                     aria-label="输入工具"
                   >
                     <span>工具</span>
@@ -122,11 +122,11 @@
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" side="bottom" :side-offset="4" class="min-w-[8.5rem] shadow-none">
-                  <DropdownMenuItem text-value="引用" class="gap-2" @select="insertAtCursor('@')">
-                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary-100 dark:bg-primary-900/50">
+                  <DropdownMenuItem text-value="提及" class="gap-2" @select="insertAtCursor('@')">
+                    <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
                       <AtSign class="h-2.5 w-2.5 text-black dark:text-white" />
                     </span>
-                    引用
+                    提及
                   </DropdownMenuItem>
                   <DropdownMenuItem text-value="来源" class="gap-2" @select="insertAtCursor('#')">
                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
@@ -146,21 +146,21 @@
               <template v-else>
                 <button
                   type="button"
-                  class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-primary-200 hover:bg-primary-50/80 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-primary-500/40 dark:hover:bg-primary-900/20"
-                  title="@ 引用联系人或机器人"
-                  aria-label="@ 引用"
+                  class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="@ 提及联系人或机器人"
+                  aria-label="@ 提及"
                   @click="insertAtCursor('@')"
                 >
-                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white">
+                  <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
                     <AtSign class="h-2 w-2" />
                   </span>
-                  <span class="text-[10px] font-medium text-black dark:text-white">引用</span>
+                  <span class="text-[10px] font-medium text-black dark:text-white">提及</span>
                 </button>
                 <button
                   type="button"
                   class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
-                  title="# 引用来源"
-                  aria-label="# 引用来源"
+                  title="# 来源"
+                  aria-label="# 来源"
                   @click="insertAtCursor('#')"
                 >
                   <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
@@ -263,6 +263,11 @@ const emit = defineEmits<{
 
 const isXxs = useBreakpoint('xxs')
 const { contacts, bots } = useContactsAndBots()
+
+/** 输入中是否 @ 了机器人（只有 @ 了机器人才展示 assistant 工具栏） */
+const showAssistantToolbar = computed(() =>
+  bots.some((b) => props.modelValue.includes(`@${b.name}`))
+)
 
 type MentionCandidate = { kind: 'contact' | 'bot'; id: string; name: string }
 const mentionCandidatesList = computed<MentionCandidate[]>(() => {

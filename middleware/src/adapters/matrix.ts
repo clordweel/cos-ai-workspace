@@ -136,15 +136,7 @@ export function createMatrixAdapter(): ChatBackendAdapter {
 
       await sendRoomMessage(roomId, message, 'm.text', userToken);
 
-      // Dify 流式接入已暂时移除，仅返回占位文案
-      send('status', { status: 'thinking' });
-      flush();
-      const placeholder = '（Matrix 会话模式，AI 回复功能暂未接入）';
-      send('message', { delta: placeholder });
-      flush();
-      send('message_end', {});
-      flush();
-
+      // 第一步：用户独自使用会话，消息存入 Matrix，无他人参与；AI 回复后续接入
       return { backendSessionId: roomId };
     },
 

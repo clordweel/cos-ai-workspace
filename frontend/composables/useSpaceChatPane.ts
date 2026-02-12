@@ -5,6 +5,7 @@
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useVirtualizer } from '@tanstack/vue-virtual'
 import { getMockSessionById } from '~/composables/useMockSessions'
+import { useContactsAndBots } from '~/composables/useContactsAndBots'
 
 const STREAM_TYPEWRITER_INTERVAL_MS = 80
 const STREAM_TYPEWRITER_CHARS_PER_TICK = 1
@@ -72,6 +73,12 @@ export function useSpaceChatPane(options: {
 
   const { streamChat } = useChatStream()
   const { sendTyping, sendReadReceipt } = useMatrixSyncClient()
+  const { bots } = useContactsAndBots()
+
+  /** 消息中是否 @ 了机器人（只有 @ 了机器人才会触发 assistant 回复） */
+  function messageContainsBotMention(text: string): boolean {
+    return bots.some((b) => text.includes(`@${b.name}`))
+  }
 
   let typingTimeoutId: ReturnType<typeof setTimeout> | null = null
   function scheduleTyping(roomId: string, isTyping: boolean) {
@@ -119,22 +126,28 @@ export function useSpaceChatPane(options: {
     }
   }
 
-  async function streamReply(id: string, text: string) {
+  async function streamReply(id: string, text: string, hasBotMention: boolean) {
     let currentId = id
     const placeholder = '思考中…'
-    appendMessage(currentId, { role: 'assistant', content: '', thinking: '' })
-    nextTick(() => scrollToLastMessage())
+    let assistantCreated = false
+
+    function ensureAssistantMessage() {
+      if (!hasBotMention || assistantCreated) return
+      assistantCreated = true
+      appendMessage(currentId, { role: 'assistant', content: placeholder, thinking: '' })
+      nextTick(() => scrollToLastMessage())
+    }
+
     streaming.value = true
     streamAbortRef.value = new AbortController()
     streamContentBuffer.value = ''
-    updateLastMessage(currentId, (m) => { m.content = placeholder })
-
     let streamEnded = false
     let currentDelayMs = STREAM_TYPEWRITER_INTERVAL_MS
 
     function typewriterTick() {
       const buf = streamContentBuffer.value
       if (buf) {
+        ensureAssistantMessage()
         const take = buf.slice(0, STREAM_TYPEWRITER_CHARS_PER_TICK)
         streamContentBuffer.value = buf.slice(STREAM_TYPEWRITER_CHARS_PER_TICK)
         updateLastMessage(currentId, (m) => {
@@ -148,15 +161,14 @@ export function useSpaceChatPane(options: {
 
       if (buf === '' && streamEnded) {
         typewriterTimerId = null
-        updateLastMessage(currentId, (m) => { m.contentChunks = undefined })
-        const list = getMessages(currentId)
-        const last = list[list.length - 1]
-        if (last && last.role === 'assistant') {
-          if (!last.content) {
-            updateLastMessage(currentId, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
-          } else if (last.content === placeholder && !last.contentChunks?.length) {
-            // 后端未返回任何内容（如 Matrix 单人会话模式），移除占位 assistant 气泡
-            setMessages(currentId, list.slice(0, -1))
+        if (assistantCreated) {
+          updateLastMessage(currentId, (m) => { m.contentChunks = undefined })
+          const list = getMessages(currentId)
+          const last = list[list.length - 1]
+          if (last && last.role === 'assistant') {
+            if (!last.content) {
+              updateLastMessage(currentId, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
+            }
           }
         }
         streamAbortRef.value = null
@@ -195,6 +207,7 @@ export function useSpaceChatPane(options: {
             currentId = realId
           },
           onThinking: () => {
+            ensureAssistantMessage()
             streamContentBuffer.value = ''
             updateLastMessage(currentId, (m) => {
               m.content = placeholder
@@ -202,6 +215,7 @@ export function useSpaceChatPane(options: {
             })
           },
           onThinkingDelta: (delta) => {
+            ensureAssistantMessage()
             updateLastMessage(currentId, (m) => {
               if (!m.thinking) m.thinking = ''
               m.thinking += delta
@@ -218,6 +232,7 @@ export function useSpaceChatPane(options: {
       const friendly = /failed to fetch|networkerror|network error/i.test(msg)
         ? '网络错误，请确认中间层已启动且可访问（检查 NUXT_PUBLIC_API_BASE 或代理）'
         : msg
+      ensureAssistantMessage()
       updateLastMessage(currentId, (m) => { m.content = `请求失败：${friendly}` })
     } finally {
       if (!streamEnded) {
@@ -247,7 +262,7 @@ export function useSpaceChatPane(options: {
     input.value = ''
     appendMessage(id, { role: 'user', content: text })
     nextTick(() => scrollToLastMessage())
-    await streamReply(id, text)
+    await streamReply(id, text, messageContainsBotMention(text))
   }
 
   const canEditOtherMessage = ref(true)
@@ -352,7 +367,7 @@ export function useSpaceChatPane(options: {
     const userMsg = list[index - 1]
     if (assistantMsg.role !== 'assistant' || userMsg.role !== 'user') return
     setMessages(id, list.slice(0, index))
-    streamReply(id, userMsg.content)
+    streamReply(id, userMsg.content, messageContainsBotMention(userMsg.content))
   }
 
   return {
