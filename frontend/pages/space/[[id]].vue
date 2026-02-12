@@ -20,7 +20,6 @@
         :create-session-error="createSessionError"
         :list-view-tab="listViewTab"
         :list-padding-top="listPaddingTop"
-        :toolbar-top="toolbarTop"
         :pinned-collapsed="pinnedCollapsed"
         :pinned-chats="pinnedChats"
         :show-mock-section="mockSessionListEnabled"
@@ -32,7 +31,6 @@
         :search-query="searchQuery"
         :show-app-list="showAppList"
         :show-search-bar="showSearchBar"
-        :app-drawer-top="appDrawerTop"
         :app-drawer-height-rem="appDrawerHeightRem"
         :drawer-common-apps="drawerCommonApps"
         :drawer-favorite-apps="drawerFavoriteApps"
@@ -157,8 +155,6 @@ const {
   openPanel,
   listViewTab,
   listPaddingTop,
-  toolbarTop,
-  appDrawerTop,
   pinnedCollapsed,
   pinnedChats,
   mockSessionListEnabled,

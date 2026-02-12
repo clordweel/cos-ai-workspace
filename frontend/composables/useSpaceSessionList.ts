@@ -159,12 +159,8 @@ export function useSpaceSessionList(options: {
     displayChats.value.reduce((sum, c) => sum + getNonReadCount(c.id), 0)
   )
 
-  /** 顶栏浮在顶部；滚动区从顶部延伸，内容用 listPaddingTop 留出顶栏/抽屉高度 */
-  const toolbarTop = computed(() => '0')
-  const listPaddingTop = computed(
-    () => `${(showAppList.value ? APP_DRAWER_HEIGHT_REM : 0) + SESSION_LIST_HEADER_HEIGHT_REM}rem`,
-  )
-  const appDrawerTop = computed(() => '0')
+  /** 顶栏在文档流中；抽屉推动整块下移，列表内容仅留顶栏高度 */
+  const listPaddingTop = computed(() => `${SESSION_LIST_HEADER_HEIGHT_REM}rem`)
 
   const isMounted = ref(false)
   onMounted(() => { isMounted.value = true })
@@ -292,9 +288,7 @@ export function useSpaceSessionList(options: {
     activeChats,
     pendingChats,
     totalPendingCount,
-    toolbarTop,
     listPaddingTop,
-    appDrawerTop,
     getChatDateLabel,
     getNonReadCount,
     isMockSession,

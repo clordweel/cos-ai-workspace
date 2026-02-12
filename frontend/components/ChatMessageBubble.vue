@@ -1,5 +1,5 @@
 <template>
-  <!-- 用户：发送状态在气泡左侧外侧，已读时顶部外侧对方头像 -->
+  <!-- 用户：发送状态在气泡左侧外侧，已读时顶部外侧对方头像；气泡与时间戳同一右对齐列 -->
   <div v-if="message.role === 'user'" class="w-full flex flex-col items-end gap-1">
     <!-- 已读：气泡顶部外侧，头像行占满宽度并右对齐，与气泡右侧对齐 -->
     <div
@@ -19,23 +19,100 @@
         <Cog v-else class="h-2.5 w-2.5" />
       </span>
     </div>
-    <div class="flex items-end gap-1.5 max-w-[85%]">
-      <!-- 发送状态：气泡左侧外侧 -->
-      <span
-        v-if="userReceiptStatus && userReceiptStatus !== 'read'"
-        class="flex h-6 w-6 shrink-0 items-center justify-center self-center"
-        :title="userReceiptStatusLabel"
-        aria-hidden
-      >
-        <Loader2 v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-spin" />
-        <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
-        <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
-        <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
-      </span>
-      <ContextMenuRoot v-if="messageIndex !== undefined">
-        <ContextMenuTrigger as-child>
+    <!-- 气泡 + 时间戳同一右对齐列，保证右侧对齐一致 -->
+    <div class="flex flex-col items-end max-w-[85%]">
+      <div class="flex items-end gap-1.5 w-full justify-end">
+        <!-- 发送状态：气泡左侧外侧 -->
+        <span
+          v-if="userReceiptStatus && userReceiptStatus !== 'read'"
+          class="flex h-6 w-6 shrink-0 items-center justify-center self-center"
+          :title="userReceiptStatusLabel"
+          aria-hidden
+        >
+          <Loader2 v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-spin" />
+          <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
+          <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
+          <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
+        </span>
+        <ContextMenuRoot v-if="messageIndex !== undefined">
+          <ContextMenuTrigger as-child>
+            <div
+              class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit min-w-28 max-w-full"
+            >
+              <div
+                v-if="message.inReplyTo"
+                class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
+              >
+                <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+                  {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
+                </span>
+                <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+                  {{ message.inReplyTo.content || '…' }}
+                </p>
+              </div>
+              <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
+            </div>
+          </ContextMenuTrigger>
+          <ContextMenuPortal>
+            <ContextMenuContent
+              class="z-[100] min-w-[140px] rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-1 shadow-lg"
+              :side-offset="4"
+            >
+              <ContextMenuItem
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="回复"
+                @select="emit('reply', message)"
+              >
+                <Reply class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                回复
+              </ContextMenuItem>
+              <ContextMenuItem
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="编辑"
+                @select="emit('editUserMessage')"
+              >
+                <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                编辑
+              </ContextMenuItem>
+              <ContextMenuItem
+                v-if="message.receiptStatus === 'failed'"
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="重试"
+                @select="emit('retryUserMessage')"
+              >
+                <RefreshCw class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                重试
+              </ContextMenuItem>
+              <ContextMenuItem
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="撤回"
+                @select="emit('recallMessage')"
+              >
+                <Undo2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                撤回
+              </ContextMenuItem>
+              <ContextMenuItem
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="删除"
+                @select="emit('deleteMessage')"
+              >
+                <Trash2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                删除
+              </ContextMenuItem>
+              <ContextMenuItem
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                text-value="更多"
+                disabled
+              >
+                <MoreHorizontal class="h-3.5 w-3.5 shrink-0 opacity-70" />
+                更多
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </ContextMenuPortal>
+        </ContextMenuRoot>
+        <template v-else>
           <div
-            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
+            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 min-w-28"
           >
             <div
               v-if="message.inReplyTo"
@@ -50,86 +127,12 @@
             </div>
             <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
           </div>
-        </ContextMenuTrigger>
-        <ContextMenuPortal>
-          <ContextMenuContent
-            class="z-[100] min-w-[140px] rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-1 shadow-lg"
-            :side-offset="4"
-          >
-            <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="回复"
-              @select="emit('reply', message)"
-            >
-              <Reply class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              回复
-            </ContextMenuItem>
-            <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="编辑"
-              @select="emit('editUserMessage')"
-            >
-              <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              编辑
-            </ContextMenuItem>
-            <ContextMenuItem
-              v-if="message.receiptStatus === 'failed'"
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="重试"
-              @select="emit('retryUserMessage')"
-            >
-              <RefreshCw class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              重试
-            </ContextMenuItem>
-            <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="撤回"
-              @select="emit('recallMessage')"
-            >
-              <Undo2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              撤回
-            </ContextMenuItem>
-            <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="删除"
-              @select="emit('deleteMessage')"
-            >
-              <Trash2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              删除
-            </ContextMenuItem>
-            <ContextMenuItem
-              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              text-value="更多"
-              disabled
-            >
-              <MoreHorizontal class="h-3.5 w-3.5 shrink-0 opacity-70" />
-              更多
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenuPortal>
-      </ContextMenuRoot>
-      <template v-else>
-        <div
-          class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100"
-        >
-          <div
-            v-if="message.inReplyTo"
-            class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
-          >
-            <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
-              {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
-            </span>
-            <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
-              {{ message.inReplyTo.content || '…' }}
-            </p>
-          </div>
-          <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
-        </div>
-      </template>
+        </template>
+      </div>
+      <span v-if="showTimestamp && timestampText" class="w-full text-right text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+        {{ timestampText }}
+      </span>
     </div>
-    <span v-if="showTimestamp && timestampText" class="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">
-      {{ timestampText }}
-    </span>
   </div>
   <!-- 系统消息：全宽、文字居中、无背景、最小间距 -->
   <div
