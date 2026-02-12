@@ -11,6 +11,7 @@
 | 认证与用户配置（Logto、Matrix、偏好） | `docs/AUTH_AND_USER_CONFIG.md` |
 | 会话持久化（重启保持认证） | `docs/SESSION_PERSISTENCE.md` |
 | 前端布局与约定 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
+| Matrix 实现/审查 | `docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MIDDLEWARE_MATRIX_REVIEW.md` |
 | 提交规范 | `.cursor/rules/git-commit.mdc` |
 
 ## 目录与职责

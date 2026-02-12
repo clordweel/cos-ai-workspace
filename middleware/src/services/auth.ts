@@ -28,8 +28,10 @@ export {
   handleLogtoCallback,
   createSessionFromLogtoAccessToken,
   getLogtoAccessTokenForSession,
+  fetchUserProfileFromLogto,
   type LogtoAuthUrlResult,
   type LogtoAuthUrlError,
   type LogtoCallbackResultOk,
   type LogtoCallbackResultFail,
+  type LogtoUserProfile,
 } from './auth/logto.js';

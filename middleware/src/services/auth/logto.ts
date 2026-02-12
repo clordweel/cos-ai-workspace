@@ -3,6 +3,10 @@
  */
 import { config } from '../../config.js';
 import { formatPhoneForDisplay } from '../../utils/phoneFormat.js';
+import {
+  getLogtoMyAccountProfile,
+  getLogtoUserProfile,
+} from '../logtoManagement.js';
 import { ensureMatrixUser, isMatrixConfigured } from '../matrixUserSync.js';
 import {
   generateSessionId,
@@ -57,6 +61,15 @@ export interface LogtoCallbackResultFail {
   error: string;
 }
 
+/** 从 Logto /oidc/me 解析出的用户资料（供 Matrix 同步等用） */
+export interface LogtoUserProfile {
+  displayName: string;
+  username?: string;
+  email?: string;
+  phone?: string;
+  avatar?: string;
+}
+
 /** 从 Logto /oidc/me 响应中提取手机号（兼容多种字段名与结构） */
 function extractPhoneFromMeData(meData: Record<string, unknown>): string | undefined {
   const v = (x: unknown) => (typeof x === 'string' && x.trim() ? x.trim() : undefined);
@@ -79,6 +92,81 @@ function extractPhoneFromMeData(meData: Record<string, unknown>): string | undef
     if (phoneId?.value) return v(phoneId.value);
   }
   return undefined;
+}
+
+/** 当 OIDC meData 缺少 phone/email 时补全：优先 Account API（用户 token），其次 Management API（M2M） */
+async function fillProfileFromAccountOrM2M(
+  logtoSub: string,
+  accessToken: string | null,
+  profile: { displayName: string; username?: string; email?: string; phone?: string; avatar?: string }
+): Promise<{ displayName: string; username?: string; email?: string; phone?: string; avatar?: string }> {
+  // 1. 优先用 Account API（用户 token，无需 M2M 权限）
+  if (accessToken && (!profile.phone || !profile.email)) {
+    const account = await getLogtoMyAccountProfile(accessToken);
+    if (account.ok) {
+      const filledPhone = !profile.phone && account.primaryPhone ? formatPhoneForDisplay(account.primaryPhone) : undefined;
+      if (filledPhone) {
+        console.info(`[auth] Account API 补全 phone (sub=${logtoSub})`);
+        return {
+          ...profile,
+          ...(filledPhone && { phone: filledPhone }),
+          ...(!profile.email && account.primaryEmail && { email: account.primaryEmail }),
+        };
+      }
+      if (!profile.email && account.primaryEmail) {
+        return { ...profile, email: account.primaryEmail };
+      }
+    }
+  }
+  // 2. 回退到 Management API
+  const m2m = await getLogtoUserProfile(logtoSub);
+  if (!m2m.ok) {
+    console.info(`[auth] M2M 补全 profile 失败 (sub=${logtoSub}): ${m2m.error}`);
+    return profile;
+  }
+  const filledPhone = !profile.phone && m2m.primaryPhone ? formatPhoneForDisplay(m2m.primaryPhone) : undefined;
+  if (filledPhone) {
+    console.info(`[auth] M2M 补全 phone (sub=${logtoSub})`);
+  }
+  return {
+    ...profile,
+    ...(filledPhone && { phone: filledPhone }),
+    ...(!profile.email && m2m.primaryEmail && { email: m2m.primaryEmail }),
+    ...(!profile.username && m2m.username && { username: m2m.username }),
+  };
+}
+
+/** 使用 access token 从 Logto /oidc/me 拉取用户资料；OIDC 未返回 phone 时用 Management API 补全（需 M2M） */
+export async function fetchUserProfileFromLogto(
+  accessToken: string
+): Promise<LogtoUserProfile | null> {
+  const { endpoint } = config.logto || {};
+  if (!endpoint || !accessToken) return null;
+  const meRes = await fetch(`${endpoint}/oidc/me`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!meRes.ok) return null;
+  const meData = (await meRes.json().catch(() => ({}))) as Record<string, unknown>;
+  const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
+  const displayName =
+    (meData.name as string) || (meData.username as string) || (meData.sub as string) || 'Logto User';
+  const username = typeof meData.username === 'string' ? meData.username : undefined;
+  const email = (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
+  const phoneRaw = extractPhoneFromMeData(meData);
+  const phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
+  const avatarVal = meData.picture ?? meData.avatar;
+  const base: LogtoUserProfile = {
+    displayName,
+    ...(username && { username }),
+    ...(email && { email }),
+    ...(phone && { phone }),
+    ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
+  };
+  if (logtoSub && (!phone || !email)) {
+    const filled = await fillProfileFromAccountOrM2M(logtoSub, accessToken, base);
+    return { ...base, ...filled };
+  }
+  return base;
 }
 
 /** Logto 回调：用 code 换 token，再取用户信息，创建会话；会 await Matrix 用户同步后再返回，确保重定向前用户已创建 */
@@ -121,12 +209,24 @@ export async function handleLogtoCallback(
   const meData = (await meRes.json().catch(() => ({}))) as Record<string, unknown>;
   const displayName =
     (meData.name as string) || (meData.username as string) || (meData.sub as string) || 'Logto User';
-  const username = typeof meData.username === 'string' ? meData.username : undefined;
-  const email =
-    (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
-  const phoneRaw = extractPhoneFromMeData(meData);
-  const phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
+  let username = typeof meData.username === 'string' ? meData.username : undefined;
+  let email = (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
+  let phoneRaw = extractPhoneFromMeData(meData);
+  let phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
   const avatarVal = meData.picture ?? meData.avatar;
+  const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
+  if (logtoSub && (!phone || !email)) {
+    const filled = await fillProfileFromAccountOrM2M(logtoSub, accessToken, {
+      displayName,
+      username,
+      email,
+      phone,
+      ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
+    });
+    if (filled.phone) phone = filled.phone;
+    if (filled.email) email = filled.email;
+    if (filled.username) username = filled.username;
+  }
   const userProfile: UserProfile = {
     name: displayName,
     ...(username && { username }),
@@ -135,7 +235,6 @@ export async function handleLogtoCallback(
     ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
   };
   const expiresIn = Math.max(Number(tokenData.expires_in) || 3600, 60);
-  const logtoSub = typeof meData.sub === 'string' ? meData.sub : undefined;
   const session = await saveSession({
     type: 'logto',
     user: displayName,
@@ -154,9 +253,9 @@ export async function handleLogtoCallback(
       });
     if (out?.ok) {
       if (out.created) {
-        console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${logtoSub} username: ${username || '-'})`);
+        console.info(`[auth] Matrix 用户已创建: ${out.matrixUserId} (Logto sub: ${logtoSub} username: ${username || '-'} phone=${phone ? '有' : '无'})`);
       } else {
-        console.info(`[auth] Matrix 用户已存在: ${out.matrixUserId} (Logto sub: ${logtoSub})`);
+        console.info(`[auth] Matrix 用户已存在: ${out.matrixUserId} (Logto sub: ${logtoSub} phone=${phone ? '已同步' : '无'})`);
       }
     } else if (out && !out.ok) {
       console.warn(
@@ -199,12 +298,23 @@ export async function createSessionFromLogtoAccessToken(
   if (!logtoSub) return { ok: false, error: '无法获取用户信息' };
   const displayName =
     (meData.name as string) || (meData.username as string) || logtoSub || 'Logto User';
-  const username = typeof meData.username === 'string' ? meData.username : undefined;
-  const email =
-    (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
-  const phoneRaw = extractPhoneFromMeData(meData);
-  const phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
+  let username = typeof meData.username === 'string' ? meData.username : undefined;
+  let email = (meData.email as string) ?? (meData.primaryEmail as string) ?? undefined;
+  let phoneRaw = extractPhoneFromMeData(meData);
+  let phone = phoneRaw ? formatPhoneForDisplay(phoneRaw) : undefined;
   const avatarVal = meData.picture ?? meData.avatar;
+  if (!phone || !email) {
+    const filled = await fillProfileFromAccountOrM2M(logtoSub, accessToken, {
+      displayName,
+      username,
+      email,
+      phone,
+      ...(typeof avatarVal === 'string' && avatarVal && { avatar: avatarVal }),
+    });
+    if (filled.phone) phone = filled.phone;
+    if (filled.email) email = filled.email;
+    if (filled.username) username = filled.username;
+  }
   const userProfile: UserProfile = {
     name: displayName,
     ...(username && { username }),

@@ -3,6 +3,7 @@
  * 供前端认证页 Matrix 登录、个人信息页修改 Matrix 密码使用
  */
 import { config } from '../config.js';
+import { stripCountryCode } from '../utils/phoneFormat.js';
 
 const basePath = '/_matrix/client/v3';
 
@@ -37,7 +38,7 @@ function buildLoginIdentifier(
   const digitsOnly = raw.replace(/\D/g, '');
   if (digitsOnly.length >= 8 && /^\+?[\d\s]+$/.test(raw.trim())) {
     const c = (country || 'CN').toUpperCase();
-    const phone = raw.startsWith('+') ? raw.slice(1).replace(/\D/g, '') : digitsOnly;
+    const phone = stripCountryCode(raw);
     return { type: 'm.id.phone', country: c, phone };
   }
   return { type: 'm.id.user', user: raw };

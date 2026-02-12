@@ -177,6 +177,83 @@ export async function patchLogtoUserCustomDataViaAccountApi(
 }
 
 /**
+ * 使用用户 access token 调 Account API 获取 profile（含 primaryPhone），无需 M2M，优先于 Management API
+ */
+export async function getLogtoMyAccountProfile(
+  accessToken: string
+): Promise<
+  | { ok: true; primaryEmail?: string; primaryPhone?: string }
+  | { ok: false; error: string; statusCode?: number }
+> {
+  const { endpoint } = config.logto || {};
+  if (!endpoint || !accessToken) {
+    return { ok: false, error: '未配置 Logto 或 token 为空', statusCode: 503 };
+  }
+  try {
+    const res = await fetch(`${endpoint}/api/my-account`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      return {
+        ok: false,
+        error: res.statusText || '获取 my-account 失败',
+        statusCode: res.status,
+      };
+    }
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    return {
+      ok: true,
+      primaryEmail: typeof data.primaryEmail === 'string' ? data.primaryEmail : undefined,
+      primaryPhone: typeof data.primaryPhone === 'string' ? data.primaryPhone : undefined,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg, statusCode: 500 };
+  }
+}
+
+/**
+ * 使用 Management API 获取用户完整资料（含 primaryPhone、primaryEmail），用于 OIDC userinfo 未返回时的补全
+ */
+export async function getLogtoUserProfile(
+  userId: string
+): Promise<
+  | { ok: true; name?: string; username?: string; primaryEmail?: string; primaryPhone?: string }
+  | { ok: false; error: string; statusCode?: number }
+> {
+  if (!userId?.trim()) {
+    return { ok: false, error: '用户 ID 为空', statusCode: 400 };
+  }
+  if (!isConfigured()) {
+    return { ok: false, error: '未配置 Logto M2M', statusCode: 503 };
+  }
+  try {
+    const client = getApiClient();
+    const res = await client.GET('/api/users/{userId}', {
+      params: { path: { userId: userId.trim() } },
+    });
+    if (res.error) {
+      return {
+        ok: false,
+        error: (res.error as { message?: string })?.message || res.response?.statusText || '获取用户资料失败',
+        statusCode: res.response?.status,
+      };
+    }
+    const u = (res.data ?? {}) as Record<string, unknown>;
+    return {
+      ok: true,
+      name: typeof u.name === 'string' ? u.name : undefined,
+      username: typeof u.username === 'string' ? u.username : undefined,
+      primaryEmail: typeof u.primaryEmail === 'string' ? u.primaryEmail : undefined,
+      primaryPhone: typeof u.primaryPhone === 'string' ? u.primaryPhone : undefined,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: msg, statusCode: 500 };
+  }
+}
+
+/**
  * 获取用户在 Logto 的 customData（用于偏好等，需 M2M）
  */
 export async function getLogtoUserCustomData(

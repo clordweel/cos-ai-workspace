@@ -15,6 +15,7 @@ import {
   handleLogtoCallback,
   createSessionFromLogtoAccessToken,
   getLogtoAccessTokenForSession,
+  fetchUserProfileFromLogto,
 } from '../services/auth.js';
 import { loginAsUser } from '../adapters/matrixClient.js';
 import { matrixLoginWithIdentifier, matrixChangePassword } from '../services/matrixAuth.js';
@@ -39,7 +40,10 @@ import {
   getPreferencesFromCustomData,
   mergePreferencesIntoCustomData,
 } from '../services/logtoManagement.js';
-import { formatPhoneForDisplay } from '../utils/phoneFormat.js';
+import {
+  formatPhoneForDisplay,
+  toLogtoPrimaryPhone,
+} from '../utils/phoneFormat.js';
 
 const ACCOUNT_CENTER_DISABLED = 'Account center is not enabled';
 
@@ -139,13 +143,41 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
     }
     if (config.chat?.provider === 'matrix' && session.logtoSub) {
-      // 每次 /me 时重试用户同步，弥补 Logto 回调时的失败或竞态；409 恢复后需更新 session.matrixUserId
+      // 每次 /me 时从 Logto 拉取最新资料并同步到 Matrix，解决重新授权后手机号等未更新的问题
+      const logtoToken = await getLogtoAccessTokenForSession(session);
+      const freshProfile =
+        logtoToken ? await fetchUserProfileFromLogto(logtoToken) : null;
+      const displayName =
+        freshProfile?.displayName ?? session.userProfile?.name ?? session.user;
+      const email = freshProfile?.email ?? session.userProfile?.email;
+      const phone = freshProfile?.phone ?? session.userProfile?.phone;
+      const username = freshProfile?.username ?? session.userProfile?.username;
+      if (freshProfile) {
+        const nextUserProfile = {
+          name: displayName,
+          ...(username && { username }),
+          ...(email !== undefined && { email }),
+          ...(phone !== undefined && { phone }),
+          ...(freshProfile.avatar && { avatar: freshProfile.avatar }),
+        };
+        const changed =
+          session.userProfile?.phone !== phone ||
+          session.userProfile?.email !== email ||
+          session.userProfile?.name !== displayName;
+        if (changed) {
+          await updateSession(session.sessionId, {
+            user: displayName,
+            userProfile: { ...session.userProfile, ...nextUserProfile },
+          });
+          Object.assign(payload, { user: nextUserProfile });
+        }
+      }
       const ensured = await ensureMatrixUser(
         session.logtoSub,
-        session.userProfile?.name ?? session.user,
-        session.userProfile?.email,
-        session.userProfile?.phone,
-        session.userProfile?.username
+        displayName,
+        email,
+        phone,
+        username
       ).catch((e) => {
         req.log.warn(e, 'ensureMatrixUser 重试失败');
         return null;
@@ -168,7 +200,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         payload.matrix_base_url = config.matrix.baseUrl;
         payload.matrix_user_id = getMatrixUserIdForSession(
           session.logtoSub,
-          session.userProfile?.username,
+          username ?? session.userProfile?.username,
           resolvedMatrixUserId
         );
       }
@@ -239,7 +271,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     if (body.phone !== undefined) {
       const raw = body.phone?.trim();
-      patch.primaryPhone = raw || null;
+      patch.primaryPhone = raw ? toLogtoPrimaryPhone(raw) : null;
     }
     if (Object.keys(patch).length === 0) {
       return reply.code(400).send({ ok: false, error: '请提供要更新的字段（email 或 phone）' });

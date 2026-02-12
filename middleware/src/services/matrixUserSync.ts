@@ -12,7 +12,7 @@ import {
   getMasUserByUsername,
   setMasUserPassword,
 } from './masAdminApi.js';
-import { toE164 } from '../utils/phoneFormat.js';
+import { toMsisdnLocal } from '../utils/phoneFormat.js';
 import { randomBytes } from 'crypto';
 
 const ADMIN_PATH = '/_synapse/admin/v2/users';
@@ -116,7 +116,11 @@ export async function ensureMatrixUser(
   }
   const threepids: Array<{ medium: string; address: string }> = [];
   if (email?.trim()) threepids.push({ medium: 'email', address: email.trim() });
-  if (phone?.trim()) threepids.push({ medium: 'msisdn', address: toE164(phone) });
+  // Matrix msisdn：使用国内号码（去除国家码），规范要求 address 不含前导 +
+  if (phone?.trim()) {
+    const msisdn = toMsisdnLocal(phone);
+    if (msisdn) threepids.push({ medium: 'msisdn', address: msisdn });
+  }
 
   const buildBody = (targetLocalpart: string, includeExternalIds: boolean): Record<string, unknown> => {
     const body: Record<string, unknown> = {
