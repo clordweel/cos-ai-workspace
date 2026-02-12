@@ -160,12 +160,13 @@ export async function ensureMatrixUser(
     ? null
     : (await getRes.json().catch(() => ({}))) as { deactivated?: boolean | number } | null;
   const synapseDeactivated = Boolean(getData?.deactivated);
-  const masUser = await getMasUserByUsername(localpart);
+  const isMasConfigured = Boolean(config.mas?.clientId && config.mas?.clientSecret);
+  const masUser = isMasConfigured ? await getMasUserByUsername(localpart) : null;
   let masHasUser = masUser !== null && typeof masUser === 'string';
   let isReactivating = false;
 
-  // Logto 重新授权后激活已停用的 Matrix 账号（MAS reactivate + 设密 + Synapse deactivated: false）
-  if (masUser && typeof masUser === 'object' && masUser.deactivated && masUser.ulid) {
+  // Logto 重新授权后激活已停用的 Matrix 账号（MAS reactivate + 设密 + Synapse deactivated: false），仅 MAS 启用时
+  if (isMasConfigured && masUser && typeof masUser === 'object' && masUser.deactivated && masUser.ulid) {
     const actResult = await activateMasUser(masUser.ulid);
     if (!actResult.ok) {
       console.warn(
@@ -203,7 +204,7 @@ export async function ensureMatrixUser(
   }
 
   if (isNewUser) {
-    if (!masHasUser) {
+    if (isMasConfigured && !masHasUser) {
       console.info(`[matrixUserSync] 新建用户 localpart=${localpart}，通过 MAS 创建`);
       const created = await createMasUser(localpart);
       if (created) {
@@ -222,7 +223,7 @@ export async function ensureMatrixUser(
     } else {
       isNewUser = false;
     }
-  } else if (!masHasUser) {
+  } else if (isMasConfigured && !masHasUser) {
     console.info(`[matrixUserSync] Synapse 已有用户但 MAS 无 (localpart=${localpart})，补建 MAS 用户`);
     const created = await createMasUser(localpart);
     if (created) {

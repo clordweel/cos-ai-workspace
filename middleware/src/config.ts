@@ -50,6 +50,8 @@ export interface Config {
   sessionStore: 'memory' | 'redis';
   /** Redis 连接 URL，SESSION_STORE=redis 时必填，如 redis://10.1.1.15:6379 或 redis://:password@host:6379 */
   redisUrl: string;
+  /** Matrix 密码加密钥，配置后会将密码加密存 Logto customData 持久化，需 M2M */
+  matrixPasswordEncryptionKey: string;
 }
 
 export const config: Config = {
@@ -103,4 +105,5 @@ export const config: Config = {
 
   sessionStore: (process.env.SESSION_STORE || 'memory').toLowerCase() === 'redis' ? 'redis' : 'memory',
   redisUrl: (process.env.REDIS_URL || '').trim(),
+  matrixPasswordEncryptionKey: (process.env.MATRIX_PASSWORD_ENCRYPTION_KEY || '').trim(),
 };

@@ -12,9 +12,10 @@
 - 应用配置：`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`LOGTO_APP_SECRET`（OAuth 回调、换 token）。
 - **用户偏好（customData）**：优先用 Logto **Account API**（`/api/my-account`）+ 用户 token 读写；若返回「Account center is not enabled」或 403，则回退到 **Management API**（需配置 M2M）。因此：**若未在控制台启用 Account center**，须配置 `LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`，偏好才能同步；若已启用 Account center 且 scope 含 `custom_data`，则无需 M2M。
 - **修改 Logto 密码**：需 **Management API**，须配置独立的 M2M 应用（`LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`）；不配置则「修改密码」功能不可用。
-- **customData 结构约定**：仅使用顶层 key `preferences` 存放本应用用户偏好，其它顶层 key 预留给其它用途，本应用不读写。  
-  - `preferences`：对象，字段为 `theme`（'light'|'dark'|'system'）、`uiFontSizeStep`（1–5）、`notificationsEnabled`（boolean）。  
-  参考：[User data structure - Custom data](https://docs.logto.io/user-management/user-data#custom-data)。Logto 的 PATCH custom-data 会**整体覆盖**，故中间层在更新偏好时先 GET 再仅合并 `preferences` 后 PATCH，不覆盖其它键。**勿在 customData 中存敏感信息**（JWT 为 base64、易被截获）。
+- **customData 结构约定**：  
+  - `preferences`：本应用用户偏好（theme、uiFontSizeStep、notificationsEnabled）。  
+  - `matrixPasswordEncrypted`：Matrix 密码经 AES-256-GCM 加密后的持久化（仅当配置 `MATRIX_PASSWORD_ENCRYPTION_KEY` 时写入；不通过 JWT 暴露，仅中间层 M2M 解密读取）。  
+  - 其它顶层 key 预留。Logto 的 PATCH custom-data 会**整体覆盖**，故中间层在更新时先 GET 再合并后 PATCH。**勿在 customData 中存明文敏感信息**。
 
 ## 中间层会话与持久化
 

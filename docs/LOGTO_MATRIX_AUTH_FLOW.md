@@ -18,9 +18,9 @@
 
 ### 2. 会话用 token 的自动获取
 
-- 当 `GET /api/auth/me` 或会话相关 API（如 `GET /api/sessions`、`POST /api/chat/stream`）被调用且会话有 `logtoSub` 但无 `matrixAccessToken` 时，中间层调用 `ensureMatrixTokenForSession(session)`。
-- **MAS 方案**（已配置 MAS_ADMIN_CLIENT_ID/SECRET）：通过 Logto username 查 MAS 用户 → 创建 Personal Session 签发 token。MAS 中**不存在或已停用**的用户会回退到 Admin 设密。
-- **回退方案**：缓存密码 → Admin 设随机密码 + Matrix 登录。用户不存在时（404）会先 `ensureMatrixUser` 创建。
+- 当 `GET /api/auth/me` 或会话相关 API 被调用且会话有 `logtoSub` 但无 `matrixAccessToken` 时，中间层调用 `ensureMatrixTokenForSession(session)`。
+- **方案 A**（禁用 MAS，推荐）：Admin 设随机密码 + Matrix 登录。密码优先从缓存读取；配置 `MATRIX_PASSWORD_ENCRYPTION_KEY` + M2M 时加密持久化到 Logto customData。
+- **MAS 方案**（已配置 MAS_ADMIN_CLIENT_ID/SECRET，当前存在实现问题）：Personal Session 或 Admin 设密回退。
 - 用户无需在前端进行任何 Matrix 登录或设置密码操作。
 
 ### 3. 不存在 / 已停用用户处理

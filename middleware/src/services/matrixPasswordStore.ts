@@ -1,10 +1,16 @@
 /**
  * Matrix 密码缓存：按 logtoSub 存储用户已设置的 Matrix 密码
  * 用于 ensureMatrixTokenForSession 时优先用已存密码登录，避免覆盖用户通过「设置 Matrix 密码」设置的密码
- * 当 SESSION_STORE=redis 时使用 Redis，否则内存 Map（服务重启后丢失）
+ * 存储层：内存/Redis（快速）+ 可选 Logto customData（持久化，需 MATRIX_PASSWORD_ENCRYPTION_KEY + M2M）
  */
 import { config } from '../config.js';
 import { Redis } from 'ioredis';
+import {
+  isLogtoMatrixPasswordEnabled,
+  getMatrixPasswordFromLogto,
+  setMatrixPasswordToLogto,
+  deleteMatrixPasswordFromLogto,
+} from './matrixPasswordLogtoStore.js';
 
 const REDIS_KEY_PREFIX = 'matrix_pwd:';
 const TTL_SEC = 90 * 24 * 60 * 60; // 90 天
@@ -71,15 +77,33 @@ const store = createStore();
 
 export async function getStoredMatrixPassword(logtoSub: string): Promise<string | null> {
   if (!logtoSub?.trim()) return null;
-  return store.get(logtoSub.trim());
+  const key = logtoSub.trim();
+  let pwd = await store.get(key);
+  if (!pwd && isLogtoMatrixPasswordEnabled()) {
+    pwd = await getMatrixPasswordFromLogto(key);
+    if (pwd) await store.set(key, pwd);
+  }
+  return pwd;
 }
 
 export async function setStoredMatrixPassword(logtoSub: string, password: string): Promise<void> {
   if (!logtoSub?.trim() || !password) return;
-  await store.set(logtoSub.trim(), password);
+  const key = logtoSub.trim();
+  await store.set(key, password);
+  if (isLogtoMatrixPasswordEnabled()) {
+    await setMatrixPasswordToLogto(key, password).catch((e) => {
+      console.warn('[matrixPasswordStore] Logto 持久化失败:', e instanceof Error ? e.message : e);
+    });
+  }
 }
 
 export async function deleteStoredMatrixPassword(logtoSub: string): Promise<void> {
   if (!logtoSub?.trim()) return;
-  await store.delete(logtoSub.trim());
+  const key = logtoSub.trim();
+  await store.delete(key);
+  if (isLogtoMatrixPasswordEnabled()) {
+    await deleteMatrixPasswordFromLogto(key).catch((e) => {
+      console.warn('[matrixPasswordStore] Logto 删除密码失败:', e instanceof Error ? e.message : e);
+    });
+  }
 }

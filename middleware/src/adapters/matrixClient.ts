@@ -43,7 +43,7 @@ async function doLogin(userId: string, password: string): Promise<{ res: Respons
 async function getAccessToken(): Promise<string> {
   if (cachedToken) return cachedToken;
   const { matrix } = config;
-  if (matrix.accessToken) {
+  if (matrix.accessToken?.trim()) {
     cachedToken = matrix.accessToken;
     return cachedToken;
   }

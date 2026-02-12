@@ -71,15 +71,16 @@ chmod +x bootstrap-mas.sh
 - `syn2mas` 需 host 网络访问数据库，bootstrap 会临时暴露 postgres:5433、mas-postgres:5434，迁移后自动移除
 - 若 Synapse 有 Logto 等 OIDC 用户，迁移时会加 `--ignore-missing-auth-providers`，需后续在 MAS 中配置对应 upstream
 
-### 禁用 MAS 回退纯 Synapse
+### 方案 A：禁用 MAS 回退纯 Synapse
 
-若 MAS 存在实现问题（如 createPersonalSession 返回 admin token、设密后 login 失败），可回退到 Synapse 原生认证。详见 `docs/MAS_ALTERNATIVES_RESEARCH.md`。
+若 MAS 存在实现问题，可回退到 Synapse 原生认证。详见 `docs/MAS_ALTERNATIVES_RESEARCH.md`。
 
-**简要步骤**：
-1. 修改 nginx：将 `/_matrix/client/*/(login|logout|refresh)` 改为代理到 Synapse，或改用不含 MAS 的 nginx 配置
-2. 修改 `data/homeserver.yaml`：`matrix_authentication_service.enabled: false` 或删除该块
-3. 重启 nginx、Synapse；可停止 MAS 容器
-4. 中间层：不配置 `MAS_ADMIN_CLIENT_ID`/`MAS_ADMIN_CLIENT_SECRET`，或确保不启用 MAS 路径
+**步骤**：
+1. 在 deploy/matrix 目录执行：`chmod +x disable-mas.sh && ./disable-mas.sh`
+2. 切换 compose：`docker compose -f docker-compose.yml -f docker-compose.no-mas.yml up -d`（替代 docker-compose.mas.yml）
+3. 工作区 `.env`：不配置或注释 `MAS_ADMIN_CLIENT_ID`、`MAS_ADMIN_CLIENT_SECRET`
+
+可选：配置 `MATRIX_PASSWORD_ENCRYPTION_KEY`（32+ 字符）与 `LOGTO_M2M_*`，将 Matrix 密码加密持久化到 Logto customData
 
 ## 配置说明
 

@@ -40,8 +40,9 @@ function getApiClient(): ReturnType<typeof createManagementApi>['apiClient'] {
 
 /**
  * Logto customData 约定结构：
- * - preferences：本应用用户偏好（主题、字体、通知），仅本应用读写
- * - 其它顶层 key 预留给其它用途，本应用不读写
+ * - preferences：本应用用户偏好（主题、字体、通知）
+ * - matrixPasswordEncrypted：Matrix 密码加密存（AES-256-GCM），仅配置 MATRIX_PASSWORD_ENCRYPTION_KEY 时由 matrixPasswordLogtoStore 读写
+ * - 其它顶层 key 预留
  */
 export const LOGTO_CUSTOM_DATA_PREFERENCES_KEY = 'preferences' as const;
 

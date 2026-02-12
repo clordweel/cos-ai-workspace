@@ -4,6 +4,22 @@
 
 ---
 
+## 2026-02-12
+
+### 方案 A：禁用 MAS 回退纯 Synapse
+
+- **deploy/matrix**：新增 `nginx-no-mas.conf`、`docker-compose.no-mas.yml`、`disable-mas.sh`。执行 `./disable-mas.sh` 并切换 compose 后，login/logout/refresh 直接转 Synapse，实现原生密码认证。
+- **文档**：`README.md` 方案 A 步骤更新；`.env.example` 注明 MAS 禁用时勿配置 `MAS_ADMIN_*`。
+
+### Matrix 密码持久化到 Logto
+
+- **middleware**：配置 `MATRIX_PASSWORD_ENCRYPTION_KEY`（32+ 字符）时，Matrix 密码经 AES-256-GCM 加密后存入 Logto customData（`matrixPasswordEncrypted`），需 M2M。
+- **matrixPasswordStore**：读时优先 Redis/内存，未命中则从 Logto 拉取并回填；写/删时同步 Logto。
+- **config**：新增 `matrixPasswordEncryptionKey`。
+- **文档**：`AUTH_AND_USER_CONFIG.md`、`LOGTO_MATRIX_AUTH_FLOW.md` 更新 customData 约定与 token 获取说明。
+
+---
+
 ## 2026-02-10
 
 ### Agent 2026 最佳实践：工作流与结构优化

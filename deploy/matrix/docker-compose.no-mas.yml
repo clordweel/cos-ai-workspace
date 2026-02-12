@@ -1,0 +1,23 @@
+# 方案 A：禁用 MAS，纯 Synapse 原生认证
+# 使用: docker compose -f docker-compose.yml -f docker-compose.no-mas.yml up -d
+# 执行前请运行 ./disable-mas.sh 禁用 Synapse 的 matrix_authentication_service
+
+services:
+  synapse:
+    ports: !reset []  # 由 nginx 对外暴露 8008
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "${SYNAPSE_HTTP_PORT:-8008}:80"
+    volumes:
+      - ./nginx-no-mas.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./well-known:/var/www/well-known:ro
+    depends_on:
+      - synapse
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
