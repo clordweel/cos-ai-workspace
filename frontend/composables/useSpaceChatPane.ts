@@ -151,8 +151,13 @@ export function useSpaceChatPane(options: {
         updateLastMessage(currentId, (m) => { m.contentChunks = undefined })
         const list = getMessages(currentId)
         const last = list[list.length - 1]
-        if (last && !last.content) {
-          updateLastMessage(currentId, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
+        if (last && last.role === 'assistant') {
+          if (!last.content) {
+            updateLastMessage(currentId, (m) => { m.content = '（未收到任何内容，请检查中间层与 CORS 配置）' })
+          } else if (last.content === placeholder && !last.contentChunks?.length) {
+            // 后端未返回任何内容（如 Matrix 单人会话模式），移除占位 assistant 气泡
+            setMessages(currentId, list.slice(0, -1))
+          }
         }
         streamAbortRef.value = null
         streaming.value = false
@@ -187,6 +192,7 @@ export function useSpaceChatPane(options: {
             setConversationId(realId, realId)
             chats.value = chats.value.filter((c) => c.id !== currentId)
             router.replace(`/space/${realId}`)
+            currentId = realId
           },
           onThinking: () => {
             streamContentBuffer.value = ''

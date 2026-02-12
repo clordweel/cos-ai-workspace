@@ -1,22 +1,20 @@
 /**
  * 用户偏好：统一由 Logto customData 存储（仅 Logto 登录时同步）
  * 未登录时使用本地 localStorage/color-mode，登录后从 /api/auth/me 的 preferences 加载并可通过 PATCH 回写
+ * 注意：界面字体大小（uiFontSizeStep）仅存本地，经 useLocalPreferences 统一管理
  */
 import type { ThemeMode } from '~/composables/useTheme'
 
 const FONT_STEP_MIN = 1
 const FONT_STEP_MAX = 5
 const FONT_STEP_DEFAULT = 3
-const STORAGE_KEY = 'app-ui-font-size'
 
 function getStoredFontStep(): number {
-  if (import.meta.client) {
-    try {
-      const v = localStorage.getItem(STORAGE_KEY)
-      const n = v != null ? parseInt(v, 10) : NaN
-      if (!Number.isNaN(n) && n >= FONT_STEP_MIN && n <= FONT_STEP_MAX) return n
-    } catch {}
-  }
+  if (!import.meta.client) return FONT_STEP_DEFAULT
+  const { load } = useLocalPreferences()
+  const prefs = load()
+  const n = prefs.uiFontSizeStep
+  if (typeof n === 'number' && !Number.isNaN(n) && n >= FONT_STEP_MIN && n <= FONT_STEP_MAX) return Math.round(n)
   return FONT_STEP_DEFAULT
 }
 
@@ -28,14 +26,16 @@ const scaleMap: Record<number, number> = {
   5: 18 / 16,
 }
 
+/** 字体档位全局状态（与 useAuth 同模式，保证设置页与聊天区共享） */
+const localFontStepRef = ref(getStoredFontStep())
+
 export function useUserPreferences() {
   const apiBase = useApiBase()
   const { isAuthenticated, preferences, fetchUser } = useAuth()
-  const localFontStepRef = ref(getStoredFontStep())
 
   if (import.meta.client) {
     onMounted(() => {
-      if (!isAuthenticated.value) localFontStepRef.value = getStoredFontStep()
+      localFontStepRef.value = getStoredFontStep()
     })
   }
 
@@ -49,27 +49,18 @@ export function useUserPreferences() {
     return (colorMode.preference as ThemeMode) || 'light'
   })
 
-  /** 字体档位 1–5（Logto 登录时来自 preferences，否则来自 localStorage） */
-  const uiFontSizeStep = computed(() => {
-    if (isAuthenticated.value && preferences.value?.uiFontSizeStep != null) {
-      const n = Number(preferences.value.uiFontSizeStep)
-      if (!Number.isNaN(n) && n >= FONT_STEP_MIN && n <= FONT_STEP_MAX) return Math.round(n)
-    }
-    return localFontStepRef.value
-  })
+  /** 字体档位 1–5（仅本地 localStorage，不持久化到后端） */
+  const uiFontSizeStep = computed(() => localFontStepRef.value)
 
   /** 会话区字体缩放倍数 */
   const sessionAreaFontScale = computed(() => scaleMap[uiFontSizeStep.value] ?? 14 / 16)
 
   function setUIFontSizeStep(step: number) {
     const clamped = Math.max(FONT_STEP_MIN, Math.min(FONT_STEP_MAX, Math.round(step)))
-    if (isAuthenticated.value) {
-      void savePreferences({ uiFontSizeStep: clamped })
-    } else {
-      localFontStepRef.value = clamped
-      try {
-        localStorage.setItem(STORAGE_KEY, String(clamped))
-      } catch {}
+    localFontStepRef.value = clamped
+    if (import.meta.client) {
+      const { patch } = useLocalPreferences()
+      patch({ uiFontSizeStep: clamped })
     }
   }
 
@@ -91,16 +82,14 @@ export function useUserPreferences() {
     }
   }
 
-  /** 将偏好写回 Logto customData（仅 Logto 登录时有效） */
+  /** 将偏好写回 Logto customData（仅 Logto 登录时有效；不含 uiFontSizeStep，该设置仅存本地） */
   async function savePreferences(patch: {
     theme?: ThemeMode
-    uiFontSizeStep?: number
     notificationsEnabled?: boolean
   }): Promise<boolean> {
     if (!isAuthenticated.value) return false
     const body: Record<string, unknown> = {}
     if (patch.theme !== undefined) body.theme = patch.theme
-    if (patch.uiFontSizeStep !== undefined) body.uiFontSizeStep = Math.max(FONT_STEP_MIN, Math.min(FONT_STEP_MAX, Math.round(patch.uiFontSizeStep)))
     if (patch.notificationsEnabled !== undefined) body.notificationsEnabled = patch.notificationsEnabled
     if (Object.keys(body).length === 0) return true
     const url = `${apiBase || ''}/api/auth/me/preferences`

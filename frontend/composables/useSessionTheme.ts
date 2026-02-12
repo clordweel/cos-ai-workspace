@@ -1,21 +1,19 @@
 import { computed, watch } from 'vue'
+import type { SessionThemeMode } from '~/composables/useLocalPreferences'
 
-export type SessionThemeMode = 'light' | 'dark' | 'system'
-
-const STORAGE_KEY = 'session-area-theme'
+export type { SessionThemeMode }
 
 function getStored(): SessionThemeMode {
-  if (import.meta.server) return 'system'
-  try {
-    const v = localStorage.getItem(STORAGE_KEY) as SessionThemeMode | null
-    if (v === 'light' || v === 'dark' || v === 'system') return v
-  } catch {}
+  if (!import.meta.client) return 'system'
+  const { load } = useLocalPreferences()
+  const v = load().sessionTheme
+  if (v === 'light' || v === 'dark' || v === 'system') return v
   return 'system'
 }
 
 /**
  * 会话区独立主题：仅作用于会话区域（列表 + 聊天），与应用区/全局主题可不同。
- * 持久化到 localStorage，解析后供会话区根节点 class 使用。
+ * 持久化经 useLocalPreferences 统一管理。
  */
 export function useSessionTheme() {
   const colorMode = useColorMode()
@@ -26,9 +24,8 @@ export function useSessionTheme() {
     watch(
       sessionThemeMode,
       (v) => {
-        try {
-          localStorage.setItem(STORAGE_KEY, v)
-        } catch {}
+        const { patch } = useLocalPreferences()
+        patch({ sessionTheme: v })
       },
       { immediate: false },
     )
