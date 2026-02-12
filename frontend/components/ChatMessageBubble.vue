@@ -95,6 +95,9 @@
         </div>
       </template>
     </div>
+    <span v-if="showTimestamp && timestampText" class="shrink-0 text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5">
+      {{ timestampText }}
+    </span>
   </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-xs text-zinc-800 dark:text-zinc-200">
@@ -372,6 +375,9 @@
         </span>
       </div>
     </div>
+    <span v-if="showTimestamp && timestampText" class="block mt-0.5 text-[11px] text-zinc-400 dark:text-zinc-500">
+      {{ timestampText }}
+    </span>
   </div>
 </template>
 
@@ -405,8 +411,11 @@ const props = defineProps<{
     editedBy?: MessageSource
     receiptStatus?: import('~/composables/useChatSessions').MessageReceiptStatus
     readBy?: MessageSource[]
+    createdAt?: number
   }
   streaming?: boolean
+  showTimestamp?: boolean
+  timestampText?: string
   /** 当前用户标识，用于高亮“我”的点赞（可选） */
   currentUserLabel?: string
   /** 是否拥有编辑对方消息权限；为 true 时底部工具条显示编辑按钮 */

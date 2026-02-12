@@ -68,6 +68,7 @@
             :scroll-ref="scrollRef"
             :chat-title="chatTitle"
             :chat-user-name="chatUserName"
+            :chat-user-avatar="chatUserAvatar"
             :is-session-expanded="isSessionExpanded"
             :session-area-font-scale="sessionAreaFontScale"
             v-model:input="input"
@@ -122,6 +123,8 @@
                     v-if="displayMessages[virtualRow.index]"
                     :message="displayMessages[virtualRow.index]"
                     :message-index="virtualRow.index"
+                    :show-timestamp="getMessageTimestampDisplay(displayMessages, virtualRow.index).show"
+                    :timestamp-text="getMessageTimestampDisplay(displayMessages, virtualRow.index).text"
                     :streaming="
                       messages.length > 0 &&
                       displayMessages[virtualRow.index]?.role === 'assistant' &&
@@ -154,6 +157,8 @@
                 <ChatMessageBubble
                   :message="msg"
                   :message-index="i"
+                  :show-timestamp="getMessageTimestampDisplay(displayMessages, i).show"
+                  :timestamp-text="getMessageTimestampDisplay(displayMessages, i).text"
                   :streaming="
                     messages.length > 0 &&
                     msg.role === 'assistant' &&
@@ -189,6 +194,8 @@
 </template>
 
 <script setup lang="ts">
+import { getMessageTimestampDisplay } from '~/composables/useMessageTimestamp'
+
 definePageMeta({ layout: 'workspace' })
 
 const {
@@ -246,6 +253,7 @@ const {
   virtualTotalSize,
   chatTitle,
   chatUserName,
+  chatUserAvatar,
   send,
   stopStream,
   scrollToLastMessage,

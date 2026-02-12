@@ -29,6 +29,7 @@ function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
     content: m.content,
     thinking: m.thinking,
     id: m.id ?? m.backendMessageId,
+    createdAt: m.createdAt,
   }
 }
 

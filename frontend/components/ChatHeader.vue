@@ -74,12 +74,18 @@
       </DropdownMenu>
     </div>
     <div class="flex min-w-0 items-center justify-end gap-1.5">
-      <span class="shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="userName">{{ userName }}</span>
+      <span v-if="userName" class="shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="userName">{{ userName }}</span>
       <span
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-xs font-medium"
+        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-xs font-medium"
         aria-hidden
       >
-        <template v-if="userName?.trim()">{{ userName.trim().slice(0, 1) }}</template>
+        <img
+          v-if="userAvatar"
+          :src="userAvatar"
+          :alt="userName || '用户'"
+          class="h-full w-full object-cover"
+        />
+        <template v-else-if="userName?.trim()">{{ userName.trim().slice(0, 1) }}</template>
         <User v-else class="h-3.5 w-3.5" />
       </span>
     </div>
@@ -102,6 +108,8 @@ import { Archive, ChevronLeft, Download, Link, Pencil, Share2, Trash2, User, X }
 defineProps<{
   title: string
   userName: string
+  /** 用户头像 URL，有则显示头像，无则显示姓名首字 */
+  userAvatar?: string
   isSessionExpanded: boolean
 }>()
 defineEmits<{

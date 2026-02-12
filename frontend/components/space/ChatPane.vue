@@ -3,6 +3,7 @@
     <ChatHeader
       :title="chatTitle"
       :user-name="chatUserName"
+      :user-avatar="chatUserAvatar"
       :is-session-expanded="isSessionExpanded"
       @close="emit('close')"
       @rename="emit('rename')"
@@ -43,6 +44,7 @@ defineProps<{
   scrollRef: Ref<HTMLElement | null> | null
   chatTitle: string
   chatUserName: string
+  chatUserAvatar?: string
   isSessionExpanded: boolean
   sessionAreaFontScale: number
   input: string

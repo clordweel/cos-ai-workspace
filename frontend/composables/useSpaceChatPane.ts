@@ -69,7 +69,22 @@ export function useSpaceChatPane(options: {
     return c?.title ?? '会话'
   })
 
-  const chatUserName = computed(() => '张三')
+  const { user: authUser } = useAuth()
+  const chatUserName = computed(() => {
+    const u = authUser.value
+    if (typeof u === 'string') return u
+    if (u && typeof u === 'object' && 'name' in u && typeof (u as { name?: string }).name === 'string') {
+      return (u as { name: string }).name
+    }
+    return ''
+  })
+  const chatUserAvatar = computed(() => {
+    const u = authUser.value
+    if (u && typeof u === 'object' && 'avatar' in u && typeof (u as { avatar?: string }).avatar === 'string') {
+      return (u as { avatar: string }).avatar
+    }
+    return ''
+  })
 
   const { streamChat } = useChatStream()
   const { sendTyping, sendReadReceipt } = useMatrixSyncClient()
@@ -134,7 +149,7 @@ export function useSpaceChatPane(options: {
     function ensureAssistantMessage() {
       if (!hasBotMention || assistantCreated) return
       assistantCreated = true
-      appendMessage(currentId, { role: 'assistant', content: placeholder, thinking: '' })
+      appendMessage(currentId, { role: 'assistant', content: placeholder, thinking: '', createdAt: Date.now() })
       nextTick(() => scrollToLastMessage())
     }
 
@@ -260,7 +275,7 @@ export function useSpaceChatPane(options: {
     const roomId = getConversationId(id) ?? id
     sendTyping(roomId, false)
     input.value = ''
-    appendMessage(id, { role: 'user', content: text })
+    appendMessage(id, { role: 'user', content: text, createdAt: Date.now() })
     nextTick(() => scrollToLastMessage())
     await streamReply(id, text, messageContainsBotMention(text))
   }
@@ -381,6 +396,7 @@ export function useSpaceChatPane(options: {
     virtualTotalSize,
     chatTitle,
     chatUserName,
+    chatUserAvatar,
     send,
     stopStream,
     scrollToLastMessage,
