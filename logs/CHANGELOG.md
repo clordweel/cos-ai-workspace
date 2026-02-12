@@ -6,6 +6,21 @@
 
 ## 2026-02-12
 
+### 聊天区接入 Nuxt UI ChatMessages
+
+- **frontend**：接入 @nuxt/ui，聊天区用 **UChatMessages** 替代自定义 CSS 反转滚动 + 虚拟列表。
+- **useSpaceChatPane**：新增 `uiMessages`（displayMessages → UIMessage）、`chatStatus`、`getMessageIndexByUiId`；移除 scrollRef、rowVirtualizerRef、virtualRows、virtualTotalSize。
+- **ChatPane**：移除 scrollRef、scaleY 与滚轮处理；使用 `<UChatMessages>`，`#content` 插槽转发给页面渲染 ChatMessageBubble。
+- **space/[[id]].vue**：传入 uiMessages、chatStatus；单一 `#content` 插槽内按 `getMessageIndexByUiId(message.id)` 渲染气泡并绑定 retry/edit/delete 等事件。
+- **app.vue**：根节点包裹 `<UApp>`；**tailwind.css**：增加 `@import "@nuxt/ui"`。
+- **说明**：挂载滚到底、流式跟滚、「回到底部」按钮由 UChatMessages 提供；无虚拟列表，适合单会话数百条级。
+
+### 前端升级至 Nuxt 4
+
+- **frontend**：`nuxt` 从 ^3.14 升级至 ^4.3.1，构建与现有模块（shadcn-nuxt、@nuxtjs/color-mode、@logto/nuxt）兼容。
+- **nuxt.config**：显式设置 `srcDir: '.'`、`dir: { app: '.' }` 以保留当前目录结构（不采用 Nuxt 4 默认的 `app/` 作为 srcDir）；保留 `experimental.appManifest: false`。
+- **说明**：升级后可使用 @nuxt/ui v4（含 ChatMessages）等依赖 Nuxt 4 的生态。
+
 ### 方案 A：禁用 MAS 回退纯 Synapse
 
 - **deploy/matrix**：新增 `nginx-no-mas.conf`、`docker-compose.no-mas.yml`、`disable-mas.sh`。执行 `./disable-mas.sh` 并切换 compose 后，login/logout/refresh 直接转 Synapse，实现原生密码认证。

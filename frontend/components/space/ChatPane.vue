@@ -16,13 +16,20 @@
       @delete="emit('delete')"
     />
     <div
-      :ref="setScrollRef"
-      class="chat-scroll-area chat-scroll-inverted absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pb-16 pt-52 scroll-smooth"
+      class="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col"
       :style="{ '--chat-text-scale': sessionAreaFontScale }"
     >
-      <div class="chat-scroll-inverted-inner">
-        <slot />
-      </div>
+      <UChatMessages
+        :messages="uiMessages"
+        :status="chatStatus"
+        should-scroll-to-bottom
+        should-auto-scroll
+        class="chat-messages-scroll flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-3"
+      >
+        <template #content="{ message }">
+          <slot name="content" :message="message" />
+        </template>
+      </UChatMessages>
     </div>
     <ChatInputPanel
       :model-value="input"
@@ -40,12 +47,13 @@
 </template>
 
 <script setup lang="ts">
-import type { Ref } from 'vue'
+import type { UiMessage } from '~/composables/useSpaceChatPane'
 import ChatHeader from '~/components/ChatHeader.vue'
 import ChatInputPanel from '~/components/ChatInputPanel.vue'
 
 const props = defineProps<{
-  scrollRef: Ref<HTMLElement | null> | null
+  uiMessages: UiMessage[]
+  chatStatus: 'submitted' | 'streaming' | 'ready' | 'error'
   chatTitle: string
   chatUserName: string
   chatUserAvatar?: string
@@ -55,25 +63,6 @@ const props = defineProps<{
   streaming: boolean
   replyTarget?: { id: string; role: string; content: string } | null
 }>()
-
-let wheelCleanup: (() => void) | null = null
-
-function setScrollRef(el: unknown) {
-  const el2 = el as HTMLElement | null
-  if (props.scrollRef) props.scrollRef.value = el2
-  if (wheelCleanup) {
-    wheelCleanup()
-    wheelCleanup = null
-  }
-  if (el2) {
-    const handler = (e: WheelEvent) => {
-      e.preventDefault()
-      el2.scrollTop -= e.deltaY
-    }
-    el2.addEventListener('wheel', handler, { passive: false })
-    wheelCleanup = () => el2.removeEventListener('wheel', handler)
-  }
-}
 
 const emit = defineEmits<{
   'update:input': [value: string]
@@ -96,50 +85,35 @@ const emit = defineEmits<{
 </script>
 
 <style scoped>
-.chat-scroll-area *::selection {
+/* 保持与原有聊天区一致的选中样式 */
+:deep([data-slot="content"]) *::selection {
   background: rgb(59 130 246 / 0.22);
   color: inherit;
 }
-.chat-scroll-area *::-moz-selection {
-  background: rgb(59 130 246 / 0.22);
-  color: inherit;
-}
-:global(.dark) .chat-scroll-area *::selection {
+:global(.dark) :deep([data-slot="content"]) *::selection {
   background: rgb(96 165 250 / 0.28);
 }
-:global(.dark) .chat-scroll-area *::-moz-selection {
-  background: rgb(96 165 250 / 0.28);
+
+/* 聊天消息区极细滚动条 */
+:deep(.chat-messages-scroll) {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
 }
-/* 反转滚动方向：scrollTop=0 显示底部（最新），内容用内层 scaleY(-1) 翻回正序 */
-.chat-scroll-inverted {
-  transform: scaleY(-1);
+:deep(.chat-messages-scroll)::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-.chat-scroll-inverted-inner {
-  transform: scaleY(-1);
-}
-.chat-scroll-area {
-  scrollbar-gutter: stable;
-}
-.chat-scroll-area::-webkit-scrollbar {
-  width: 2px;
-}
-.chat-scroll-area::-webkit-scrollbar-track {
+:deep(.chat-messages-scroll)::-webkit-scrollbar-track {
   background: transparent;
 }
-.chat-scroll-area::-webkit-scrollbar-thumb {
-  border-radius: 4px;
-  background: rgb(161 161 170 / 0.4);
+:deep(.chat-messages-scroll)::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 3px;
 }
-.chat-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: rgb(161 161 170 / 0.6);
+:global(.dark) :deep(.chat-messages-scroll) {
+  scrollbar-color: rgb(82 82 91) transparent;
 }
-.chat-scroll-area::-webkit-scrollbar-thumb:active {
-  background: rgb(161 161 170 / 0.8);
-}
-@supports (scrollbar-width: thin) {
-  .chat-scroll-area {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(161 161 170 / 0.5) transparent;
-  }
+:global(.dark) :deep(.chat-messages-scroll)::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
 }
 </style>

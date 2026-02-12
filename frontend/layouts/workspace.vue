@@ -4,11 +4,11 @@
       <div
         class="workspace-grid flex-1 grid min-h-0 p-3 relative"
         :class="showAppPanel ? 'gap-3' : 'gap-0'"
-        :style="{ gridTemplateColumns: effectiveGridColumns }"
+        :style="{ gridTemplateColumns: effectiveGridColumns, gridTemplateRows: 'minmax(0, 1fr)' }"
       >
-        <!-- 左栏：会话区；< sm 时居中且限制最大宽度；左栏最大 940px 由 effectiveGridColumns 控制 -->
-        <div class="workspace-session-column h-full w-full min-w-0 flex flex-col overflow-visible">
-          <div class="workspace-session-column-inner h-full w-full min-w-0 flex flex-col overflow-visible">
+        <!-- 左栏：会话区；行高由 minmax(0,1fr) 约束，避免聊天内容撑开整页 -->
+        <div class="workspace-session-column h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden">
+          <div class="workspace-session-column-inner h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden">
             <slot />
           </div>
         </div>

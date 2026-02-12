@@ -104,14 +104,16 @@ Element 采用 **BACAT** 避免直接操纵 `scrollTop` 带来的问题：
 
 ---
 
-## 六、反转顺序方案（最新在上）
+## 六、当前方案：Nuxt UI UChatMessages
 
-已采用：**反转消息顺序**，使最新消息在顶部，`scrollTop=0` 即默认视图，无需滚动定位。
+已采用 **Nuxt UI ChatMessages**（UChatMessages）承载消息列表与滚动，替代原先的 CSS 反转滚动 + 虚拟列表。
 
-- `displayMessages = [...messages].reverse()`：index 0 = 最新
-- 虚拟列表：index 0 为顶部，自然显示最新
-- `scrollToLastMessage` = `scrollTop = 0`
-- 移除：scrollAnchorRef、scheduleScrollToBottomDelayed、stuckAtBottom、virtualTotalSize 等复杂逻辑
+- **组件**：ChatPane 内使用 `<UChatMessages>`，传入 `uiMessages`（由 displayMessages 映射为 UIMessage）、`chatStatus`（streaming ? 'streaming' : 'ready'）。
+- **滚动**：`should-scroll-to-bottom`、`should-auto-scroll` 开启；组件内置「回到底部」按钮；无需手写 isAtBottom / stickyBottom。
+- **自定义气泡**：通过 `#content` 插槽渲染既有 ChatMessageBubble，用 `getMessageIndexByUiId(message.id)` 反查 displayMessages 下标。
+- **消息**：`displayMessages = messages`（旧→新），无虚拟列表；适合单会话数百条级。若未来需长列表可再评估虚拟或分页。
+
+更全面的开源方案与选型见 **`docs/CHAT_UI_BEST_PRACTICES.md`**。
 
 ---
 
@@ -122,3 +124,4 @@ Element 采用 **BACAT** 避免直接操纵 `scrollTop` 带来的问题：
 | [Element Web scrolling docs](https://web-docs.element.dev/Element%20Web/scrolling.html) | BACAT 原理、scrollState、stickyBottom |
 | [matrix-react-sdk ScrollPanel](https://github.com/element-hq/matrix-react-sdk/blob/develop/src/components/structures/ScrollPanel.tsx) | 具体实现、isAtBottom、scrollBy |
 | Cinny / 通用聊天 | 智能滚动语义（加载 vs 新消息） |
+| 项目内 `CHAT_UI_BEST_PRACTICES.md` | 开源方案汇总、消息列表与滚动最佳实践、组件选型 |

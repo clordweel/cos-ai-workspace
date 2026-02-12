@@ -7,7 +7,7 @@
     - 右：main 聊天区，flex-1 min-w-0，与列表左右并排时占剩余宽度。
     - 注意：layout 在 xl+ 且应用区展开时会话列给 1fr，否则 md～lg 应用区展开时给 288px（仅列表可见）。
   -->
-  <div class="session-area-container h-full w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
+  <div class="session-area-container h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
     <div
       class="flex min-h-0 min-w-0 flex-1"
       :class="isSessionExpanded ? 'flex-row w-full' : 'flex-col'"
@@ -65,7 +65,8 @@
       >
         <template v-if="chatId && !showChatPlaceholderOnFirstLoad">
           <SpaceChatPane
-            :scroll-ref="scrollRef"
+            :ui-messages="uiMessages"
+            :chat-status="chatStatus"
             :chat-title="chatTitle"
             :chat-user-name="chatUserName"
             :chat-user-avatar="chatUserAvatar"
@@ -90,100 +91,39 @@
             @add-participant="openAddParticipant"
             @cancel-reply="onCancelReply"
           >
-            <template v-if="virtualRows.length > 0">
+            <template #content="{ message }">
               <div
-                :style="{
-                  height: `${virtualTotalSize}px`,
-                  width: '100%',
-                  position: 'relative',
-                }"
-              >
-                <div
-                  v-for="virtualRow in virtualRows"
-                  :key="virtualRow.key"
-                  :data-index="virtualRow.index"
-                  class="flex w-full pb-3"
-                  :class="
-                    (displayMessages[virtualRow.index]?.role === 'user'
-                      ? 'justify-end'
-                      : 'justify-start')
-                  "
-                  :style="{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }"
-                  :ref="
-                    (el) => {
-                      if (el) rowVirtualizerRef.measureElement(el)
-                    }
-                  "
-                >
-                  <ChatMessageBubble
-                    v-if="displayMessages[virtualRow.index]"
-                    :message="displayMessages[virtualRow.index]"
-                    :message-index="virtualRow.index"
-                    :show-timestamp="getMessageTimestampDisplay(displayMessages, virtualRow.index).show"
-                    :timestamp-text="getMessageTimestampDisplay(displayMessages, virtualRow.index).text"
-                    :streaming="
-                      messages.length > 0 &&
-                      displayMessages[virtualRow.index]?.role === 'assistant' &&
-                      virtualRow.index === displayMessages.length - 1 &&
-                      streaming
-                    "
-                    :can-edit-other-message="displayMessages[virtualRow.index] && canEditMessage(displayMessages[virtualRow.index])"
-                    @retry="retryMessage(virtualRow.index)"
-                    @edit="onEditMessage(virtualRow.index)"
-                    @view-edit-history="onViewEditHistory(virtualRow.index)"
-                    @edit-user-message="onEditUserMessage(virtualRow.index)"
-                    @retry-user-message="onRetryUserMessage(virtualRow.index)"
-                    @recall-message="onRecallMessage(virtualRow.index)"
-                    @delete-message="onDeleteMessage(virtualRow.index)"
-                    @copy-message="onCopyMessage(virtualRow.index)"
-                    @favorite="onFavoriteMessage(virtualRow.index)"
-                    @export-markdown="onExportMarkdown()"
-                    @listen-reply="onListenReply(virtualRow.index)"
-                    @reply="onReplyToMessage"
-                  />
-                </div>
-              </div>
-            </template>
-            <div v-else class="space-y-3">
-              <div
-                v-for="(msg, i) in displayMessages"
-                :key="'msg-' + i"
-                class="flex"
-                :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+                class="flex w-full pb-3"
+                :class="(displayMessages[getMessageIndexByUiId(message.id)]?.role === 'user' ? 'justify-end' : 'justify-start')"
               >
                 <ChatMessageBubble
-                  :message="msg"
-                  :message-index="i"
-                  :show-timestamp="getMessageTimestampDisplay(displayMessages, i).show"
-                  :timestamp-text="getMessageTimestampDisplay(displayMessages, i).text"
-                    :streaming="
-                      messages.length > 0 &&
-                      msg.role === 'assistant' &&
-                      i === displayMessages.length - 1 &&
-                      streaming
-                    "
-                  :can-edit-other-message="canEditMessage(msg)"
-                  @retry="retryMessage(i)"
-                  @edit="onEditMessage(i)"
-                  @view-edit-history="onViewEditHistory(i)"
-                  @edit-user-message="onEditUserMessage(i)"
-                  @retry-user-message="onRetryUserMessage(i)"
-                  @recall-message="onRecallMessage(i)"
-                  @delete-message="onDeleteMessage(i)"
-                  @copy-message="onCopyMessage(i)"
-                  @favorite="onFavoriteMessage(i)"
+                  v-if="displayMessages[getMessageIndexByUiId(message.id)]"
+                  :message="displayMessages[getMessageIndexByUiId(message.id)]"
+                  :message-index="getMessageIndexByUiId(message.id)"
+                  :show-timestamp="getMessageTimestampDisplay(displayMessages, getMessageIndexByUiId(message.id)).show"
+                  :timestamp-text="getMessageTimestampDisplay(displayMessages, getMessageIndexByUiId(message.id)).text"
+                  :streaming="
+                    messages.length > 0 &&
+                    displayMessages[getMessageIndexByUiId(message.id)]?.role === 'assistant' &&
+                    getMessageIndexByUiId(message.id) === displayMessages.length - 1 &&
+                    streaming
+                  "
+                  :can-edit-other-message="displayMessages[getMessageIndexByUiId(message.id)] && canEditMessage(displayMessages[getMessageIndexByUiId(message.id)])"
+                  @retry="retryMessage(getMessageIndexByUiId(message.id))"
+                  @edit="onEditMessage(getMessageIndexByUiId(message.id))"
+                  @view-edit-history="onViewEditHistory(getMessageIndexByUiId(message.id))"
+                  @edit-user-message="onEditUserMessage(getMessageIndexByUiId(message.id))"
+                  @retry-user-message="onRetryUserMessage(getMessageIndexByUiId(message.id))"
+                  @recall-message="onRecallMessage(getMessageIndexByUiId(message.id))"
+                  @delete-message="onDeleteMessage(getMessageIndexByUiId(message.id))"
+                  @copy-message="onCopyMessage(getMessageIndexByUiId(message.id))"
+                  @favorite="onFavoriteMessage(getMessageIndexByUiId(message.id))"
                   @export-markdown="onExportMarkdown()"
-                  @listen-reply="onListenReply(i)"
+                  @listen-reply="onListenReply(getMessageIndexByUiId(message.id))"
                   @reply="onReplyToMessage"
                 />
               </div>
-            </div>
+            </template>
           </SpaceChatPane>
         </template>
         <ChatEmptyState
@@ -247,14 +187,13 @@ const {
   creatingSession,
   createSessionError,
   displayChats,
-  scrollRef,
   input,
   streaming,
   messages,
   displayMessages,
-  rowVirtualizerRef,
-  virtualRows,
-  virtualTotalSize,
+  uiMessages,
+  chatStatus,
+  getMessageIndexByUiId,
   chatTitle,
   chatUserName,
   chatUserAvatar,

@@ -1,11 +1,13 @@
 /**
- * 会话区聊天面板：消息列表、虚拟滚动、流式发送、导出与单条消息操作
+ * 会话区聊天面板：消息列表（Nuxt UI UChatMessages）、流式发送、导出与单条消息操作
  * 供 space 页 useSpacePage 使用
  */
 import type { ChatMessage } from '~/composables/useChatSessions'
-import { useVirtualizer } from '@tanstack/vue-virtual'
 import { getMockSessionById } from '~/composables/useMockSessions'
 import { useContactsAndBots } from '~/composables/useContactsAndBots'
+
+/** Nuxt UI ChatMessages 使用的消息格式 */
+export type UiMessage = { id: string; role: 'user' | 'assistant'; parts: Array<{ type: 'text'; text: string }> }
 
 const STREAM_TYPEWRITER_INTERVAL_MS = 80
 const STREAM_TYPEWRITER_CHARS_PER_TICK = 1
@@ -42,7 +44,6 @@ export function useSpaceChatPane(options: {
 
   const config = useRuntimeConfig()
   const router = useRouter()
-  const scrollRef = ref<HTMLElement | null>(null)
   const input = ref('')
   const streaming = ref(false)
   const streamAbortRef = ref<AbortController | null>(null)
@@ -52,14 +53,26 @@ export function useSpaceChatPane(options: {
   const messages = computed(() => (chatId.value ? getMessages(chatId.value) : []))
   const displayMessages = computed(() => messages.value)
 
-  const rowVirtualizerRef = useVirtualizer({
-    count: computed(() => displayMessages.value.length),
-    getScrollElement: () => scrollRef.value ?? null,
-    estimateSize: () => 120,
-    overscan: 10,
-  })
-  const virtualRows = computed(() => rowVirtualizerRef.value.getVirtualItems())
-  const virtualTotalSize = computed(() => rowVirtualizerRef.value.getTotalSize())
+  /** 供 UChatMessages 使用：id 与 displayMessages 下标一致，便于 #content 插槽反查 */
+  const uiMessages = computed<UiMessage[]>(() =>
+    displayMessages.value.map((m, i) => ({
+      id: m.id ?? `idx-${i}`,
+      role: (m.role === 'system' ? 'assistant' : m.role) as 'user' | 'assistant',
+      parts: [{ type: 'text' as const, text: m.content ?? '' }],
+    }))
+  )
+
+  /** UChatMessages status：流式中为 streaming，否则 ready */
+  const chatStatus = computed<'submitted' | 'streaming' | 'ready' | 'error'>(() =>
+    streaming.value ? 'streaming' : 'ready'
+  )
+
+  /** 由 UIMessage.id 反查 displayMessages 中的下标（用于 #content 插槽） */
+  function getMessageIndexByUiId(uiId: string): number {
+    if (uiId.startsWith('idx-')) return parseInt(uiId.slice(4), 10)
+    const idx = displayMessages.value.findIndex((m) => m.id === uiId)
+    return idx >= 0 ? idx : 0
+  }
 
   const chatTitle = computed(() => {
     if (!chatId.value) return ''
@@ -130,10 +143,8 @@ export function useSpaceChatPane(options: {
     streaming.value = false
   }
 
-  /** 滚动方向已用 CSS 反转：scrollTop=0 即显示最新，滚到顶即到底部 */
-  function scrollToLastMessage(behavior: ScrollBehavior = 'smooth') {
-    scrollRef.value?.scrollTo({ top: 0, behavior })
-  }
+  /** 由 UChatMessages 内部处理滚动与「回到底部」按钮，此处保留供输入框等调用（可 no-op） */
+  function scrollToLastMessage(_behavior?: ScrollBehavior) {}
 
   const replyTarget = ref<{ id: string; role: string; content: string } | null>(null)
 
@@ -399,14 +410,13 @@ export function useSpaceChatPane(options: {
   }
 
   return {
-    scrollRef,
     input,
     streaming,
     messages,
     displayMessages,
-    rowVirtualizerRef,
-    virtualRows,
-    virtualTotalSize,
+    uiMessages,
+    chatStatus,
+    getMessageIndexByUiId,
     chatTitle,
     chatUserName,
     chatUserAvatar,
