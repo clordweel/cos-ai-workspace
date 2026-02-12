@@ -1,8 +1,6 @@
 import { computed, watch } from 'vue'
 import type { SessionThemeMode } from '~/composables/useLocalPreferences'
 
-export type { SessionThemeMode }
-
 function getStored(): SessionThemeMode {
   if (!import.meta.client) return 'system'
   const { load } = useLocalPreferences()

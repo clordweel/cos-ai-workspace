@@ -56,7 +56,7 @@ export function useSpaceChatPane(options: {
     count: computed(() => displayMessages.value.length),
     getScrollElement: () => scrollRef.value ?? null,
     estimateSize: () => 120,
-    overscan: 5,
+    overscan: 10,
   })
   const virtualRows = computed(() => rowVirtualizerRef.value.getVirtualItems())
   const virtualTotalSize = computed(() => rowVirtualizerRef.value.getTotalSize())
@@ -130,15 +130,9 @@ export function useSpaceChatPane(options: {
     streaming.value = false
   }
 
+  /** 滚动方向已用 CSS 反转：scrollTop=0 即显示最新，滚到顶即到底部 */
   function scrollToLastMessage(behavior: ScrollBehavior = 'smooth') {
-    const n = displayMessages.value.length
-    if (n === 0) return
-    if (virtualRows.value.length > 0) {
-      rowVirtualizerRef.value.scrollToIndex(n - 1, { align: 'end', behavior })
-    } else {
-      const el = scrollRef.value
-      if (el) el.scrollTo({ top: el.scrollHeight, behavior })
-    }
+    scrollRef.value?.scrollTo({ top: 0, behavior })
   }
 
   const replyTarget = ref<{ id: string; role: string; content: string } | null>(null)
@@ -195,10 +189,7 @@ export function useSpaceChatPane(options: {
         }
         streamAbortRef.value = null
         streaming.value = false
-        nextTick(() => {
-          const n = displayMessages.value.length
-          if (n > 0) rowVirtualizerRef.value?.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
-        })
+        nextTick(() => scrollToLastMessage('smooth'))
         return
       }
 
@@ -269,10 +260,7 @@ export function useSpaceChatPane(options: {
       }
     }
     if (!streamEnded) {
-      nextTick(() => {
-        const n = displayMessages.value.length
-        if (n > 0) rowVirtualizerRef.value?.scrollToIndex(n - 1, { align: 'end', behavior: 'smooth' })
-      })
+      nextTick(() => scrollToLastMessage('smooth'))
     }
   }
 

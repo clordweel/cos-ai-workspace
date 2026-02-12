@@ -114,6 +114,11 @@ export function useSpacePage() {
     }
   })
 
+  /** 有消息时立即显示聊天区，避免 placeholder 延迟 120ms 导致 scrollRef 未挂载 */
+  watch(() => (chatId.value ? getMessages(chatId.value).length : 0), (len) => {
+    if (chatId.value && len > 0) showChatPlaceholderOnFirstLoad.value = false
+  })
+
   watch(() => route.query.app, (app) => {
     if (app === 'contacts' || app === 'bots') openPanel(app as any)
   })

@@ -26,8 +26,9 @@ const scaleMap: Record<number, number> = {
   5: 18 / 16,
 }
 
-/** 字体档位全局状态（与 useAuth 同模式，保证设置页与聊天区共享） */
-const localFontStepRef = ref(getStoredFontStep())
+/** 字体档位全局状态（与 useAuth 同模式，保证设置页与聊天区共享）
+ * 初始化必须用 FONT_STEP_DEFAULT，避免 SSR 与客户端 hydration 时从 localStorage 读取导致 style mismatch */
+const localFontStepRef = ref(FONT_STEP_DEFAULT)
 
 export function useUserPreferences() {
   const apiBase = useApiBase()

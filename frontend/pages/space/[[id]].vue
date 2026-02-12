@@ -162,12 +162,12 @@
                   :message-index="i"
                   :show-timestamp="getMessageTimestampDisplay(displayMessages, i).show"
                   :timestamp-text="getMessageTimestampDisplay(displayMessages, i).text"
-                  :streaming="
-                    messages.length > 0 &&
-                    msg.role === 'assistant' &&
-                    i === displayMessages.length - 1 &&
-                    streaming
-                  "
+                    :streaming="
+                      messages.length > 0 &&
+                      msg.role === 'assistant' &&
+                      i === displayMessages.length - 1 &&
+                      streaming
+                    "
                   :can-edit-other-message="canEditMessage(msg)"
                   @retry="retryMessage(i)"
                   @edit="onEditMessage(i)"

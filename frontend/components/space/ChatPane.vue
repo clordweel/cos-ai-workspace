@@ -16,11 +16,13 @@
       @delete="emit('delete')"
     />
     <div
-      :ref="scrollRef"
-      class="chat-scroll-area absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pt-16 pb-52"
+      :ref="setScrollRef"
+      class="chat-scroll-area chat-scroll-inverted absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain p-3 pl-5 pb-16 pt-52 scroll-smooth"
       :style="{ '--chat-text-scale': sessionAreaFontScale }"
     >
-      <slot />
+      <div class="chat-scroll-inverted-inner">
+        <slot />
+      </div>
     </div>
     <ChatInputPanel
       :model-value="input"
@@ -42,7 +44,7 @@ import type { Ref } from 'vue'
 import ChatHeader from '~/components/ChatHeader.vue'
 import ChatInputPanel from '~/components/ChatInputPanel.vue'
 
-defineProps<{
+const props = defineProps<{
   scrollRef: Ref<HTMLElement | null> | null
   chatTitle: string
   chatUserName: string
@@ -53,6 +55,25 @@ defineProps<{
   streaming: boolean
   replyTarget?: { id: string; role: string; content: string } | null
 }>()
+
+let wheelCleanup: (() => void) | null = null
+
+function setScrollRef(el: unknown) {
+  const el2 = el as HTMLElement | null
+  if (props.scrollRef) props.scrollRef.value = el2
+  if (wheelCleanup) {
+    wheelCleanup()
+    wheelCleanup = null
+  }
+  if (el2) {
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      el2.scrollTop -= e.deltaY
+    }
+    el2.addEventListener('wheel', handler, { passive: false })
+    wheelCleanup = () => el2.removeEventListener('wheel', handler)
+  }
+}
 
 const emit = defineEmits<{
   'update:input': [value: string]
@@ -88,6 +109,13 @@ const emit = defineEmits<{
 }
 :global(.dark) .chat-scroll-area *::-moz-selection {
   background: rgb(96 165 250 / 0.28);
+}
+/* 反转滚动方向：scrollTop=0 显示底部（最新），内容用内层 scaleY(-1) 翻回正序 */
+.chat-scroll-inverted {
+  transform: scaleY(-1);
+}
+.chat-scroll-inverted-inner {
+  transform: scaleY(-1);
 }
 .chat-scroll-area {
   scrollbar-gutter: stable;
