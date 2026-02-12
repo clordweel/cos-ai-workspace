@@ -172,7 +172,8 @@ export function createMockAdapter(): ChatBackendAdapter {
 
       send('status', { status: 'thinking' });
       flush();
-      const reply = `[Mock] 收到：${message}`;
+      const botLabel = params.botIds?.length ? ` @${params.botIds[0]}` : '';
+      const reply = `[Mock]${botLabel} 收到：${message}`;
       await streamEcho(send, flush, reply);
 
       const assistantMsg: NormalizedMessage = {

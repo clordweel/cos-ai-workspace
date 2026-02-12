@@ -70,65 +70,34 @@
               <X class="h-3.5 w-3.5" />
             </button>
           </div>
-          <!-- @ 提及候选：输入 @ 后显示在输入框上方，紧凑样式 + 极细滚动条 -->
           <div
-            v-show="atMentionOpen"
-            ref="mentionListRef"
-            class="mention-list absolute left-3 z-30 w-44 max-h-40 overflow-y-auto overflow-x-hidden rounded-md border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-md py-0.5"
-            :style="{ bottom: `${editHeightPx + 52}px` }"
+            ref="editorWrapRef"
+            class="chat-input-inner-scroll overflow-x-hidden overflow-y-auto"
+            :style="{ height: `${editHeightPx}px`, minHeight: `${editHeightPx}px` }"
           >
-            <button
-              v-for="(item, i) in mentionCandidates"
-              :key="item.id + item.kind"
-              type="button"
-              class="flex w-full items-center gap-1.5 px-2 py-1 text-left text-xs transition-colors"
-              :class="i === mentionSelectedIndex ? 'bg-primary-50 dark:bg-primary-900/30 text-black dark:text-white' : 'text-black dark:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700/50'"
-              @mousedown.prevent="onMentionSelect(item)"
-            >
-              <span
-                v-if="item.kind === 'contact'"
-                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-zinc-200 dark:bg-zinc-600 text-black dark:text-white text-[10px] font-medium"
-              >
-                {{ item.name.charAt(0) }}
-              </span>
-              <span
-                v-else
-                class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white"
-              >
-                <Bot class="h-2.5 w-2.5" />
-              </span>
-              <span class="min-w-0 flex-1 truncate font-medium">{{ item.name }}</span>
-              <span class="shrink-0 text-[9px] text-zinc-400 dark:text-zinc-500">
-                {{ item.kind === 'contact' ? '联系人' : '机器人' }}
-              </span>
-            </button>
-            <p
-              v-if="atMentionOpen && mentionCandidates.length === 0"
-              class="px-2 py-1 text-[10px] text-zinc-500 dark:text-zinc-400"
-            >
-              无匹配
-            </p>
-          </div>
-          <div
-            ref="textareaWrapRef"
-            class="chat-input-inner-scroll overflow-x-hidden"
-            :class="modelValue.trim() ? 'overflow-y-auto' : 'overflow-y-hidden'"
-            :style="{ height: `${editHeightPx}px` }"
-          >
-            <textarea
-              ref="textareaRef"
-              :value="modelValue"
-              rows="2"
+            <UEditor
+              :model-value="modelValue"
+              content-type="markdown"
               placeholder="说点什么？输入 @ 可提及联系人或机器人"
-              class="chat-input-textarea chat-input-text-scale min-h-[72px] w-full resize-none border-0 bg-transparent pl-3 pr-1 py-3 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-0"
-              :disabled="streaming"
-              @input="onTextareaInput"
-              @keydown="onTextareaKeydown"
-            />
+              :editable="!streaming"
+              :extensions="chatEnterExtensions"
+              class="chat-input-editor chat-input-text-scale min-h-full w-full px-3 pt-3 pb-0 text-xs text-zinc-800 dark:text-zinc-200 placeholder-zinc-400 dark:placeholder-zinc-500 [&_.ProseMirror]:min-h-[3rem] [&_.ProseMirror]:outline-none"
+              @update:model-value="onEditorUpdate"
+            >
+              <template v-slot="{ editor }">
+                <ChatInputEditorBridge :editor="editor" @register="setEditorRef" />
+                <UEditorMentionMenu
+                  v-if="editor"
+                  :editor="editor"
+                  :items="mentionMenuItems"
+                  :append-to="mentionMenuAppendTo"
+                />
+              </template>
+            </UEditor>
           </div>
-          <div class="flex items-center justify-between gap-2 px-3 pb-2 pt-0">
+          <!-- 工具栏固定在输入框底部 -->
+          <div class="chat-input-toolbar flex shrink-0 items-center justify-between gap-2 px-3 pb-2 pt-2">
             <div class="flex items-center gap-1">
-              <!-- xxs：工具以下拉菜单展示 -->
               <DropdownMenu v-if="isXxs">
                 <DropdownMenuTrigger
                   as-child
@@ -144,51 +113,50 @@
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" side="bottom" :side-offset="4" class="min-w-[8.5rem] shadow-none">
-                  <DropdownMenuItem text-value="提及" class="gap-2" @select="insertAtCursor('@')">
+                  <DropdownMenuItem text-value="提及" class="gap-2" @select="editorRef?.chain().focus().insertContent('@').run()">
                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
                       <AtSign class="h-2.5 w-2.5 text-black dark:text-white" />
                     </span>
                     提及
                   </DropdownMenuItem>
-                  <DropdownMenuItem text-value="来源" class="gap-2" @select="insertAtCursor('#')">
+                  <DropdownMenuItem text-value="来源" class="gap-2" @select="editorRef?.chain().focus().insertContent('#').run()">
                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
                       <Hash class="h-2.5 w-2.5 text-black dark:text-white" />
                     </span>
                     来源
                   </DropdownMenuItem>
-                  <DropdownMenuItem text-value="命令" class="gap-2" @select="insertAtCursor('/')">
+                  <DropdownMenuItem text-value="命令" class="gap-2" @select="editorRef?.chain().focus().insertContent('/').run()">
                     <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
                       <Slash class="h-2.5 w-2.5 text-black dark:text-white" />
                     </span>
                     命令
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem text-value="粗体" class="gap-2" @select="wrapAtCursor('**', '**')">
+                  <DropdownMenuItem text-value="粗体" class="gap-2" @select="editorRef?.chain().focus().toggleBold().run()">
                     <Bold class="h-3 w-3" />
                     粗体
                   </DropdownMenuItem>
-                  <DropdownMenuItem text-value="斜体" class="gap-2" @select="wrapAtCursor('*', '*')">
+                  <DropdownMenuItem text-value="斜体" class="gap-2" @select="editorRef?.chain().focus().toggleItalic().run()">
                     <Italic class="h-3 w-3" />
                     斜体
                   </DropdownMenuItem>
-                  <DropdownMenuItem text-value="代码" class="gap-2" @select="wrapAtCursor('`', '`')">
+                  <DropdownMenuItem text-value="代码" class="gap-2" @select="editorRef?.chain().focus().toggleCode().run()">
                     <Code class="h-3 w-3" />
                     代码
                   </DropdownMenuItem>
-                  <DropdownMenuItem text-value="代码块" class="gap-2" @select="wrapAtCursor('```\n', '\n```')">
+                  <DropdownMenuItem text-value="代码块" class="gap-2" @select="editorRef?.chain().focus().toggleCodeBlock().run()">
                     <Code class="h-3 w-3" />
                     代码块
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <!-- 非 xxs：三个按钮并排 -->
               <template v-else>
                 <button
                   type="button"
                   class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
-                  title="@ 提及联系人或机器人"
+                  title="@ 提及"
                   aria-label="@ 提及"
-                  @click="insertAtCursor('@')"
+                  @click="editorRef?.chain().focus().insertContent('@').run()"
                 >
                   <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
                     <AtSign class="h-2 w-2" />
@@ -200,7 +168,7 @@
                   class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
                   title="# 来源"
                   aria-label="# 来源"
-                  @click="insertAtCursor('#')"
+                  @click="editorRef?.chain().focus().insertContent('#').run()"
                 >
                   <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
                     <Hash class="h-2 w-2" />
@@ -212,7 +180,7 @@
                   class="input-toolbar-chip relative flex h-6 items-center gap-1 rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 px-1 py-1 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
                   title="/ 命令"
                   aria-label="/ 命令"
-                  @click="insertAtCursor('/')"
+                  @click="editorRef?.chain().focus().insertContent('/').run()"
                 >
                   <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80 text-black dark:text-white">
                     <Slash class="h-2 w-2" />
@@ -224,7 +192,7 @@
                   class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
                   title="粗体"
                   aria-label="粗体"
-                  @click="wrapAtCursor('**', '**')"
+                  @click="editorRef?.chain().focus().toggleBold().run()"
                 >
                   <Bold class="h-3 w-3 text-black dark:text-white" />
                 </button>
@@ -233,7 +201,7 @@
                   class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
                   title="斜体"
                   aria-label="斜体"
-                  @click="wrapAtCursor('*', '*')"
+                  @click="editorRef?.chain().focus().toggleItalic().run()"
                 >
                   <Italic class="h-3 w-3 text-black dark:text-white" />
                 </button>
@@ -242,7 +210,7 @@
                   class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
                   title="行内代码"
                   aria-label="行内代码"
-                  @click="wrapAtCursor('`', '`')"
+                  @click="editorRef?.chain().focus().toggleCode().run()"
                 >
                   <Code class="h-3 w-3 text-black dark:text-white" />
                 </button>
@@ -276,13 +244,13 @@
               <div
                 v-else
                 class="send-btn-wrap shrink-0 rounded-lg p-0.5 transition-colors duration-300"
-                :class="modelValue.trim() ? 'send-btn-ready' : ''"
+                :class="canSubmit ? 'send-btn-ready' : ''"
               >
                 <button
                   type="submit"
                   class="send-btn-inner group relative flex h-6 min-w-8 items-center justify-center gap-0.5 rounded-[calc(0.5rem-1px)] pl-1 pr-1.5 transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50"
-                  :class="modelValue.trim() ? 'text-black dark:text-white bg-white dark:bg-zinc-800 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25 hover:bg-zinc-50 dark:hover:bg-zinc-700' : 'text-black dark:text-white bg-white dark:bg-zinc-800 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700'"
-                  :disabled="!modelValue.trim()"
+                  :class="canSubmit ? 'text-black dark:text-white bg-white dark:bg-zinc-800 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25 hover:bg-zinc-50 dark:hover:bg-zinc-700' : 'text-black dark:text-white bg-white dark:bg-zinc-800 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700'"
+                  :disabled="!canSubmit"
                   aria-label="发送"
                 >
                   <span class="flex shrink-0 pl-0.5 transition-transform duration-200 group-hover:-rotate-90">
@@ -303,8 +271,8 @@
 </template>
 
 <script setup lang="ts">
-import { AtSign, Bold, Bot, ChevronDown, Code, GripHorizontal, Hash, Image as ImageIcon, Italic, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
-import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { AtSign, Bold, ChevronDown, Code, GripHorizontal, Hash, Image as ImageIcon, Italic, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useBreakpoint } from '~/composables/useBreakpoint'
 import { useContactsAndBots } from '~/composables/useContactsAndBots'
 import {
@@ -314,6 +282,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
+import type { Editor } from '@tiptap/vue-3'
+import { ChatEnterSubmit } from '~/extensions/chatEnterSubmit'
 
 const props = defineProps<{
   modelValue: string
@@ -334,207 +304,66 @@ const emit = defineEmits<{
 }>()
 
 const isXxs = useBreakpoint('xxs')
-const { contacts, bots } = useContactsAndBots()
+const { contacts, bots, getMentionedBotIdsFromText } = useContactsAndBots()
 
-/** 输入中是否 @ 了机器人（只有 @ 了机器人才展示 assistant 工具栏） */
+/** 输入中是否 @ 了机器人（支持纯文本 @名称 与指令块 [@id="..." label="..."]） */
 const showAssistantToolbar = computed(() =>
-  bots.some((b) => props.modelValue.includes(`@${b.name}`))
+  getMentionedBotIdsFromText(props.modelValue).length > 0
 )
 
-type MentionCandidate = { kind: 'contact' | 'bot'; id: string; name: string }
-const mentionCandidatesList = computed<MentionCandidate[]>(() => {
-  const list: MentionCandidate[] = [
-    ...contacts.map((c) => ({ kind: 'contact' as const, id: c.id, name: c.name })),
-    ...bots.map((b) => ({ kind: 'bot' as const, id: b.id, name: b.name })),
-  ]
-  return list
+/**
+ * 是否可提交：初次加载或内容全删时视为空。
+ * 去除：普通空白、Unicode 空白（含 \u00A0）、零宽字符、字面量 HTML 实体（&nbsp; &#160; 等）。
+ */
+function isContentEmpty(value: string | undefined | null): boolean {
+  if (value == null || value === '') return true
+  let s = value
+  // 字面量实体（富文本序列化可能输出为文本）
+  s = s.replace(/&nbsp;|&#160;|&#x0?0?A0;/gi, '')
+  // 所有 Unicode 空白（含不换行空格 \u00A0、全角空格等）
+  s = s.replace(/\p{White_Space}/gu, '')
+  // 零宽字符（不在 White_Space 中）
+  s = s.replace(/[\u200B-\u200D\uFEFF]/g, '')
+  return s.length === 0
+}
+const canSubmit = computed(() => !isContentEmpty(props.modelValue))
+
+/** 编辑器内容变更时，若等效为空则同步为 ''，避免残留 &nbsp; 等导致发送按钮仍可点 */
+function onEditorUpdate(value: string) {
+  emit('update:modelValue', isContentEmpty(value) ? '' : value)
+}
+
+/** @ 提及菜单挂载到 body，悬浮显示、不占文档流（SSR 安全） */
+const mentionMenuAppendTo = () => (typeof document !== 'undefined' ? document.body : undefined)
+
+/** UEditor Mention 菜单项：联系人 + 机器人，格式为 Nuxt UI EditorMentionMenuItem */
+const mentionMenuItems = computed(() => {
+  const fromContacts = contacts.map((c) => ({ label: c.name, id: c.id }))
+  const fromBots = bots.map((b) => ({ label: b.name, id: b.id }))
+  return [...fromContacts, ...fromBots]
 })
+
+/** Enter 提交、Shift+Enter 换行的 TipTap 扩展 */
+const chatEnterExtensions = [ChatEnterSubmit.configure({ onSubmit: () => emit('submit') })]
 
 const MIN_EDIT_HEIGHT = 72
 const MAX_EDIT_HEIGHT = 280
 const DEFAULT_EDIT_HEIGHT = 72
 
-const textareaWrapRef = ref<HTMLElement | null>(null)
-const textareaRef = ref<HTMLTextAreaElement | null>(null)
-const mentionListRef = ref<HTMLElement | null>(null)
+const editorWrapRef = ref<HTMLElement | null>(null)
+/** 从 UEditor slot 同步的 editor 实例，供底部工具栏使用 */
+const editorRef = ref<Editor | null>(null)
+function setEditorRef(e: Editor | null) {
+  editorRef.value = e
+}
 const editHeightPx = ref(DEFAULT_EDIT_HEIGHT)
 const inputPanelRootRef = ref<HTMLElement | null>(null)
 const inputFormRef = ref<HTMLFormElement | null>(null)
 
-/** 当前 @ 提及起始位置（@ 的索引），null 表示未在输入 @ 状态 */
-const atMentionStart = ref<number | null>(null)
-/** 当前 @ 后已输入的查询词（用于过滤候选） */
-const atMentionQuery = ref('')
-/** 键盘选中的候选下标 */
-const mentionSelectedIndex = ref(0)
-
-const atMentionOpen = computed(() => atMentionStart.value !== null)
-
-const mentionCandidates = computed(() => {
-  const q = atMentionQuery.value.trim().toLowerCase()
-  if (!q) return mentionCandidatesList.value
-  return mentionCandidatesList.value.filter((item) =>
-    item.name.toLowerCase().includes(q),
-  )
-})
-
-watch(mentionCandidates, (list) => {
-  mentionSelectedIndex.value = Math.max(0, Math.min(mentionSelectedIndex.value, list.length - 1))
-})
-
-function parseAtMention(value: string, cursorPos: number) {
-  let start: number | null = null
-  for (let i = cursorPos - 1; i >= 0; i--) {
-    if (value[i] === '\n') break
-    if (value[i] === '@') {
-      start = i
-      break
-    }
-  }
-  if (start === null) {
-    atMentionStart.value = null
-    atMentionQuery.value = ''
-    return
-  }
-  const query = value.slice(start + 1, cursorPos)
-  if (/\s/.test(query)) {
-    atMentionStart.value = null
-    atMentionQuery.value = ''
-    return
-  }
-  atMentionStart.value = start
-  atMentionQuery.value = query
-  mentionSelectedIndex.value = 0
-}
-
-function insertMention(name: string) {
-  const start = atMentionStart.value
-  const el = textareaRef.value
-  if (start === null || !el) return
-  const value = props.modelValue
-  const end = el.selectionStart
-  const newValue = value.slice(0, start) + `@${name} ` + value.slice(end)
-  emit('update:modelValue', newValue)
-  atMentionStart.value = null
-  atMentionQuery.value = ''
-  nextTick(() => {
-    const newCursor = start + name.length + 2
-    el.focus()
-    el.setSelectionRange(newCursor, newCursor)
-    adjustTextareaHeight()
-  })
-}
-
-function onMentionSelect(item: MentionCandidate) {
-  insertMention(item.name)
-}
-
-/** 在光标处插入字符并聚焦输入框；插入 @ 后会触发提及候选 */
-function insertAtCursor(char: string) {
-  const el = textareaRef.value
-  if (!el) return
-  const value = props.modelValue
-  const pos = el.selectionStart ?? value.length
-  const newValue = value.slice(0, pos) + char + value.slice(pos)
-  emit('update:modelValue', newValue)
-  nextTick(() => {
-    const newPos = pos + 1
-    el.focus()
-    el.setSelectionRange(newPos, newPos)
-    if (char === '@') parseAtMention(newValue, newPos)
-    adjustTextareaHeight()
-  })
-}
-
-/** 在选中区域前后插入字符（用于粗体、斜体、代码等格式） */
-function wrapAtCursor(before: string, after: string = before) {
-  const el = textareaRef.value
-  if (!el) return
-  const value = props.modelValue
-  const start = el.selectionStart ?? value.length
-  const end = el.selectionEnd ?? start
-  const selected = value.slice(start, end)
-  const newValue = value.slice(0, start) + before + selected + after + value.slice(end)
-  emit('update:modelValue', newValue)
-  nextTick(() => {
-    el.focus()
-    const newEnd = start + before.length + selected.length + after.length
-    const newStart = selected ? newEnd : start + before.length
-    el.setSelectionRange(newStart, newEnd)
-    adjustTextareaHeight()
-  })
-}
-
-function onTextareaKeydown(e: KeyboardEvent) {
-  if (!atMentionOpen.value) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      emit('submit')
-      return
-    }
-    if (e.key === 'Enter' && e.shiftKey) {
-      e.preventDefault()
-      emit('update:modelValue', props.modelValue + '\n')
-      return
-    }
-    return
-  }
-  const list = mentionCandidates.value
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    mentionSelectedIndex.value = Math.min(mentionSelectedIndex.value + 1, list.length - 1)
-    return
-  }
-  if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    mentionSelectedIndex.value = Math.max(mentionSelectedIndex.value - 1, 0)
-    return
-  }
-  if (e.key === 'Enter') {
-    e.preventDefault()
-    const item = list[mentionSelectedIndex.value]
-    if (item) onMentionSelect(item)
-    return
-  }
-  if (e.key === 'Escape') {
-    e.preventDefault()
-    atMentionStart.value = null
-    atMentionQuery.value = ''
-    return
-  }
-}
-
 function onFormSubmit() {
-  if (atMentionOpen.value) return
   emit('submit')
 }
 
-function adjustTextareaHeight() {
-  nextTick(() => {
-    const el = textareaRef.value
-    if (!el) return
-    el.style.overflow = 'hidden'
-    el.style.height = '0'
-    const h = Math.max(MIN_EDIT_HEIGHT, el.scrollHeight)
-    el.style.height = `${h}px`
-    el.style.overflow = 'hidden'
-    // 空内容时让外层高度与 textarea 一致，避免出现滚动条
-    if (!props.modelValue.trim()) {
-      editHeightPx.value = h
-    }
-  })
-}
-
-function onTextareaInput(e: Event) {
-  const el = e.target as HTMLTextAreaElement
-  const value = el.value
-  const cursorPos = el.selectionStart ?? value.length
-  emit('update:modelValue', value)
-  parseAtMention(value, cursorPos)
-  adjustTextareaHeight()
-}
-
-watch(() => props.modelValue, adjustTextareaHeight)
 function reportInputAreaHeight() {
   const root = inputPanelRootRef.value
   const form = inputFormRef.value
@@ -548,7 +377,6 @@ function reportInputAreaHeight() {
 }
 
 onMounted(() => {
-  adjustTextareaHeight()
   const el = inputPanelRootRef.value
   if (!el) return
   const ro = new ResizeObserver(() => {
@@ -591,35 +419,21 @@ onUnmounted(() => {
 .chat-input-text-scale {
   font-size: calc(1rem * var(--chat-text-scale, 1));
 }
-.mention-list {
-  scrollbar-gutter: stable;
+
+/* 输入区：左右与上 padding 一致（0.75rem），下无 padding */
+.chat-input-editor {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0;
 }
-.mention-list::-webkit-scrollbar {
-  width: 2px;
-}
-.mention-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-.mention-list::-webkit-scrollbar-thumb {
-  border-radius: 2px;
-  background: rgb(161 161 170 / 0.3);
-}
-.mention-list::-webkit-scrollbar-thumb:hover {
-  background: rgb(161 161 170 / 0.45);
-}
-@supports (scrollbar-width: thin) {
-  .mention-list {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(161 161 170 / 0.4) transparent;
-  }
+.chat-input-editor :deep(.ProseMirror) {
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .chat-input-inner-scroll {
   scrollbar-gutter: stable;
-}
-/* 空内容时不预留滚动条、不显示滚动条 */
-.chat-input-inner-scroll.overflow-y-hidden {
-  scrollbar-gutter: auto;
 }
 .chat-input-inner-scroll::-webkit-scrollbar {
   width: 2px;
@@ -642,10 +456,6 @@ onUnmounted(() => {
     scrollbar-width: thin;
     scrollbar-color: rgb(161 161 170 / 0.5) transparent;
   }
-}
-/* 仅外层滚动，textarea 不出现第二条滚动条 */
-.chat-input-textarea {
-  overflow: hidden;
 }
 
 /* 发送按钮：等待发送时流光边框 */

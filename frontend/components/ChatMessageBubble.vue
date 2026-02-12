@@ -37,22 +37,22 @@
         <ContextMenuRoot v-if="messageIndex !== undefined">
           <ContextMenuTrigger as-child>
             <div
-              class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit min-w-28 max-w-full"
+              class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit min-w-28 max-w-full"
             >
               <div
                 v-if="message.inReplyTo"
-                class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
+                class="w-full text-left border-l-2 border-primary-foreground/50 pl-2 py-0.5 -ml-1"
               >
-                <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+                <span class="text-[10px] text-primary-foreground/80">
                   {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
                 </span>
-                <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+                <p class="text-[11px] text-primary-foreground/90 line-clamp-2 break-words">
                   {{ message.inReplyTo.content || '…' }}
                 </p>
               </div>
               <div
                 v-if="userBodyHtml"
-                class="chat-message-text chat-message-markdown break-words flex-1 min-w-0 w-full"
+                class="chat-message-text chat-message-markdown chat-message-markdown--on-primary break-words flex-1 min-w-0 w-full"
                 role="region"
                 aria-label="消息正文"
               >
@@ -120,22 +120,22 @@
         </ContextMenuRoot>
         <template v-else>
           <div
-            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 min-w-28"
+            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground min-w-28"
           >
             <div
               v-if="message.inReplyTo"
-              class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
+              class="w-full text-left border-l-2 border-primary-foreground/50 pl-2 py-0.5 -ml-1"
             >
-              <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+              <span class="text-[10px] text-primary-foreground/80">
                 {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
               </span>
-              <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+              <p class="text-[11px] text-primary-foreground/90 line-clamp-2 break-words">
                 {{ message.inReplyTo.content || '…' }}
               </p>
             </div>
             <div
               v-if="userBodyHtml"
-              class="chat-message-text chat-message-markdown break-words flex-1 min-w-0 w-full"
+              class="chat-message-text chat-message-markdown chat-message-markdown--on-primary break-words flex-1 min-w-0 w-full"
               role="region"
               aria-label="消息正文"
             >
@@ -150,15 +150,18 @@
       </span>
     </div>
   </div>
-  <!-- 系统消息：全宽、文字居中、浅底胶囊样式，与对话气泡区分 -->
+  <!-- 系统消息：全宽、文字居中、浅底胶囊样式，与对话气泡区分；支持时间戳 -->
   <div
     v-else-if="message.role === 'system'"
-    class="w-full py-1 flex justify-center"
+    class="w-full py-1 flex flex-col items-center gap-0.5"
   >
     <span
       class="inline-flex items-center rounded-full px-3 py-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100/90 dark:bg-zinc-700/60 border border-zinc-200/60 dark:border-zinc-600/50"
     >
       {{ message.content }}
+    </span>
+    <span v-if="showTimestamp && timestampText" class="text-[11px] text-zinc-400 dark:text-zinc-500">
+      {{ timestampText }}
     </span>
   </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
@@ -743,6 +746,39 @@ function onCopy() {
 }
 .dark :deep(.chat-message-markdown hr) {
   border-top-color: rgb(63 63 70);
+}
+
+/* 发送方气泡内 Markdown：随主题 primary-foreground */
+:deep(.chat-message-markdown--on-primary),
+:deep(.chat-message-markdown--on-primary p),
+:deep(.chat-message-markdown--on-primary li),
+:deep(.chat-message-markdown--on-primary blockquote),
+:deep(.chat-message-markdown--on-primary th),
+:deep(.chat-message-markdown--on-primary td) {
+  color: inherit;
+}
+:deep(.chat-message-markdown--on-primary blockquote) {
+  border-left-color: color-mix(in srgb, currentColor 50%, transparent);
+}
+:deep(.chat-message-markdown--on-primary pre) {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+}
+:deep(.chat-message-markdown--on-primary :not(pre) > code) {
+  background: color-mix(in srgb, currentColor 15%, transparent);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  color: inherit;
+}
+:deep(.chat-message-markdown--on-primary a) {
+  color: inherit;
+  text-decoration: underline;
+}
+:deep(.chat-message-markdown--on-primary th),
+:deep(.chat-message-markdown--on-primary td) {
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+:deep(.chat-message-markdown--on-primary hr) {
+  border-top-color: color-mix(in srgb, currentColor 40%, transparent);
 }
 
 .streaming-cursor {

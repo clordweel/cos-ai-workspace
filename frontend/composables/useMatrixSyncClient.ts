@@ -12,7 +12,7 @@ const syncReady = ref(false)
 export function useMatrixSyncClient() {
   const auth = useAuth()
   const config = useRuntimeConfig()
-  const { appendMessage, ensureChat, getMessages } = useChatSessions()
+  const { appendMessage, ensureChat, getMessages, setMessages, updateLastMessage } = useChatSessions()
 
   watch(
     () => (auth.matrixSyncToken as { value?: string })?.value,
@@ -72,7 +72,19 @@ export function useMatrixSyncClient() {
       syncReady.value = false
 
       c.on(sdk.ClientEvent.Sync, (state: string) => {
-        if (state === 'PREPARED' || state === 'SYNCING') syncReady.value = true
+        if (state === 'PREPARED' || state === 'SYNCING') {
+          syncReady.value = true
+          // 刷新所有已加入房间的显示名称，避免刷新后仅显示 roomId
+          nextTick(() => {
+            const rooms = c.getRooms?.() ?? []
+            for (const room of rooms) {
+              const roomId = room?.roomId
+              if (!roomId) continue
+              const name = (room?.name ?? '').trim()
+              if (name) ensureChat(roomId, name)
+            }
+          })
+        }
         if (state === 'ERROR' && import.meta.dev) {
           console.warn('[MatrixSync] sync state ERROR，实时消息可能不可用')
         }
@@ -110,6 +122,43 @@ export function useMatrixSyncClient() {
           if (body == null) return
           const formattedBody = (content as { formatted_body?: string }).formatted_body
           const role = event.getSender?.() === userId ? 'user' : 'assistant'
+          // 己方消息：后端可能改写 body/formatted_body，用「替换最后一条无 id 的 user 占位」避免新旧两条并存
+          if (role === 'user' && eventId) {
+            const list = getMessages(roomId)
+            if (list.some((m) => m.id === eventId)) return
+            const now = Date.now()
+            const PENDING_WINDOW_MS = 15000
+            let replaceIndex = -1
+            for (let i = list.length - 1; i >= 0; i--) {
+              const m = list[i]
+              if (m?.role !== 'user') continue
+              if (m.id) break
+              const age = now - (m.createdAt ?? 0)
+              if (age <= PENDING_WINDOW_MS) replaceIndex = i
+              break
+            }
+            if (replaceIndex >= 0) {
+              const existing = list[replaceIndex]
+              const syncMsg = {
+                role: 'user' as const,
+                content: String(body),
+                ...(typeof formattedBody === 'string' && formattedBody ? { formattedBody } : {}),
+                id: eventId,
+                createdAt,
+                receiptStatus: 'sent' as const,
+                inReplyTo: existing?.inReplyTo,
+              }
+              nextTick(() => {
+                const room = c.getRoom?.(roomId)
+                const title = (room?.name ?? '').trim() || roomId
+                ensureChat(roomId, title)
+                const next = [...list]
+                next[replaceIndex] = { ...existing, ...syncMsg }
+                setMessages(roomId, next)
+              })
+              return
+            }
+          }
           const msg = {
             role: role as 'user' | 'assistant',
             content: String(body),
@@ -118,7 +167,9 @@ export function useMatrixSyncClient() {
             createdAt,
           }
           nextTick(() => {
-            ensureChat(roomId, roomId)
+            const room = c.getRoom?.(roomId)
+            const title = (room?.name ?? '').trim() || roomId
+            ensureChat(roomId, title)
             appendMessage(roomId, msg)
           })
           return
@@ -127,45 +178,12 @@ export function useMatrixSyncClient() {
         if (eventType === 'm.room.name') {
           const content = event.getContent?.() ?? {}
           const name = (content.name as string)?.trim() || '未命名'
-          const systemMsg = {
-            role: 'system' as const,
-            content: `会话已改名为「${name}」`,
-            id: eventId ?? undefined,
-            createdAt,
-          }
-          nextTick(() => {
-            ensureChat(roomId, name)
-            appendMessage(roomId, systemMsg)
-          })
+          nextTick(() => ensureChat(roomId, name))
           return
         }
 
-        if (eventType === 'm.room.member') {
-          const content = event.getContent?.() ?? {}
-          const membership = (content.membership as string) ?? ''
-          const stateKey = (event.getStateKey?.() ?? event.getSender?.() ?? '') as string
-          const displayName = (content.displayname as string)?.trim() || stateKey.replace(/^@/, '').split(':')[0] || stateKey
-          let contentText: string
-          if (membership === 'join') {
-            contentText = `${displayName} 加入了会话`
-          } else if (membership === 'leave') {
-            contentText = `${displayName} 离开了会话`
-          } else if (membership === 'invite') {
-            contentText = `${displayName} 被邀请加入`
-          } else {
-            return
-          }
-          const systemMsg = {
-            role: 'system' as const,
-            content: contentText,
-            id: eventId ?? undefined,
-            createdAt,
-          }
-          nextTick(() => {
-            ensureChat(roomId, roomId)
-            appendMessage(roomId, systemMsg)
-          })
-        }
+        // 与 Cinny 一致：成员加入/离开等状态事件不放入聊天流，不展示为系统消息
+        if (eventType === 'm.room.member') return
       })
 
       await c.startClient({ initialSyncLimit: 50 })

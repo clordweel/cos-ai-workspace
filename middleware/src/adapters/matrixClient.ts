@@ -293,11 +293,9 @@ export async function getRoomMessages(
   const data = (await res.json()) as RoomMessagesResponse & { error?: string };
   if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
   const chunk = data.chunk || [];
+  // 仅保留时间线消息；m.room.name / m.room.member 为状态事件，与 Cinny 一致不放入聊天流
   const events = chunk.filter(
-    (e) =>
-      (e.type === 'm.room.message' && e.content?.body != null) ||
-      (e.type === 'm.room.member' && e.content?.membership) ||
-      (e.type === 'm.room.name' && e.content?.name != null)
+    (e) => e.type === 'm.room.message' && e.content?.body != null
   );
   return { events, nextToken: data.end };
 }
@@ -306,19 +304,25 @@ export async function getRoomMessages(
  * 发送一条文本消息到房间
  * userToken 必填：必须以当前用户 token 发送，否则消息归属到 admin
  * @param inReplyToEventId - 回复某条消息时，被回复消息的 event_id
+ * @param formattedBody - 可选，HTML 富文本；有则带 format: org.matrix.custom.html
  */
 export async function sendRoomMessage(
   roomId: string,
   body: string,
   msgtype = 'm.text',
   userToken?: string,
-  inReplyToEventId?: string
+  inReplyToEventId?: string,
+  formattedBody?: string
 ): Promise<{ event_id: string }> {
   if (!userToken?.trim()) {
     throw new MatrixApiError('sendRoomMessage 必须使用当前用户 token，禁止回退到 admin', 0);
   }
   const encoded = encodeURIComponent(roomId);
   const content: Record<string, unknown> = { msgtype, body };
+  if (formattedBody?.trim()) {
+    content.format = 'org.matrix.custom.html';
+    content.formatted_body = formattedBody.trim();
+  }
   if (inReplyToEventId?.trim()) {
     content['m.relates_to'] = {
       'm.in_reply_to': { event_id: inReplyToEventId.trim() },

@@ -17,6 +17,9 @@
   --color-primary-800: #1e40af;
   --color-primary-900: #1e3a8a;
   --color-primary-950: #172554;
+  /* 语义：主色与主色上的前景（用于按钮、发送方气泡等） */
+  --color-primary: var(--color-primary-600);
+  --color-primary-foreground: #ffffff;
   --font-sans: "HarmonyOS Sans SC", HarmonyOSHans-Regular, HarmonyOSHans-fallback,
     "PingFang SC", "Microsoft YaHei", Arial, Helvetica, sans-serif;
 }

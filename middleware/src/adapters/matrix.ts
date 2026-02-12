@@ -2,7 +2,7 @@
  * Matrix 会话后端适配器
  * 与 SESSION_ADAPTER_MATRIX.md 对应：Room = 会话，m.room.message = 消息
  * 使用 Matrix Client-Server API（matrixClient）
- * 注：Dify 流式接入已暂时移除，助手回复为占位文案
+ * 当消息 @ 了机器人且配置了 Dify 时，助手回复经 SSE 推送给前端（不写入 Matrix）
  */
 import {
   getJoinedRooms,
@@ -11,11 +11,14 @@ import {
   sendRoomMessage,
   createRoom,
   inviteToRoom,
+  joinRoom,
   leaveRoom,
   setRoomName,
   verifyMatrixTokenUserId,
 } from './matrixClient.js';
 import { config } from '../config.js';
+import { runStreamWithParams } from '../services/difyStream.js';
+import { processMessageText } from '../services/messageTextProcessor.js';
 import type {
   ChatBackendAdapter,
   NormalizedSession,
@@ -28,7 +31,6 @@ import type {
   InviteToSessionParams,
   DeleteSessionParams,
   RenameSessionParams,
-  SSESend,
 } from './types.js';
 
 function isMatrixConfigured(): boolean {
@@ -104,40 +106,9 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       }
       const out: NormalizedMessage[] = [];
       for (const ev of events) {
-        if (ev.type === 'm.room.member') {
-          const membership = ev.content?.membership ?? '';
-          const stateKey = ev.state_key ?? ev.sender;
-          const displayName = ev.content?.displayname ?? stateKey.replace(/^@/, '').split(':')[0] ?? stateKey;
-          let content: string;
-          if (membership === 'join') {
-            content = `${displayName} 加入了会话`;
-          } else if (membership === 'leave') {
-            content = `${displayName} 离开了会话`;
-          } else if (membership === 'invite') {
-            content = `${displayName} 被邀请加入`;
-          } else {
-            continue;
-          }
-          out.push({
-            id: ev.event_id,
-            role: 'system',
-            content,
-            backendMessageId: ev.event_id,
-            createdAt: ev.origin_server_ts,
-          });
-          continue;
-        }
-        if (ev.type === 'm.room.name') {
-          const name = ev.content?.name?.trim() || '未命名';
-          out.push({
-            id: ev.event_id,
-            role: 'system',
-            content: `会话已改名为「${name}」`,
-            backendMessageId: ev.event_id,
-            createdAt: ev.origin_server_ts,
-          });
-          continue;
-        }
+        // 与 Cinny 一致：不把状态事件（m.room.member、m.room.name）当作聊天消息展示
+        if (ev.type === 'm.room.member' || ev.type === 'm.room.name') continue;
+
         const r = ev.sender === currentUserId ? 'user' : 'assistant';
         const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
         const formattedBody = typeof (ev.content as { formatted_body?: string })?.formatted_body === 'string'
@@ -192,15 +163,55 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         flush();
       }
 
+      const { body: msgBody, formattedBody: msgFormattedBody } = processMessageText(message);
       await sendRoomMessage(
         roomId,
-        message,
+        msgBody,
         'm.text',
         userToken,
-        params.replyToMessageId
+        params.replyToMessageId,
+        msgFormattedBody || undefined
       );
 
-      // 第一步：用户独自使用会话，消息存入 Matrix，无他人参与；AI 回复后续接入
+      // 若 @ 了机器人且配置了 Dify，经 SSE 推送助手流，并可选写入 Matrix（以 bot 身份）
+      // Dify 的 conversation_id 须为空或 Dify 返回的 UUID，不能传 Matrix roomId，否则 400
+      if (params.botIds?.length && config.dify.apiKey) {
+        const fullAnswer = await runStreamWithParams(
+          {
+            message,
+            conversation_id: '',
+            user_id: userId,
+          },
+          send,
+          flush
+        );
+        if (fullAnswer?.trim() && config.matrix.botUserId && config.matrix.botAccessToken) {
+          try {
+            await inviteToRoom(roomId, config.matrix.botUserId, userToken);
+          } catch {
+            // 可能已在房间
+          }
+          try {
+            await joinRoom(roomId, config.matrix.botAccessToken);
+          } catch {
+            // 可能已加入
+          }
+          try {
+            const { body: botBody, formattedBody: botFormattedBody } = processMessageText(fullAnswer.trim());
+            await sendRoomMessage(
+              roomId,
+              botBody,
+              'm.text',
+              config.matrix.botAccessToken,
+              undefined,
+              botFormattedBody || undefined
+            );
+          } catch {
+            // 助手回复写入 Matrix 失败时仅忽略，用户已通过 SSE 看到回复
+          }
+        }
+      }
+
       return { backendSessionId: roomId };
     },
 

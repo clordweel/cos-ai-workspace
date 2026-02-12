@@ -138,7 +138,16 @@ importers:
       ioredis:
         specifier: ^5.9.2
         version: 5.9.2
+      isomorphic-dompurify:
+        specifier: 3.0.0-rc.2
+        version: 3.0.0-rc.2
+      markdown-it:
+        specifier: ^14.1.1
+        version: 14.1.1
     devDependencies:
+      '@types/markdown-it':
+        specifier: ^14.1.2
+        version: 14.1.2
       '@types/node':
         specifier: ^22.10.1
         version: 22.19.10

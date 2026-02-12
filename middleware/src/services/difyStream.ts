@@ -21,13 +21,14 @@ type SSEFlush = () => void;
 
 /**
  * 运行流式对话，向 send/flush 写入 SSE 事件（与请求解耦，供适配器调用）
+ * @returns 助手回复的完整文本（不含思考过程），供写入 Matrix 等持久化
  */
 export async function runStreamWithParams(
   params: StreamParams,
   send: SSESend,
   flush: SSEFlush,
   difyConfig?: DifyConfig
-): Promise<void> {
+): Promise<string> {
   const { message, conversation_id = '', user_id = 'default' } = params;
   const { apiKey, apiBase } = difyConfig ?? config.dify;
   const chatClient = new ChatClient({ apiKey, baseUrl: apiBase });
@@ -39,7 +40,7 @@ export async function runStreamWithParams(
     response_mode: 'streaming',
     conversation_id: conversation_id || '',
   });
-  await consumeStream(result, send, flush);
+  return consumeStream(result, send, flush);
 }
 
 interface DifyStreamEvent {
@@ -52,12 +53,13 @@ interface DifyStreamEvent {
 
 /**
  * 消费 Dify 流式迭代器，发送 SSE 事件（thinking / message / message_end）
+ * @returns 助手回复的完整文本（不含思考过程）
  */
 export async function consumeStream(
   result: AsyncIterable<DifyStreamEvent> | { data?: unknown },
   send: SSESend,
   flush: SSEFlush
-): Promise<void> {
+): Promise<string> {
   const isStream =
     result && typeof (result as AsyncIterable<DifyStreamEvent>)[Symbol.asyncIterator] === 'function';
   if (!isStream) {
@@ -65,11 +67,12 @@ export async function consumeStream(
     const answer = extractText(
       typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : undefined
     );
-    if (typeof answer === 'string' && answer) send('message', { delta: answer });
+    const text = typeof answer === 'string' ? answer : '';
+    if (text) send('message', { delta: text });
     flush();
     send('message_end', {});
     flush();
-    return;
+    return text;
   }
 
   send('status', { status: 'thinking' });
@@ -178,6 +181,8 @@ export async function consumeStream(
   }
   send('message_end', {});
   flush();
+  const { answer } = splitThinkingAndAnswer(accumulatedFull);
+  return answer ?? '';
 }
 
 interface FastifyReplyWithRaw {

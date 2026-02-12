@@ -74,6 +74,7 @@
 | `MATRIX_BASE_URL` | Synapse/MAS 根 URL（如 `http://10.1.1.15:8008`） |
 | `MATRIX_SERVER_NAME` | MXID 域名（如 `10.1.1.15`） |
 | `MATRIX_USER_ID` + `MATRIX_PASSWORD` \| `MATRIX_ACCESS_TOKEN` | 仅 Admin API（ensureMatrixUser、setMatrixPasswordByAdmin），不参与会话 |
+| `MATRIX_BOT_USER_ID` + `MATRIX_BOT_ACCESS_TOKEN` | 可选：助手回复写入房间时以该 bot 身份发送，不配则仅经 SSE 推前端 |
 | `MAS_ADMIN_CLIENT_ID` + `MAS_ADMIN_CLIENT_SECRET` | MAS Personal Session（可选） |
 
 ### 3.2 deploy/matrix 部署

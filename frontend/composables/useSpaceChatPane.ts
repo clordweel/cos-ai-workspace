@@ -101,11 +101,11 @@ export function useSpaceChatPane(options: {
 
   const { streamChat } = useChatStream()
   const { sendTyping, sendReadReceipt } = useMatrixSyncClient()
-  const { bots } = useContactsAndBots()
+  const { getMentionedBotIdsFromText } = useContactsAndBots()
 
-  /** 消息中是否 @ 了机器人（只有 @ 了机器人才会触发 assistant 回复） */
+  /** 消息中是否 @ 了机器人（支持纯文本 @名称 与指令块 [@id="..." label="..."]） */
   function messageContainsBotMention(text: string): boolean {
-    return bots.some((b) => text.includes(`@${b.name}`))
+    return getMentionedBotIdsFromText(text).length > 0
   }
 
   let typingTimeoutId: ReturnType<typeof setTimeout> | null = null
@@ -151,7 +151,7 @@ export function useSpaceChatPane(options: {
   async function streamReply(
     id: string,
     text: string,
-    hasBotMention: boolean,
+    botIds: string[],
     replyToMessageId?: string
   ) {
     let currentId = id
@@ -159,7 +159,7 @@ export function useSpaceChatPane(options: {
     let assistantCreated = false
 
     function ensureAssistantMessage() {
-      if (!hasBotMention || assistantCreated) return
+      if (botIds.length === 0 || assistantCreated) return
       assistantCreated = true
       appendMessage(currentId, { role: 'assistant', content: placeholder, thinking: '', createdAt: Date.now() })
       nextTick(() => scrollToLastMessage())
@@ -177,13 +177,15 @@ export function useSpaceChatPane(options: {
         ensureAssistantMessage()
         const take = buf.slice(0, STREAM_TYPEWRITER_CHARS_PER_TICK)
         streamContentBuffer.value = buf.slice(STREAM_TYPEWRITER_CHARS_PER_TICK)
-        updateLastMessage(currentId, (m) => {
-          const base = m.content === placeholder ? '' : m.content
-          m.content = base + take
-          if (!m.contentChunks) m.contentChunks = []
-          m.contentChunks.push(take)
-        })
-        scrollToLastMessage('auto')
+        if (assistantCreated) {
+          updateLastMessage(currentId, (m) => {
+            const base = m.content === placeholder ? '' : m.content
+            m.content = base + take
+            if (!m.contentChunks) m.contentChunks = []
+            m.contentChunks.push(take)
+          })
+          scrollToLastMessage('auto')
+        }
       }
 
       if (buf === '' && streamEnded) {
@@ -220,6 +222,7 @@ export function useSpaceChatPane(options: {
           signal: streamAbortRef.value?.signal,
           conversationId: getConversationId(currentId),
           replyToMessageId,
+          botIds: botIds.length ? botIds : undefined,
           onSessionCreated: (payload) => {
             const realId = payload.backend_session_id ?? payload.session_id
             if (realId === currentId) return
@@ -259,6 +262,13 @@ export function useSpaceChatPane(options: {
         : msg
       ensureAssistantMessage()
       updateLastMessage(currentId, (m) => { m.content = `请求失败：${friendly}` })
+      const list = getMessages(currentId)
+      const sendingIdx = list.findLastIndex((m) => m.role === 'user' && m.receiptStatus === 'sending')
+      if (sendingIdx >= 0) {
+        const next = [...list]
+        next[sendingIdx] = { ...next[sendingIdx]!, receiptStatus: 'failed' }
+        setMessages(currentId, next)
+      }
     } finally {
       if (!streamEnded) {
         if (typewriterTimerId) {
@@ -288,10 +298,12 @@ export function useSpaceChatPane(options: {
       role: 'user',
       content: text,
       createdAt: Date.now(),
+      receiptStatus: 'sending',
       inReplyTo: target ? { id: target.id, role: target.role as 'user' | 'assistant', content: target.content } : undefined,
     })
     nextTick(() => scrollToLastMessage())
-    await streamReply(id, text, messageContainsBotMention(text), target?.id)
+    // 始终请求后端（普通消息也要写入 Matrix）；仅 @ 机器人时才创建助手占位并展示流
+    await streamReply(id, text, getMentionedBotIdsFromText(text), target?.id)
   }
 
   function onReplyToMessage(msg: { id?: string; role: string; content: string }) {
@@ -397,7 +409,7 @@ export function useSpaceChatPane(options: {
     if (msg?.content) navigator.clipboard.writeText(msg.content).catch(() => {})
   }
 
-  function retryMessage(index: number) {
+  async function retryMessage(index: number) {
     const id = chatId.value
     if (!id || streaming.value) return
     const list = getMessages(id)
@@ -406,7 +418,8 @@ export function useSpaceChatPane(options: {
     const userMsg = list[index - 1]
     if (assistantMsg.role !== 'assistant' || userMsg.role !== 'user') return
     setMessages(id, list.slice(0, index))
-    streamReply(id, userMsg.content, messageContainsBotMention(userMsg.content))
+    if (!messageContainsBotMention(userMsg.content)) return
+    await streamReply(id, userMsg.content, getMentionedBotIdsFromText(userMsg.content))
   }
 
   return {

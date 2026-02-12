@@ -66,7 +66,7 @@ export function useSpaceSessionList(options: {
   const listViewTab = ref<ListViewTab>('active')
   const pinnedCollapsed = ref(false)
   const pinnedIds = ref<string[]>(['mock-private-zhangsan', 'mock-group-product'])
-  const mockCollapsed = ref(false)
+  const mockCollapsed = ref(true)
   const mockTitleOverrides = ref<Record<string, string>>({})
   const mockHiddenIds = ref<string[]>([])
 
@@ -140,17 +140,12 @@ export function useSpaceSessionList(options: {
       (c) => isMockSessionId(c.id) && !pinnedIds.value.includes(c.id)
     )
   })
+  /** 仅按数据顺序展示，不因选中而置顶；排序由 touchChatUpdatedAt（发消息时）驱动 */
   const activeChats = computed<DisplayChatItem[]>(() => {
     const base = mockSessionListEnabled.value
       ? displayChats.value.filter((c) => !isMockSessionId(c.id))
       : displayChats.value
-    const list = base.filter((c) => !pinnedIds.value.includes(c.id))
-    const current = chatId.value
-    if (!current) return list
-    const idx = list.findIndex((c) => c.id === current)
-    if (idx <= 0) return list
-    const item = list[idx]
-    return [item, ...list.slice(0, idx), ...list.slice(idx + 1)]
+    return base.filter((c) => !pinnedIds.value.includes(c.id))
   })
   const pendingChats = computed<DisplayChatItem[]>(() =>
     displayChats.value.filter((c) => getNonReadCount(c.id) > 0)
@@ -173,11 +168,6 @@ export function useSpaceSessionList(options: {
     return text ? (text.length > 20 ? `${text.slice(0, 20)}…` : text) : '点击开始对话'
   }
 
-  function formatChatDateAbsolute(ts: number): string {
-    const d = new Date(ts)
-    return `${d.getMonth() + 1}月${d.getDate()}日`
-  }
-
   function formatChatDate(ts: number): string {
     const d = new Date(ts)
     const today = new Date()
@@ -188,11 +178,13 @@ export function useSpaceSessionList(options: {
     return `${d.getMonth() + 1}月${d.getDate()}日`
   }
 
+  /** 水合前返回空，避免服务端与客户端日期/时区/数据不一致导致 hydration mismatch；挂载后再显示日期 */
   function getChatDateLabel(id: string): string {
+    if (!isMounted.value) return ''
     const mock = getMockSessionById(id)
     const ts = mock ? mock.updatedAt : chats.value.find((x) => x.id === id)?.updatedAt
     if (ts == null) return ''
-    return isMounted.value ? formatChatDate(ts) : formatChatDateAbsolute(ts)
+    return formatChatDate(ts)
   }
 
   function isMockSession(id: string) {

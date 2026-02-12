@@ -11,7 +11,7 @@
             class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
             @click="emit('update:pinnedCollapsed', !pinnedCollapsed)"
           >
-            <component :is="pinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <component :is="effectivePinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <span class="flex-1">置顶</span>
             <span
@@ -21,7 +21,7 @@
               {{ pinnedChats.length }}
             </span>
           </button>
-          <ul v-show="!pinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
+          <ul v-show="!effectivePinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
             <SessionListItem
               v-for="c in pinnedChats"
               :key="c.id"
@@ -47,7 +47,7 @@
             class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
             @click="emit('update:mockCollapsed', !mockCollapsed)"
           >
-            <component :is="mockCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <component :is="effectiveMockCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <span class="flex-1">Mock 会话</span>
             <span
@@ -57,7 +57,7 @@
               {{ mockChats.length }}
             </span>
           </button>
-          <ul v-show="!mockCollapsed && mockChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
+          <ul v-show="!effectiveMockCollapsed && mockChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
             <SessionListItem
               v-for="c in mockChats"
               :key="c.id"
@@ -178,7 +178,7 @@ export interface DisplayChatItem {
   participants?: { name: string }[]
 }
 
-defineProps<{
+const props = defineProps<{
   listViewTab: 'active' | 'favorites' | 'pending' | 'settings'
   listPaddingTop: string
   pinnedCollapsed: boolean
@@ -197,6 +197,12 @@ defineProps<{
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
 }>()
+
+/** 水合前使用固定值，避免服务端与客户端图标/列表显隐不一致导致 hydration mismatch */
+const mounted = ref(false)
+onMounted(() => { mounted.value = true })
+const effectivePinnedCollapsed = computed(() => (mounted.value ? props.pinnedCollapsed : false))
+const effectiveMockCollapsed = computed(() => (mounted.value ? (props.mockCollapsed ?? true) : true))
 
 const emit = defineEmits<{
   'update:pinnedCollapsed': [value: boolean]

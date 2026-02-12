@@ -15,6 +15,8 @@ export function useChatStream() {
       userId?: string
       /** 回复某条消息的 id（event_id / backendMessageId） */
       replyToMessageId?: string
+      /** 消息中 @ 的机器人 id 列表，供后端按机器人路由（如 Dify 应用） */
+      botIds?: string[]
       signal?: AbortSignal
       onThinking?: () => void
       onThinkingDelta?: (delta: string) => void
@@ -24,15 +26,17 @@ export function useChatStream() {
       onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void
     }
   ): Promise<void> {
+    const body: Record<string, unknown> = {
+      message,
+      conversation_id: options?.conversationId,
+      user_id: (options?.userId ?? (useAuth().userId as { value?: string })?.value) || 'default',
+      reply_to_message_id: options?.replyToMessageId,
+    }
+    if (options?.botIds?.length) body.bot_ids = options.botIds
     const res = await fetch(`${apiBase}/api/chat/stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        conversation_id: options?.conversationId,
-        user_id: (options?.userId ?? (useAuth().userId as { value?: string })?.value) || 'default',
-        reply_to_message_id: options?.replyToMessageId,
-      }),
+      body: JSON.stringify(body),
       credentials: 'include',
       signal: options?.signal,
     })

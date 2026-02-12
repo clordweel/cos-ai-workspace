@@ -30,6 +30,7 @@ services:
     environment:
       SYNAPSE_SERVER_NAME: ${SYNAPSE_SERVER_NAME:?请设置 SYNAPSE_SERVER_NAME}
       SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
+      TZ: Asia/Shanghai
     volumes:
       - ./data:/data
     healthcheck:

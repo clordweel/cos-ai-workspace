@@ -21,6 +21,10 @@ export interface Config {
     userId: string;
     accessToken: string;
     password: string;
+    /** 可选：用于把助手回复写入房间的 bot MXID，需配合 botAccessToken */
+    botUserId: string;
+    /** 可选：bot 的 access token，配置后助手回复会以 bot 身份发到 Matrix 房间 */
+    botAccessToken: string;
   };
   /** MAS Personal Session：配置后优先用 MAS Admin API 签发 token，不再依赖密码/Admin 设密 */
   mas: {
@@ -74,6 +78,8 @@ export const config: Config = {
     userId: process.env.MATRIX_USER_ID || '',
     accessToken: process.env.MATRIX_ACCESS_TOKEN || '',
     password: process.env.MATRIX_PASSWORD || '',
+    botUserId: (process.env.MATRIX_BOT_USER_ID || '').trim(),
+    botAccessToken: (process.env.MATRIX_BOT_ACCESS_TOKEN || '').trim(),
   },
   mas: {
     baseUrl: (process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').replace(/\/$/, ''),

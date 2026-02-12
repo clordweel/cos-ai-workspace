@@ -67,8 +67,14 @@ export function useChatSessionsApi() {
       if (!res.ok) return false
       const json = (await res.json()) as { sessions?: ApiSession[] }
       const sessions = json.sessions ?? []
+      const isMatrixRoomId = (id: string) => id.startsWith('!') && id.includes(':')
       for (const s of sessions) {
-        ensureChat(s.id, s.title)
+        // 若后端返回的 title 实为房间 ID（如 getRoomName 失败），用占位名避免列表/顶栏显示 ID
+        const title =
+          isMatrixRoomId(s.id) && (s.title === s.id || !s.title?.trim())
+            ? '会话'
+            : (s.title?.trim() || '会话')
+        ensureChat(s.id, title)
         setChatUpdatedAt(s.id, s.updatedAt)
         setConversationId(s.id, s.backendSessionId ?? s.id)
       }

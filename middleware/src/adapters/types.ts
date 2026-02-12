@@ -56,6 +56,8 @@ export interface StreamMessageParams {
   flush: SSEFlush;
   /** 回复某条消息时的 event_id / backendMessageId */
   replyToMessageId?: string;
+  /** 消息中 @ 的机器人 id 列表，供按机器人路由（如 Dify 应用） */
+  botIds?: string[];
   /** Matrix 每用户 token（混合方案） */
   matrixAccessToken?: string;
   /** 当前用户 MXID，用于 listMessages 等 role 判断 */

@@ -78,6 +78,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **Matrix 最佳实践** | `docs/MATRIX_CLIENT_BEST_PRACTICES.md` | 限流、token、分页、3PID、登录 identifier 等（来自 matrix-js-sdk、Element、规范） |
 | **Matrix 中间层审查** | `docs/MIDDLEWARE_MATRIX_REVIEW.md` | 中间层 Matrix 实现审查与改进建议 |
 | **前端** | `docs/FRONTEND_SPEC.md` | 布局、目录、视图、主题、扩展 |
+| **聊天输入框重构** | `docs/CHAT_INPUT_REFACTOR_PLAN.md` | 输入时渲染 Markdown/富文本、Nuxt UI Editor / Tiptap 方案 |
 | **鉴权** | `docs/FRONTEND_AUTH_AND_PERMISSIONS.md` | 免认证/需认证/分权限、usePermissions |
 | **扩展** | `docs/APP_EXTENSIONS.md` | 应用扩展契约、注册、懒加载 |
 | **API** | `docs/API_SPEC.md` | cos App REST 接口（物料、生产辅助） |

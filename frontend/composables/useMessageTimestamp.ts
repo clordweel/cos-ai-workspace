@@ -1,8 +1,9 @@
 /**
  * 消息时间戳展示逻辑（参考 Cinny）：
- * - 每条非系统消息均在气泡右侧显示时间
  * - 跨日期时在首条消息上方显示日期分隔线（今天 / 昨天 / 具体日期）
+ * - 时间戳：仅当与上一条非系统消息的间隔超过 2 分钟时显示，减少连续对话中的冗余
  */
+const TIMESTAMP_GAP_MS = 2 * 60 * 1000 // 2 分钟
 export function formatMessageTime(ts: number): string {
   const d = new Date(ts)
   const now = new Date()
@@ -24,17 +25,31 @@ export function formatMessageTime(ts: number): string {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${timeStr}`
 }
 
-/** 每条非系统消息且存在 createdAt 时都显示时间戳 */
+/**
+ * 是否显示该条消息的时间戳：与上一条参考消息的间隔超过 2 分钟则显示（首条或间隔足够大时显示）。
+ * 用户/助手消息参考上一条非系统消息；系统消息参考上一条任意有 createdAt 的消息。
+ */
 export function getMessageTimestampDisplay(
   messages: Array<{ role: string; createdAt?: number }>,
   index: number
 ): { show: boolean; text: string } {
   if (index < 0 || index >= messages.length) return { show: false, text: '' }
   const msg = messages[index]
-  if (msg.role === 'system') return { show: false, text: '' }
   const ts = msg.createdAt
   if (ts == null) return { show: false, text: '' }
-  return { show: true, text: formatMessageTime(ts) }
+  // 系统消息：与上一条任意有 createdAt 的消息比较
+  const useAnyRole = msg.role === 'system'
+  let prevTs: number | null = null
+  for (let i = index - 1; i >= 0; i--) {
+    const m = messages[i]
+    if (m.createdAt == null) continue
+    if (useAnyRole || m.role !== 'system') {
+      prevTs = m.createdAt
+      break
+    }
+  }
+  const show = prevTs == null || ts - prevTs > TIMESTAMP_GAP_MS
+  return { show, text: formatMessageTime(ts) }
 }
 
 /** 若该条消息是“新日期”的第一条，返回日期分隔文案（今天/昨天/M月D日/YYYY年M月D日），否则返回空 */

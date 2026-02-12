@@ -53,9 +53,7 @@ export type ChatMessage = {
   editableByCurrentUser?: boolean
 }
 
-const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([
-  { id: 'default', title: '当前会话', updatedAt: Date.now() },
-])
+const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([])
 const messagesByChatId = ref<Record<string, ChatMessage[]>>({})
 const conversationIds = ref<Record<string, string | undefined>>({})
 
@@ -93,9 +91,15 @@ export function useChatSessions() {
     }
   }
 
+  /** 更新会话活动时间并移到列表最前（仅发消息等产生新活动时调用，点击选中不触发） */
   const touchChatUpdatedAt = (id: string) => {
     const now = Date.now()
-    chats.value = chats.value.map((c) => (c.id === id ? { ...c, updatedAt: now } : c))
+    const list = chats.value
+    const idx = list.findIndex((c) => c.id === id)
+    if (idx < 0) return
+    const item = list[idx]
+    const updated = { ...item, updatedAt: now }
+    chats.value = [updated, ...list.slice(0, idx), ...list.slice(idx + 1)]
   }
 
   /** 设置某会话的 updatedAt（用于从 API 拉取会话列表后保持正确排序） */
