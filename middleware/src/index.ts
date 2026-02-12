@@ -13,6 +13,7 @@ import { authRoutes } from './routes/auth.js';
 import { chatRoutes } from './routes/chat.js';
 import { materialRoutes } from './routes/material.js';
 import { diagnosticsRoutes } from './routes/diagnostics.js';
+import { debugRoutes } from './routes/debug.js';
 
 const isDev = process.env.NODE_ENV === 'development';
 const app = Fastify({
@@ -28,6 +29,7 @@ await app.register(authRoutes);
 await app.register(chatRoutes);
 await app.register(materialRoutes);
 await app.register(diagnosticsRoutes);
+await app.register(debugRoutes);
 
 await app.listen({
   port: config.port,

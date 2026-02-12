@@ -1,6 +1,6 @@
 <template>
   <header
-    class="session-list-header h-12 shrink-0 flex items-center justify-between gap-1 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75 px-2"
+    class="session-list-header relative h-12 shrink-0 flex items-center justify-between gap-1 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75 px-2 pointer-events-auto"
     role="banner"
     aria-label="会话列表"
   >
@@ -40,12 +40,14 @@
       />
       <button
         type="button"
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-colors"
-        title="新会话"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-black dark:text-white hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-black dark:hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+        :title="createSessionError || '新会话'"
         aria-label="新会话"
-        @click="$emit('new-chat')"
+        :disabled="creatingSession"
+        @click="onNewChatClick"
       >
-        <MessageSquarePlus class="h-4 w-4" />
+        <MessageSquarePlus v-if="!creatingSession" class="h-4 w-4" />
+        <span v-else class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
       </button>
     </div>
   </header>
@@ -61,18 +63,26 @@ const props = withDefaults(
     appDrawerOpen?: boolean
     searchBarOpen?: boolean
     searchQuery?: string
+    /** 创建会话中（禁用按钮并显示 loading） */
+    creatingSession?: boolean
+    /** 创建会话失败时的错误信息 */
+    createSessionError?: string | null
     /** 可选：用户头像 URL，未传则用用户名首字或默认图标 */
     userAvatar?: string
   }>(),
-  { appDrawerOpen: false, searchBarOpen: false }
+  { appDrawerOpen: false, searchBarOpen: false, creatingSession: false, createSessionError: null }
 )
 
-defineEmits<{
+const emit = defineEmits<{
   'new-chat': []
   search: []
   app: []
   'update:searchQuery': [value: string]
 }>()
+
+function onNewChatClick() {
+  emit('new-chat')
+}
 
 const { user } = useAuth()
 const userName = computed(() => {

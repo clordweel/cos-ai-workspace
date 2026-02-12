@@ -108,6 +108,17 @@ export function useChatSessions() {
     return id
   }
 
+  /** 从列表中移除会话（删除后调用） */
+  const removeChat = (chatId: string) => {
+    chats.value = chats.value.filter((c) => c.id !== chatId)
+    const nextMessages = { ...messagesByChatId.value }
+    delete nextMessages[chatId]
+    messagesByChatId.value = nextMessages
+    const nextIds = { ...conversationIds.value }
+    delete nextIds[chatId]
+    conversationIds.value = nextIds
+  }
+
   /** 更新某条消息的接收状态 */
   const updateMessageReceipt = (chatId: string, index: number, status: MessageReceiptStatus) => {
     const list = getMessages(chatId)
@@ -150,6 +161,7 @@ export function useChatSessions() {
     appendMessage,
     updateLastMessage,
     ensureChat,
+    removeChat,
     touchChatUpdatedAt,
     setChatUpdatedAt,
     getConversationId,

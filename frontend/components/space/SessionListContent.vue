@@ -1,10 +1,10 @@
 <template>
-  <div class="session-list-scroll-area absolute inset-0 z-0 overflow-y-auto overscroll-contain pb-24">
+  <div
+    class="session-list-scroll-area absolute left-0 right-0 bottom-0 z-0 overflow-y-auto overscroll-contain pb-24"
+    :style="{ top: listPaddingTop }"
+  >
     <template v-if="listViewTab === 'active'">
-      <div
-        class="min-h-full flex flex-col transition-[padding] duration-200"
-        :style="{ paddingTop: listPaddingTop }"
-      >
+      <div class="min-h-full flex flex-col">
         <section class="session-list-pinned border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
           <button
             type="button"
@@ -33,7 +33,7 @@
               @click="emit('session-click', c.id)"
               @toggle-pin="emit('toggle-pin', c.id)"
               @rename="emit('rename', c.id)"
-              @close="emit('close', c.id)"
+              @delete="emit('delete', c.id)"
             />
           </ul>
         </section>
@@ -69,7 +69,7 @@
               @click="emit('session-click', c.id)"
               @toggle-pin="emit('toggle-pin', c.id)"
               @rename="emit('rename', c.id)"
-              @close="emit('close', c.id)"
+              @delete="emit('delete', c.id)"
             />
           </ul>
         </section>
@@ -87,7 +87,7 @@
                 @click="emit('session-click', c.id)"
                 @toggle-pin="emit('toggle-pin', c.id)"
                 @rename="emit('rename', c.id)"
-                @close="emit('close', c.id)"
+                @delete="emit('delete', c.id)"
               />
             </ul>
           </template>
@@ -106,10 +106,7 @@
       </div>
     </template>
     <template v-else-if="listViewTab === 'favorites'">
-      <div
-        class="min-h-full flex flex-col items-center justify-center"
-        :style="{ paddingTop: listPaddingTop }"
-      >
+      <div class="min-h-full flex flex-col items-center justify-center">
         <Empty
           compact
           title="收藏与归档"
@@ -119,10 +116,7 @@
       </div>
     </template>
     <template v-else-if="listViewTab === 'pending'">
-      <div
-        class="min-h-full flex flex-col transition-[padding] duration-200"
-        :style="{ paddingTop: listPaddingTop }"
-      >
+      <div class="min-h-full flex flex-col">
         <section class="border-b border-zinc-100 dark:border-zinc-700/80 px-3 py-2">
           <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">未读、发送中、已送达等（非已读）</p>
         </section>
@@ -163,7 +157,7 @@
       </div>
     </template>
     <template v-else-if="listViewTab === 'settings'">
-      <SessionListSettings :padding-top="listPaddingTop" />
+      <SessionListSettings padding-top="0" />
     </template>
   </div>
 </template>
@@ -209,7 +203,7 @@ const emit = defineEmits<{
   'session-click': [id: string]
   'toggle-pin': [id: string]
   rename: [id: string]
-  close: [id: string]
+  delete: [id: string]
 }>()
 </script>
 

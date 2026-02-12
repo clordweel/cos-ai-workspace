@@ -31,7 +31,10 @@ export function useSpacePage() {
     markChatAsRead,
   } = useChatSessions()
 
-  const { loadSessions, loadSessionMessages } = useChatSessionsApi()
+  const config = useRuntimeConfig()
+  const chatProvider = (config.public?.chatProvider as string) || ''
+
+  const { loadSessions, loadSessionMessages, createSession } = useChatSessionsApi()
   const { getWithTitle } = useContactsAndBots()
   const { openPanel, openNavPage, addTab, currentView, activeTab } = useAppView()
 
@@ -41,7 +44,29 @@ export function useSpacePage() {
     router.push(`/space/${id}`)
   }
 
-  function startNewChat() {
+  const creatingSession = ref(false)
+  const createSessionError = ref<string | null>(null)
+
+  async function startNewChat() {
+    createSessionError.value = null
+    if (chatProvider === 'matrix') {
+      creatingSession.value = true
+      try {
+        const id = await createSession('新会话')
+        if (id) {
+          ensureChat(id, '新会话')
+          setConversationId(id, id)
+          router.push(`/space/${id}`)
+          return
+        }
+        createSessionError.value = '创建会话失败，请刷新后重试'
+      } catch (e) {
+        createSessionError.value = e instanceof Error ? e.message : '创建会话失败，请刷新后重试'
+      } finally {
+        creatingSession.value = false
+      }
+      return
+    }
     const id = createNewChat()
     router.push(`/space/${id}`)
   }
@@ -152,6 +177,9 @@ export function useSpacePage() {
     showAppPanel,
     openAddParticipant,
     openPanel,
+    startNewChat,
+    creatingSession,
+    createSessionError,
     ...listApi,
     ...paneApi,
   }

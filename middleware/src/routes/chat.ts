@@ -7,7 +7,11 @@ import type { FastifyInstance } from 'fastify';
 import { getChatAdapter } from '../adapters/index.js';
 import { getSessionFromCookie, getStableUserId, updateSession } from '../services/auth.js';
 import { getMatrixUserId, getMatrixUserIdForSession, ensureMatrixUser } from '../services/matrixUserSync.js';
-import { verifyMatrixTokenUserId } from '../adapters/matrixClient.js';
+import {
+  verifyMatrixTokenUserId,
+  getMatrixUserIdFromToken,
+  getMatrixAdminUserId,
+} from '../adapters/matrixClient.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import { config } from '../config.js';
 import { messagesToMarkdown } from '../services/exportMarkdown.js';
@@ -146,49 +150,72 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.get('/api/sessions', async (req, reply) => {
-    const adapter = getChatAdapter();
-    if (
-      !adapter ||
-      !adapter.supportsListSessions() ||
-      typeof adapter.listSessions !== 'function'
-    ) {
-      return reply.code(501).send({
-        error: '当前后端不支持会话列表',
-        message: '请使用支持 listSessions 的 CHAT_PROVIDER（如 mock）',
-      });
-    }
-    const session = await getSessionFromCookie(req.headers.cookie);
-    if (await requireMatrixToken(req, session, reply)) return;
-
-    // 校验 token 属于当前用户，避免误用 admin token 导致返回 admin 的房间列表
-    const expectedMxid = getMatrixUserIdForSession(
-      session!.logtoSub,
-      session!.userProfile?.username,
-      session!.matrixUserId
-    );
-    const tokenValid = await verifyMatrixTokenUserId(session!.matrixAccessToken!, expectedMxid);
-    if (!tokenValid) {
-      session!.matrixAccessToken = undefined;
-      session!.matrixTokenExpiresAt = undefined;
-      await updateSession(session!.sessionId, {
-        matrixAccessToken: undefined,
-        matrixTokenExpiresAt: undefined,
-      });
-      const ensured = await ensureMatrixTokenForSession(session!);
-      const fresh = await getSessionFromCookie(req.headers.cookie);
-      if (fresh?.matrixAccessToken) {
-        session!.matrixAccessToken = fresh.matrixAccessToken;
-        session!.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
-      }
-      if (!session!.matrixAccessToken) {
-        return reply.code(401).send({
-          error: 'Matrix token 已失效，请刷新后重试',
+    try {
+      const adapter = getChatAdapter();
+      if (
+        !adapter ||
+        !adapter.supportsListSessions() ||
+        typeof adapter.listSessions !== 'function'
+      ) {
+        return reply.code(501).send({
+          error: '当前后端不支持会话列表',
+          message: '请使用支持 listSessions 的 CHAT_PROVIDER（如 mock）',
         });
       }
-    }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
 
-    const userId = await resolveUserId(req);
-    try {
+      // 校验 token 属于当前用户；admin token 需清除刷新，MAS 等签发的用户 token 则采纳
+      let expectedMxid = getMatrixUserIdForSession(
+        session!.logtoSub,
+        session!.userProfile?.username,
+        session!.matrixUserId
+      );
+      const tokenValid = await verifyMatrixTokenUserId(
+        session!.matrixAccessToken!,
+        expectedMxid
+      );
+      if (!tokenValid && session!.logtoSub) {
+        const actualUserId = await getMatrixUserIdFromToken(session!.matrixAccessToken!);
+        const adminUserId = await getMatrixAdminUserId();
+        if (actualUserId && adminUserId && actualUserId === adminUserId) {
+          if (expectedMxid === adminUserId) {
+            session!.matrixUserId = actualUserId;
+          } else {
+            session!.matrixAccessToken = undefined;
+            session!.matrixTokenExpiresAt = undefined;
+            await updateSession(session!.sessionId, {
+              matrixAccessToken: undefined,
+              matrixTokenExpiresAt: undefined,
+            });
+            await ensureMatrixTokenForSession(session!);
+            const fresh = await getSessionFromCookie(req.headers.cookie);
+            if (fresh?.matrixAccessToken) {
+              session!.matrixAccessToken = fresh.matrixAccessToken;
+              session!.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
+              const afterActual = await getMatrixUserIdFromToken(session!.matrixAccessToken!);
+              if (afterActual && afterActual !== adminUserId) {
+                await updateSession(session!.sessionId, { matrixUserId: afterActual });
+                session!.matrixUserId = afterActual;
+              }
+            }
+            if (!session!.matrixAccessToken) {
+              return reply.code(401).send({
+                error: 'Matrix token 已失效，请刷新后重试',
+              });
+            }
+          }
+        } else if (actualUserId && actualUserId !== adminUserId) {
+          await updateSession(session!.sessionId, { matrixUserId: actualUserId });
+          session!.matrixUserId = actualUserId;
+        } else {
+          return reply.code(401).send({
+            error: 'Matrix token 已失效，请刷新后重试',
+          });
+        }
+      }
+
+      const userId = await resolveUserId(req);
       const list = await adapter.listSessions({
         userId,
         matrixAccessToken: session?.matrixAccessToken,
@@ -206,28 +233,28 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
   app.get<{ Params: { id?: string }; Querystring: { user_id?: string; user?: string; limit?: string; before_id?: string } }>(
     '/api/sessions/:id/messages',
     async (req, reply) => {
-      const adapter = getChatAdapter();
-      if (
-        !adapter ||
-        !adapter.supportsListMessages() ||
-        typeof adapter.listMessages !== 'function'
-      ) {
-        return reply.code(501).send({
-          error: '当前后端不支持会话历史',
-          message: '请使用支持 listMessages 的 CHAT_PROVIDER（如 mock）',
-        });
-      }
-      const sessionId = req.params?.id;
-      if (!sessionId) {
-        return reply.code(400).send({ error: 'session id is required' });
-      }
-      const session = await getSessionFromCookie(req.headers.cookie);
-      if (await requireMatrixToken(req, session, reply)) return;
-
-      const userId = await resolveUserId(req);
-      const limit = req.query?.limit ?? 50;
-      const beforeId = req.query?.before_id;
       try {
+        const adapter = getChatAdapter();
+        if (
+          !adapter ||
+          !adapter.supportsListMessages() ||
+          typeof adapter.listMessages !== 'function'
+        ) {
+          return reply.code(501).send({
+            error: '当前后端不支持会话历史',
+            message: '请使用支持 listMessages 的 CHAT_PROVIDER（如 mock）',
+          });
+        }
+        const sessionId = req.params?.id;
+        if (!sessionId) {
+          return reply.code(400).send({ error: 'session id is required' });
+        }
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (await requireMatrixToken(req, session, reply)) return;
+
+        const userId = await resolveUserId(req);
+        const limit = req.query?.limit ?? 50;
+        const beforeId = req.query?.before_id;
         const messages = await adapter.listMessages({
           sessionId,
           backendSessionId: sessionId,
@@ -236,8 +263,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
           beforeId: beforeId || undefined,
           matrixAccessToken: session?.matrixAccessToken,
           currentUserMxid: session?.logtoSub
-          ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
-          : undefined,
+            ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
+            : undefined,
         });
         return reply.send({ messages });
       } catch (e) {
@@ -251,26 +278,109 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
   );
 
   app.post('/api/sessions', async (req, reply) => {
-    const adapter = getChatAdapter();
-    if (!adapter || typeof adapter.createSession !== 'function') {
-      return reply.code(501).send({
-        error: '当前后端不支持创建会话',
-        message: '请使用支持 createSession 的 CHAT_PROVIDER（如 matrix）',
-      });
-    }
-    const session = await getSessionFromCookie(req.headers.cookie);
-    if (await requireMatrixToken(req, session, reply)) return;
-
-    const userId = await resolveUserId(req);
-    const body = (req.body as { title?: string }) || {};
     try {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.createSession !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持创建会话',
+          message: '请使用支持 createSession 的 CHAT_PROVIDER（如 matrix）',
+        });
+      }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      if (!session?.matrixAccessToken?.trim()) {
+        return reply.code(401).send({ error: '需要 Matrix 会话，请刷新后重试' });
+      }
+
+      // 校验 token 属于当前用户；若不匹配则区分：admin token 需清除刷新，MAS 等签发的用户 token（MXID 可能不同）则采纳
+      let currentUserMxid: string | undefined =
+        session?.logtoSub
+          ? getMatrixUserIdForSession(
+              session.logtoSub,
+              session.userProfile?.username,
+              session.matrixUserId
+            )
+          : undefined;
+
+      if (session.logtoSub && currentUserMxid) {
+        const tokenValid = await verifyMatrixTokenUserId(
+          session.matrixAccessToken!,
+          currentUserMxid
+        );
+        if (!tokenValid) {
+          const actualUserId = await getMatrixUserIdFromToken(session.matrixAccessToken!);
+          const adminUserId = await getMatrixAdminUserId();
+          if (actualUserId && adminUserId && actualUserId === adminUserId) {
+            if (currentUserMxid === adminUserId) {
+              req.log.info(
+                { mxid: currentUserMxid, sessionId: session.sessionId },
+                'createSession: 当前用户即为 Matrix 管理员，采纳 token'
+              );
+              currentUserMxid = actualUserId;
+            } else {
+              req.log.info(
+                { expectedMxid: currentUserMxid, sessionId: session.sessionId },
+                'createSession: token 为 admin 但当前用户非 admin，清除并重新获取'
+              );
+              session.matrixAccessToken = undefined;
+              session.matrixTokenExpiresAt = undefined;
+              await updateSession(session.sessionId, {
+                matrixAccessToken: undefined,
+                matrixTokenExpiresAt: undefined,
+              });
+              await ensureMatrixTokenForSession(session);
+              const fresh = await getSessionFromCookie(req.headers.cookie);
+              if (fresh?.matrixAccessToken) {
+                session.matrixAccessToken = fresh.matrixAccessToken;
+                session.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
+              }
+              if (!session.matrixAccessToken?.trim()) {
+                return reply.code(401).send({
+                  error: 'Matrix token 已失效，请刷新页面后重试',
+                });
+              }
+              const afterActual = await getMatrixUserIdFromToken(session.matrixAccessToken!);
+              if (!afterActual) {
+                return reply.code(401).send({
+                  error: 'Matrix token 无效，请刷新页面后重试',
+                });
+              }
+              if (afterActual === adminUserId && afterActual !== currentUserMxid) {
+                req.log.warn(
+                  { expectedMxid: currentUserMxid, actualUserId: afterActual, sessionId: session.sessionId },
+                  'createSession: 刷新后仍为 admin token，请退出登录后重新登录'
+                );
+                return reply.code(401).send({
+                  error: '无法获取用户会话，请退出登录后重新登录',
+                });
+              }
+              currentUserMxid = afterActual;
+              await updateSession(session.sessionId, { matrixUserId: afterActual });
+              session.matrixUserId = afterActual;
+            }
+          } else if (actualUserId && actualUserId !== adminUserId) {
+            req.log.info(
+              { expectedMxid: currentUserMxid, actualUserId, sessionId: session.sessionId },
+              'createSession: token 属用户但 MXID 与 Logto 推导不一致，采纳 token 并更新 session'
+            );
+            await updateSession(session.sessionId, { matrixUserId: actualUserId });
+            session.matrixUserId = actualUserId;
+            currentUserMxid = actualUserId;
+          } else {
+            return reply.code(401).send({
+              error: 'Matrix token 已失效，请刷新页面后重试',
+            });
+          }
+        }
+      }
+
+      const userId = await resolveUserId(req);
+      const body = (req.body as { title?: string }) || {};
       const created = await adapter.createSession({
         userId,
         title: body.title,
-        matrixAccessToken: session?.matrixAccessToken,
-        currentUserMxid: session?.logtoSub
-          ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
-          : undefined,
+        matrixAccessToken: session.matrixAccessToken,
+        currentUserMxid,
       });
       return reply.send(created);
     } catch (e) {
@@ -325,6 +435,42 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       }
     }
   );
+
+  app.delete<{ Params: { id?: string } }>('/api/sessions/:id', async (req, reply) => {
+    try {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.deleteSession !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持删除会话',
+          message: '请使用支持 deleteSession 的 CHAT_PROVIDER（如 matrix、mock）',
+        });
+      }
+      const sessionId = req.params?.id;
+      if (!sessionId) {
+        return reply.code(400).send({ error: 'session id is required' });
+      }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (config.chat?.provider === 'matrix' && (await requireMatrixToken(req, session, reply))) return;
+      if (config.chat?.provider === 'matrix' && !session?.matrixAccessToken?.trim()) {
+        return reply.code(401).send({ error: '需要 Matrix 会话，请刷新后重试' });
+      }
+
+      const userId = await resolveUserId(req);
+      await adapter.deleteSession({
+        sessionId,
+        backendSessionId: sessionId,
+        userId,
+        matrixAccessToken: session?.matrixAccessToken,
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '删除会话失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
 
   app.post('/api/chat/export-markdown', async (req, reply) => {
     const body = (req.body as { messages?: Array<{ role: 'user' | 'assistant'; content?: string; thinking?: string }> }) || {};

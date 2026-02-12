@@ -65,6 +65,7 @@ function safeGetRetryAfterMs(error: unknown, defaultMs: number): number {
 - 会话/房间/消息等操作用**用户 token**，不得回退到 admin token。
 - Admin token 仅用于 Admin API（用户管理、deactivate 等）。
 - 实现上应对「用户级」接口强制要求传入 userToken，缺则抛错，不做隐式回退。
+- 创建房间前应验证 token 归属：调用 `/account/whoami`，确认与 `currentUserMxid` 一致。详见 [MATRIX_ROOM_CREATOR_FIX.md](./MATRIX_ROOM_CREATOR_FIX.md)。
 
 ---
 

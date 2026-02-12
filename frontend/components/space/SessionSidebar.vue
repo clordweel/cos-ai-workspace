@@ -27,7 +27,7 @@
         @session-click="emit('session-click', $event)"
         @toggle-pin="emit('toggle-pin', $event)"
         @rename="emit('rename', $event)"
-        @close="emit('close', $event)"
+        @delete="emit('delete', $event)"
       />
       <SpaceAppDrawer
         :open="showAppList"
@@ -40,13 +40,15 @@
         @more="emit('more')"
       />
       <SessionListHeader
-        class="absolute left-0 right-0 z-20 transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md"
+        class="absolute left-0 right-0 z-20 isolate transition-[top] duration-200 ease-out bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md"
         :style="{ top: toolbarTop }"
         :app-drawer-open="showAppList"
         :search-bar-open="showSearchBar"
         :search-query="searchQuery"
+        :creating-session="creatingSession"
+        :create-session-error="createSessionError"
         @update:search-query="emit('update:searchQuery', $event)"
-        @new-chat="emit('new-chat')"
+        @new-chat="onNewChat"
         @search="emit('search')"
         @app="emit('app')"
       />
@@ -72,6 +74,10 @@ defineProps<{
   /** 应用区内容展开时为 true，此时始终显示会话列表、隐藏聊天区 */
   appContentVisible?: boolean
   chatId?: string
+  /** 创建会话中（Matrix 调用 API 时） */
+  creatingSession?: boolean
+  /** 创建会话失败时的错误信息 */
+  createSessionError?: string | null
   listViewTab: 'active' | 'favorites' | 'pending' | 'settings'
   listPaddingTop: string
   toolbarTop: string
@@ -96,6 +102,10 @@ defineProps<{
   drawerAppActive: (app: DrawerAppItem) => boolean
 }>()
 
+function onNewChat() {
+  emit('new-chat')
+}
+
 const emit = defineEmits<{
   'update:pinnedCollapsed': [value: boolean]
   'update:mockCollapsed': [value: boolean]
@@ -104,7 +114,7 @@ const emit = defineEmits<{
   'session-click': [id: string]
   'toggle-pin': [id: string]
   rename: [id: string]
-  close: [id: string]
+  delete: [id: string]
   'new-chat': []
   search: []
   app: []

@@ -11,6 +11,7 @@ import type {
   ListSessionsParams,
   ListMessagesParams,
   StreamMessageParams,
+  DeleteSessionParams,
 } from './types.js';
 
 interface UserData {
@@ -195,6 +196,14 @@ export function createMockAdapter(): ChatBackendAdapter {
       const data = getUserData(userId);
       const list = data.messagesBySession.get(id) || [];
       return list.slice(-Math.min(Number(limit) || 20, 100));
+    },
+
+    async deleteSession(params: DeleteSessionParams): Promise<void> {
+      const { sessionId, backendSessionId, userId } = params;
+      const id = backendSessionId || sessionId;
+      const data = getUserData(userId);
+      data.sessions = data.sessions.filter((s) => s.id !== id && s.backendSessionId !== id);
+      data.messagesBySession.delete(id);
     },
   };
 }

@@ -54,12 +54,12 @@
           重命名
         </ContextMenuItem>
         <ContextMenuItem
-          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
-          text-value="关闭会话"
-          @select="emit('close')"
+          class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-red-600 dark:text-red-400 outline-none hover:bg-red-50 dark:hover:bg-red-900/30"
+          text-value="删除会话"
+          @select="emit('delete')"
         >
-          <X class="h-3.5 w-3.5 shrink-0 opacity-70" />
-          关闭会话
+          <Trash2 class="h-3.5 w-3.5 shrink-0 opacity-70" />
+          删除会话
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenuPortal>
@@ -74,7 +74,7 @@ import {
   ContextMenuRoot,
   ContextMenuTrigger,
 } from 'radix-vue'
-import { Pencil, Pin, PinOff, X } from 'lucide-vue-next'
+import { Pencil, Pin, PinOff, Trash2 } from 'lucide-vue-next'
 import type { SessionParticipant } from '~/components/SessionListThumb.vue'
 
 export type SessionListItemType = {
@@ -98,7 +98,7 @@ const emit = defineEmits<{
   (e: 'click'): void
   (e: 'toggle-pin'): void
   (e: 'rename'): void
-  (e: 'close'): void
+  (e: 'delete'): void
 }>()
 
 const thumbType = computed(() => props.item.type === 'group' ? 'group' : 'private')

@@ -16,6 +16,8 @@
         :is-session-expanded="isSessionExpanded"
         :app-content-visible="appContentVisible && showAppPanel"
         :chat-id="chatId"
+        :creating-session="creatingSession"
+        :create-session-error="createSessionError"
         :list-view-tab="listViewTab"
         :list-padding-top="listPaddingTop"
         :toolbar-top="toolbarTop"
@@ -45,7 +47,7 @@
         @session-click="onSessionItemClick"
         @toggle-pin="togglePin"
         @rename="onSessionRename"
-        @close="onSessionClose"
+        @delete="onSessionDelete"
         @new-chat="startNewChat"
         @search="toggleSearchBar"
         @app="toggleAppList"
@@ -177,6 +179,8 @@
         </template>
         <ChatEmptyState
           v-if="!chatId || showChatPlaceholderOnFirstLoad"
+          :creating-session="creatingSession"
+          :create-session-error="createSessionError"
           @new-chat="startNewChat"
         />
       </main>
@@ -222,13 +226,15 @@ const {
   onSessionItemClick,
   togglePin,
   onSessionRename,
-  onSessionClose,
+  onSessionDelete,
   startNewChat,
   toggleSearchBar,
   toggleAppList,
   onDrawerMore,
   onDrawerAppClick,
   drawerAppActive,
+  creatingSession,
+  createSessionError,
   displayChats,
   scrollRef,
   input,

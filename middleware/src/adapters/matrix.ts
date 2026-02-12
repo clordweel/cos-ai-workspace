@@ -1,7 +1,8 @@
 /**
  * Matrix 会话后端适配器
  * 与 SESSION_ADAPTER_MATRIX.md 对应：Room = 会话，m.room.message = 消息
- * 使用 Matrix Client-Server API（matrixClient），流式回复由 Dify 产生并写入房间
+ * 使用 Matrix Client-Server API（matrixClient）
+ * 注：Dify 流式接入已暂时移除，助手回复为占位文案
  */
 import {
   getJoinedRooms,
@@ -10,8 +11,9 @@ import {
   sendRoomMessage,
   createRoom,
   inviteToRoom,
+  leaveRoom,
+  verifyMatrixTokenUserId,
 } from './matrixClient.js';
-import { runStreamWithParams } from '../services/difyStream.js';
 import { config } from '../config.js';
 import type {
   ChatBackendAdapter,
@@ -23,6 +25,7 @@ import type {
   ListMessagesParams,
   CreateSessionParams,
   InviteToSessionParams,
+  DeleteSessionParams,
   SSESend,
 } from './types.js';
 
@@ -108,12 +111,18 @@ export function createMatrixAdapter(): ChatBackendAdapter {
     },
 
     async streamMessage(params: StreamMessageParams): Promise<StreamMessageResult | void> {
-      const { sessionId, backendSessionId, message, userId, send, flush, matrixAccessToken: userToken } = params;
+      const { sessionId, backendSessionId, message, userId, send, flush, matrixAccessToken: userToken, currentUserMxid } = params;
       let roomId = backendSessionId || sessionId;
 
-      // 必须使用当前用户 token，否则消息和房间会归属到 admin
-      if (!userToken) {
+      // 必须使用当前用户 token，否则消息和房间会归属到 admin（参考 Element/Cinny：Client 绑定单一用户 token）
+      if (!userToken?.trim()) {
         throw new Error('需要 Matrix 用户 token（请先登录）');
+      }
+      if (currentUserMxid) {
+        const valid = await verifyMatrixTokenUserId(userToken, currentUserMxid);
+        if (!valid) {
+          throw new Error(`token 不属于当前用户 (${currentUserMxid})，禁止以 admin 创建/发消息`);
+        }
       }
 
       if (!roomId) {
@@ -125,43 +134,28 @@ export function createMatrixAdapter(): ChatBackendAdapter {
 
       await sendRoomMessage(roomId, message, 'm.text', userToken);
 
-      let accumulated = '';
-      const wrappingSend: SSESend = (event: string, data: Record<string, unknown>) => {
-        if (event === 'message' && data && typeof data.delta === 'string') {
-          accumulated += data.delta;
-        }
-        send(event, data);
-      };
-
-      if (config.dify.apiKey) {
-        await runStreamWithParams(
-          {
-            message,
-            conversation_id: roomId,
-            user_id: userId,
-          },
-          wrappingSend,
-          flush,
-          config.dify
-        );
-        // 助手回复仅经 SSE 推给前端，不写入 Matrix（已去除 admin 代理）
-      } else {
-        send('status', { status: 'thinking' });
-        flush();
-        const placeholder = '（当前未配置 Dify）';
-        send('message', { delta: placeholder });
-        flush();
-        send('message_end', {});
-        flush();
-      }
+      // Dify 流式接入已暂时移除，仅返回占位文案
+      send('status', { status: 'thinking' });
+      flush();
+      const placeholder = '（Matrix 会话模式，AI 回复功能暂未接入）';
+      send('message', { delta: placeholder });
+      flush();
+      send('message_end', {});
+      flush();
 
       return { backendSessionId: roomId };
     },
 
     async createSession(params: CreateSessionParams): Promise<NormalizedSession> {
-      const { title, matrixAccessToken: userToken } = params;
-      if (!userToken) {
+      const { title, matrixAccessToken: userToken, currentUserMxid } = params;
+      if (!userToken?.trim()) {
         throw new Error('需要 Matrix 用户 token（请先登录）');
+      }
+      if (currentUserMxid) {
+        const valid = await verifyMatrixTokenUserId(userToken, currentUserMxid);
+        if (!valid) {
+          throw new Error(`token 不属于当前用户 (${currentUserMxid})，禁止以 admin 创建房间`);
+        }
       }
       const { room_id } = await createRoom(title, userToken);
       return {
@@ -178,6 +172,13 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       const roomId = backendSessionId || sessionId;
       if (!userToken) throw new Error('需要 Matrix token');
       await inviteToRoom(roomId, inviteeMxid, userToken);
+    },
+
+    async deleteSession(params: DeleteSessionParams): Promise<void> {
+      const { backendSessionId, sessionId, matrixAccessToken: userToken } = params;
+      const roomId = backendSessionId || sessionId;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      await leaveRoom(roomId, userToken);
     },
   };
 }

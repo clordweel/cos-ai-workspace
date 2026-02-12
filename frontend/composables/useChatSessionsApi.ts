@@ -36,6 +36,7 @@ export function useChatSessionsApi() {
   const apiBase = useApiBase()
   const {
     ensureChat,
+    removeChat,
     setChatUpdatedAt,
     setConversationId,
     setMessages,
@@ -72,6 +73,37 @@ export function useChatSessionsApi() {
   }
 
   /**
+   * 创建新会话（POST /api/sessions）
+   * @param title - 可选标题
+   * @returns 创建的会话 id，或 null（501/502 时表示不支持/失败）
+   */
+  async function createSession(title?: string): Promise<string | null> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return null
+    try {
+      const res = await fetch(`${base}/api/sessions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: title?.trim() || undefined }),
+      })
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return null
+      }
+      const json = (await res.json().catch(() => ({}))) as { id?: string; message?: string; error?: string }
+      if (res.status === 501 || res.status === 502 || !res.ok) {
+        const errMsg = json.message || json.error || '创建会话失败，请刷新后重试'
+        throw new Error(errMsg)
+      }
+      return json.id ?? null
+    } catch (e) {
+      if (e instanceof Error) throw e
+      throw new Error('创建会话失败，请刷新后重试')
+    }
+  }
+
+  /**
    * 拉取某会话历史消息并写入当前状态
    * @param sessionId - 会话 id（与 GET :id 一致，如 Dify 的 conversation_id）
    * @param userId - 不传时用当前登录用户 id，未登录为 'default'
@@ -103,8 +135,35 @@ export function useChatSessionsApi() {
     }
   }
 
+  /**
+   * 删除会话（Matrix 为 leave 房间，mock 为移除）
+   * @param sessionId - 会话 id
+   * @returns 是否成功
+   */
+  async function deleteSession(sessionId: string): Promise<boolean> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return false
+    try {
+      const res = await fetch(`${base}/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      if (res.status === 501 || res.status === 502 || !res.ok) return false
+      removeChat(sessionId)
+      return true
+    } catch {
+      return false
+    }
+  }
+
   return {
     loadSessions,
     loadSessionMessages,
+    createSession,
+    deleteSession,
   }
 }

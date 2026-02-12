@@ -72,6 +72,7 @@ export function useSpaceSessionList(options: {
   const { isAuthenticated } = useAuth()
   const { favoriteIds } = useAppFavorites()
   const mockSessionListEnabled = useMockSessionListEnabled()
+  const { deleteSession } = useChatSessionsApi()
 
   const drawerCommonApps = computed<DrawerAppItem[]>(() => [
     { id: 'home', title: '导航', view: 'home', icon: Home },
@@ -247,12 +248,13 @@ export function useSpaceSessionList(options: {
     ensureChat(id, title)
   }
 
-  function onSessionClose(id: string) {
+  async function onSessionDelete(id: string) {
     if (isMockSession(id)) {
       if (!mockHiddenIds.value.includes(id)) {
         mockHiddenIds.value = [...mockHiddenIds.value, id]
       }
     }
+    await deleteSession(id)
     if (chatId.value === id) {
       router.push('/space')
     }
@@ -296,7 +298,7 @@ export function useSpaceSessionList(options: {
     onSessionItemClick,
     togglePin,
     onSessionRename,
-    onSessionClose,
+    onSessionDelete,
     onDrawerAppClick,
     onDrawerMore,
     drawerAppActive,
