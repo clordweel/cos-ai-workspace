@@ -21,6 +21,7 @@ export interface ApiMessage {
   thinking?: string
   backendMessageId?: string
   createdAt?: number
+  inReplyTo?: { id: string; role?: 'user' | 'assistant'; content?: string }
 }
 
 function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
@@ -30,6 +31,7 @@ function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
     thinking: m.thinking,
     id: m.id ?? m.backendMessageId,
     createdAt: m.createdAt,
+    inReplyTo: m.inReplyTo,
   }
 }
 

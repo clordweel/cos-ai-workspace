@@ -13,6 +13,8 @@ export function useChatStream() {
     options?: {
       conversationId?: string
       userId?: string
+      /** 回复某条消息的 id（event_id / backendMessageId） */
+      replyToMessageId?: string
       signal?: AbortSignal
       onThinking?: () => void
       onThinkingDelta?: (delta: string) => void
@@ -29,6 +31,7 @@ export function useChatStream() {
         message,
         conversation_id: options?.conversationId,
         user_id: (options?.userId ?? (useAuth().userId as { value?: string })?.value) || 'default',
+        reply_to_message_id: options?.replyToMessageId,
       }),
       credentials: 'include',
       signal: options?.signal,

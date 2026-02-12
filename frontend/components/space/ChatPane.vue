@@ -25,12 +25,14 @@
     <ChatInputPanel
       :model-value="input"
       :streaming="streaming"
+      :reply-target="replyTarget"
       @update:model-value="emit('update:input', $event)"
       @submit="emit('submit')"
       @stop="emit('stop')"
       @clear="emit('clear')"
       @scroll-to-last="emit('scroll-to-last')"
       @add-participant="emit('add-participant')"
+      @cancel-reply="emit('cancel-reply')"
     />
   </div>
 </template>
@@ -49,6 +51,7 @@ defineProps<{
   sessionAreaFontScale: number
   input: string
   streaming: boolean
+  replyTarget?: { id: string; role: string; content: string } | null
 }>()
 
 const emit = defineEmits<{
@@ -67,6 +70,7 @@ const emit = defineEmits<{
   clear: []
   'scroll-to-last': []
   'add-participant': []
+  'cancel-reply': []
 }>()
 </script>
 

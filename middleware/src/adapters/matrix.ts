@@ -95,17 +95,36 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         userToken
       );
       const currentUserId = currentUserMxid ?? userId;
+      const eventMap = new Map<string, { role: 'user' | 'assistant'; content: string }>();
+      for (const ev of events) {
+        const r = ev.sender === currentUserId ? 'user' : 'assistant';
+        const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
+        eventMap.set(ev.event_id, { role: r, content: body });
+      }
       const out: NormalizedMessage[] = [];
       for (const ev of events) {
         const sender = ev.sender;
         const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
         const role = sender === currentUserId ? 'user' : 'assistant';
+        const replyEventId = ev.content?.['m.relates_to']?.['m.in_reply_to']?.event_id;
+        const inReplyTo =
+          replyEventId
+            ? (() => {
+                const parent = eventMap.get(replyEventId);
+                return {
+                  id: replyEventId,
+                  role: parent?.role,
+                  content: parent?.content,
+                };
+              })()
+            : undefined;
         out.push({
           id: ev.event_id,
           role,
           content: body,
           backendMessageId: ev.event_id,
           createdAt: ev.origin_server_ts,
+          inReplyTo,
         });
       }
       out.reverse();
@@ -134,7 +153,13 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         flush();
       }
 
-      await sendRoomMessage(roomId, message, 'm.text', userToken);
+      await sendRoomMessage(
+        roomId,
+        message,
+        'm.text',
+        userToken,
+        params.replyToMessageId
+      );
 
       // 第一步：用户独自使用会话，消息存入 Matrix，无他人参与；AI 回复后续接入
       return { backendSessionId: roomId };

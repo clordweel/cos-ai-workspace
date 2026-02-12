@@ -42,6 +42,8 @@ export type ChatMessage = {
   id?: string
   /** 消息时间戳（毫秒），用于展示与连续消息合并判断 */
   createdAt?: number
+  /** 回复某条消息时的引用信息 */
+  inReplyTo?: { id: string; role?: 'user' | 'assistant'; content?: string }
   /**
    * 可选：当前用户是否可编辑该条对方消息。
    * 为 false 时表示发送方为更高权限等，不展示编辑按钮；未设或 true 时依全局编辑权限决定。

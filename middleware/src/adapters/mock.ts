@@ -150,12 +150,18 @@ export function createMockAdapter(): ChatBackendAdapter {
       }
 
       const messages = data.messagesBySession.get(roomId) || [];
+      const replyTo = params.replyToMessageId
+        ? messages.find((m) => m.id === params.replyToMessageId || m.backendMessageId === params.replyToMessageId)
+        : undefined;
       const userMsg: NormalizedMessage = {
         id: `mock-msg-${Date.now()}-u`,
         role: 'user',
         content: message,
         backendMessageId: `mock-msg-${Date.now()}-u`,
         createdAt: Date.now(),
+        inReplyTo: replyTo
+          ? { id: replyTo.id ?? replyTo.backendMessageId ?? params.replyToMessageId!, role: replyTo.role, content: replyTo.content }
+          : undefined,
       };
       messages.push(userMsg);
       data.messagesBySession.set(roomId, messages);

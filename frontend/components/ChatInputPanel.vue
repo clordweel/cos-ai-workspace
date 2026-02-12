@@ -48,6 +48,28 @@
           <GripHorizontal class="h-2 w-2" />
         </button>
         <form class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="onFormSubmit">
+          <!-- 回复预览：回复某条消息时显示引用块，可点击关闭 -->
+          <div
+            v-if="replyTarget"
+            class="flex items-center gap-2 mx-3 mt-2 mb-0 py-2 px-3 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/80"
+          >
+            <div class="min-w-0 flex-1 text-left">
+              <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+                {{ replyTarget.role === 'user' ? '回复用户' : '回复助手' }}
+              </span>
+              <p class="text-[11px] text-zinc-700 dark:text-zinc-300 line-clamp-2 break-words mt-0.5">
+                {{ replyTarget.content || '…' }}
+              </p>
+            </div>
+            <button
+              type="button"
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-600 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+              aria-label="取消回复"
+              @click="$emit('cancel-reply')"
+            >
+              <X class="h-3.5 w-3.5" />
+            </button>
+          </div>
           <!-- @ 提及候选：输入 @ 后显示在输入框上方，紧凑样式 + 极细滚动条 -->
           <div
             v-show="atMentionOpen"
@@ -251,6 +273,8 @@ import {
 const props = defineProps<{
   modelValue: string
   streaming: boolean
+  /** 当前回复的目标消息，有则显示引用预览 */
+  replyTarget?: { id: string; role: string; content: string } | null
 }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -259,6 +283,7 @@ const emit = defineEmits<{
   (e: 'clear'): void
   (e: 'scroll-to-last'): void
   (e: 'add-participant'): void
+  (e: 'cancel-reply'): void
 }>()
 
 const isXxs = useBreakpoint('xxs')

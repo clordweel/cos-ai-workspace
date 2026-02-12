@@ -77,8 +77,8 @@ async function requireMatrixToken(
 
 export async function chatRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/chat/stream', async (req, reply) => {
-    const body = (req.body as { message?: string; conversation_id?: string; user_id?: string }) || {};
-    const { message, conversation_id } = body;
+    const body = (req.body as { message?: string; conversation_id?: string; user_id?: string; reply_to_message_id?: string }) || {};
+    const { message, conversation_id, reply_to_message_id } = body;
     if (!message) {
       return reply.code(400).send({ error: 'message is required' });
     }
@@ -129,6 +129,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         userId,
         send,
         flush,
+        replyToMessageId: reply_to_message_id?.trim() || undefined,
         matrixAccessToken: session?.matrixAccessToken,
         currentUserMxid: session?.logtoSub
           ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)

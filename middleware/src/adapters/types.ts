@@ -18,6 +18,16 @@ export interface NormalizedMessageSource {
   label?: string;
 }
 
+/** 回复引用：指向被回复的消息 */
+export interface NormalizedInReplyTo {
+  /** 被回复消息的 event_id / backendMessageId */
+  id: string;
+  /** 可选：被回复消息的 role，用于展示 */
+  role?: 'user' | 'assistant';
+  /** 可选：被回复消息内容摘要，用于展示引用块 */
+  content?: string;
+}
+
 export interface NormalizedMessage {
   id?: string;
   role: 'user' | 'assistant';
@@ -28,6 +38,8 @@ export interface NormalizedMessage {
   editedAt?: number;
   backendMessageId?: string;
   createdAt?: number;
+  /** 回复某条消息时的引用信息 */
+  inReplyTo?: NormalizedInReplyTo;
 }
 
 export type SSESend = (event: string, data: Record<string, unknown>) => void;
@@ -40,6 +52,8 @@ export interface StreamMessageParams {
   userId: string;
   send: SSESend;
   flush: SSEFlush;
+  /** 回复某条消息时的 event_id / backendMessageId */
+  replyToMessageId?: string;
   /** Matrix 每用户 token（混合方案） */
   matrixAccessToken?: string;
   /** 当前用户 MXID，用于 listMessages 等 role 判断 */

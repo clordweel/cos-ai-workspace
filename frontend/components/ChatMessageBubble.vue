@@ -35,9 +35,20 @@
       <ContextMenuRoot v-if="messageIndex !== undefined">
         <ContextMenuTrigger as-child>
           <div
-            class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
+            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100 w-fit max-w-full"
           >
-            <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+            <div
+              v-if="message.inReplyTo"
+              class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
+            >
+              <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+                {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
+              </span>
+              <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+                {{ message.inReplyTo.content || '…' }}
+              </p>
+            </div>
+            <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
           </div>
         </ContextMenuTrigger>
         <ContextMenuPortal>
@@ -45,6 +56,14 @@
             class="z-[100] min-w-[140px] rounded-xl border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 p-1 shadow-lg"
             :side-offset="4"
           >
+            <ContextMenuItem
+              class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+              text-value="回复"
+              @select="emit('reply', message)"
+            >
+              <Reply class="h-3.5 w-3.5 shrink-0 opacity-70" />
+              回复
+            </ContextMenuItem>
             <ContextMenuItem
               class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               text-value="编辑"
@@ -90,8 +109,21 @@
         </ContextMenuPortal>
       </ContextMenuRoot>
       <template v-else>
-        <div class="flex items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100">
-          <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0">{{ message.content }}</p>
+        <div
+          class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary-100 dark:bg-primary-900/40 text-primary-900 dark:text-primary-100"
+        >
+          <div
+            v-if="message.inReplyTo"
+            class="w-full text-left border-l-2 border-primary-300 dark:border-primary-600 pl-2 py-0.5 -ml-1"
+          >
+            <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+              {{ message.inReplyTo.role === 'user' ? '回复我' : '回复对方' }}
+            </span>
+            <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+              {{ message.inReplyTo.content || '…' }}
+            </p>
+          </div>
+          <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
         </div>
       </template>
     </div>
@@ -104,6 +136,17 @@
     <ContextMenuRoot v-if="messageIndex !== undefined">
       <ContextMenuTrigger as-child>
         <div class="w-full">
+          <div
+            v-if="message.inReplyTo"
+            class="mb-2 border-l-2 border-zinc-300 dark:border-zinc-500 pl-2 py-1"
+          >
+            <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+              {{ message.inReplyTo.role === 'user' ? '回复用户' : '回复助手' }}
+            </span>
+            <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+              {{ message.inReplyTo.content || '…' }}
+            </p>
+          </div>
           <div
             v-if="message.thinking != null && message.thinking.trim()"
             class="mb-3"
@@ -173,6 +216,14 @@
           </ContextMenuItem>
           <ContextMenuItem
             class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+            text-value="回复"
+            @select="emit('reply', message)"
+          >
+            <Reply class="h-3.5 w-3.5 shrink-0 opacity-70" />
+            回复
+          </ContextMenuItem>
+          <ContextMenuItem
+            class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
             text-value="复制"
             @select="emit('copyMessage')"
           >
@@ -215,6 +266,17 @@
       </ContextMenuPortal>
     </ContextMenuRoot>
     <template v-else>
+      <div
+        v-if="message.inReplyTo"
+        class="mb-2 border-l-2 border-zinc-300 dark:border-zinc-500 pl-2 py-1"
+      >
+        <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+          {{ message.inReplyTo.role === 'user' ? '回复用户' : '回复助手' }}
+        </span>
+        <p class="text-[11px] text-zinc-600 dark:text-zinc-300 line-clamp-2 break-words">
+          {{ message.inReplyTo.content || '…' }}
+        </p>
+      </div>
       <div
         v-if="message.thinking != null && message.thinking.trim()"
         class="mb-3"
@@ -395,7 +457,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { Bookmark, Bot, Check, CheckCheck, Cog, Copy, FileDown, History, Loader2, MoreHorizontal, MoreVertical, Pencil, RefreshCw, Sparkles, ThumbsDown, ThumbsUp, Trash2, Undo2, User, Volume2, XCircle } from 'lucide-vue-next'
+import { Bookmark, Bot, Check, CheckCheck, Cog, Copy, FileDown, History, Loader2, MoreHorizontal, MoreVertical, Pencil, RefreshCw, Reply, Sparkles, ThumbsDown, ThumbsUp, Trash2, Undo2, User, Volume2, XCircle } from 'lucide-vue-next'
 
 const THINKING_PLACEHOLDER = '思考中…'
 
@@ -412,6 +474,7 @@ const props = defineProps<{
     receiptStatus?: import('~/composables/useChatSessions').MessageReceiptStatus
     readBy?: MessageSource[]
     createdAt?: number
+    inReplyTo?: { id: string; role?: 'user' | 'assistant'; content?: string }
   }
   streaming?: boolean
   showTimestamp?: boolean
@@ -424,6 +487,7 @@ const props = defineProps<{
   messageIndex?: number
 }>()
 const emit = defineEmits<{
+  reply: [message: import('~/composables/useChatSessions').ChatMessage]
   retry: []; favorite: []; exportMarkdown: []; listenReply: []; viewEditHistory: []; edit: [];
   editUserMessage: []; retryUserMessage: []; recallMessage: []; deleteMessage: []; copyMessage: [];
   reaction: [type: 'like' | 'dislike']

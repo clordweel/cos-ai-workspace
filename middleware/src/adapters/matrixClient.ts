@@ -255,7 +255,13 @@ export interface MatrixMessageEvent {
   event_id: string;
   sender: string;
   origin_server_ts: number;
-  content?: { body?: string; msgtype?: string };
+  content?: {
+    body?: string;
+    msgtype?: string;
+    'm.relates_to'?: {
+      'm.in_reply_to'?: { event_id?: string };
+    };
+  };
   type: string;
 }
 
@@ -290,20 +296,28 @@ export async function getRoomMessages(
 /**
  * 发送一条文本消息到房间
  * userToken 必填：必须以当前用户 token 发送，否则消息归属到 admin
+ * @param inReplyToEventId - 回复某条消息时，被回复消息的 event_id
  */
 export async function sendRoomMessage(
   roomId: string,
   body: string,
   msgtype = 'm.text',
-  userToken?: string
+  userToken?: string,
+  inReplyToEventId?: string
 ): Promise<{ event_id: string }> {
   if (!userToken?.trim()) {
     throw new MatrixApiError('sendRoomMessage 必须使用当前用户 token，禁止回退到 admin', 0);
   }
   const encoded = encodeURIComponent(roomId);
+  const content: Record<string, unknown> = { msgtype, body };
+  if (inReplyToEventId?.trim()) {
+    content['m.relates_to'] = {
+      'm.in_reply_to': { event_id: inReplyToEventId.trim() },
+    };
+  }
   const res = await matrixFetchWithToken(
     `/rooms/${encoded}/send/m.room.message`,
-    { method: 'POST', body: JSON.stringify({ msgtype, body }) },
+    { method: 'POST', body: JSON.stringify(content) },
     userToken
   );
   const data = (await res.json()) as { event_id?: string; error?: string };

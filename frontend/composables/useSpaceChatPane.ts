@@ -141,7 +141,14 @@ export function useSpaceChatPane(options: {
     }
   }
 
-  async function streamReply(id: string, text: string, hasBotMention: boolean) {
+  const replyTarget = ref<{ id: string; role: string; content: string } | null>(null)
+
+  async function streamReply(
+    id: string,
+    text: string,
+    hasBotMention: boolean,
+    replyToMessageId?: string
+  ) {
     let currentId = id
     const placeholder = '思考中…'
     let assistantCreated = false
@@ -210,6 +217,7 @@ export function useSpaceChatPane(options: {
         {
           signal: streamAbortRef.value?.signal,
           conversationId: getConversationId(currentId),
+          replyToMessageId,
           onSessionCreated: (payload) => {
             const realId = payload.backend_session_id ?? payload.session_id
             if (realId === currentId) return
@@ -274,10 +282,27 @@ export function useSpaceChatPane(options: {
     if (!id || !text || streaming.value) return
     const roomId = getConversationId(id) ?? id
     sendTyping(roomId, false)
+    const target = replyTarget.value
     input.value = ''
-    appendMessage(id, { role: 'user', content: text, createdAt: Date.now() })
+    replyTarget.value = null
+    appendMessage(id, {
+      role: 'user',
+      content: text,
+      createdAt: Date.now(),
+      inReplyTo: target ? { id: target.id, role: target.role as 'user' | 'assistant', content: target.content } : undefined,
+    })
     nextTick(() => scrollToLastMessage())
-    await streamReply(id, text, messageContainsBotMention(text))
+    await streamReply(id, text, messageContainsBotMention(text), target?.id)
+  }
+
+  function onReplyToMessage(msg: { id?: string; role: string; content: string }) {
+    const id = msg.id || (msg as ChatMessage).backendMessageId
+    if (!id) return
+    replyTarget.value = { id, role: msg.role, content: msg.content }
+  }
+
+  function onCancelReply() {
+    replyTarget.value = null
   }
 
   const canEditOtherMessage = ref(true)
@@ -397,6 +422,9 @@ export function useSpaceChatPane(options: {
     chatTitle,
     chatUserName,
     chatUserAvatar,
+    replyTarget,
+    onReplyToMessage,
+    onCancelReply,
     send,
     stopStream,
     scrollToLastMessage,

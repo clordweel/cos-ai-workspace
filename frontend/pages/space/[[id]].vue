@@ -73,6 +73,7 @@
             :session-area-font-scale="sessionAreaFontScale"
             v-model:input="input"
             :streaming="streaming"
+            :reply-target="replyTarget"
             @close="onCloseChat"
             @rename="onRenameChat"
             @share="onShareConversation"
@@ -87,6 +88,7 @@
             @clear="input = ''"
             @scroll-to-last="scrollToLastMessage"
             @add-participant="openAddParticipant"
+            @cancel-reply="onCancelReply"
           >
             <template v-if="virtualRows.length > 0">
               <div
@@ -143,6 +145,7 @@
                     @favorite="onFavoriteMessage(virtualRow.index)"
                     @export-markdown="onExportMarkdown()"
                     @listen-reply="onListenReply(virtualRow.index)"
+                    @reply="onReplyToMessage"
                   />
                 </div>
               </div>
@@ -177,6 +180,7 @@
                   @favorite="onFavoriteMessage(i)"
                   @export-markdown="onExportMarkdown()"
                   @listen-reply="onListenReply(i)"
+                  @reply="onReplyToMessage"
                 />
               </div>
             </div>
@@ -254,6 +258,9 @@ const {
   chatTitle,
   chatUserName,
   chatUserAvatar,
+  replyTarget,
+  onReplyToMessage,
+  onCancelReply,
   send,
   stopStream,
   scrollToLastMessage,
