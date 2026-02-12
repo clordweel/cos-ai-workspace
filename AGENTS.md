@@ -27,5 +27,6 @@
 - **Plan 优先**：大功能/多文件改动先用 Plan Mode（Shift+Tab），再编码；计划可存 `.cursor/plans/`。
 - **动态上下文**：用 @ 引用具体文件或行、语义搜索、grep，避免整仓或大段粘贴。
 - **单次会话 scope 单一**：例如只改 `frontend` 或只改 `middleware`；约 20+ 轮或新功能时新开会话，用 commit/PR 接棒。
+- **Matrix 参考**：涉及 Matrix 时，允许从 Element、Cinny、FluffyChat 等开源客户端搜索参考方案。
 
 详见 `.cursor/rules/agent-workflow.mdc` 与 `.cursor/rules/project-global.mdc`。
