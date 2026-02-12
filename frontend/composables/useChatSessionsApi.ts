@@ -136,6 +136,36 @@ export function useChatSessionsApi() {
   }
 
   /**
+   * 重命名会话（Matrix 为更新 room name，mock 为更新 title）
+   * @param sessionId - 会话 id
+   * @param title - 新标题
+   * @returns 是否成功
+   */
+  async function renameSession(sessionId: string, title: string): Promise<boolean> {
+    const trimmed = title?.trim()
+    if (!trimmed) return false
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return false
+    try {
+      const res = await fetch(`${base}/api/sessions/${encodeURIComponent(sessionId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title: trimmed }),
+      })
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      if (res.status === 501 || res.status === 502 || !res.ok) return false
+      ensureChat(sessionId, trimmed)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * 删除会话（Matrix 为 leave 房间，mock 为移除）
    * @param sessionId - 会话 id
    * @returns 是否成功
@@ -164,6 +194,7 @@ export function useChatSessionsApi() {
     loadSessions,
     loadSessionMessages,
     createSession,
+    renameSession,
     deleteSession,
   }
 }

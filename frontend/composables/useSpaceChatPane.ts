@@ -22,6 +22,8 @@ export function useSpaceChatPane(options: {
   ensureChat: (id: string, title: string) => void
   getConversationId: (id: string) => string | undefined
   setConversationId: (id: string, conversationId: string | undefined) => void
+  /** 重命名会话回调（会话列表右键或顶栏菜单触发） */
+  onRenameSession?: (sessionId: string) => void
 }) {
   const {
     chatId,
@@ -34,6 +36,7 @@ export function useSpaceChatPane(options: {
     ensureChat,
     getConversationId,
     setConversationId,
+    onRenameSession,
   } = options
 
   const config = useRuntimeConfig()
@@ -297,7 +300,9 @@ export function useSpaceChatPane(options: {
     navigator.clipboard.writeText(url).catch(() => {})
   }
   function onCloseChat() { router.push('/space') }
-  function onRenameChat() { /* TODO */ }
+  function onRenameChat() {
+    if (chatId.value && onRenameSession) onRenameSession(chatId.value)
+  }
   function onArchiveChat() { /* TODO */ }
   function onDeleteChat() { /* TODO */ }
 

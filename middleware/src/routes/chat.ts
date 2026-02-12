@@ -436,6 +436,51 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
+  app.patch<{ Params: { id?: string }; Body: { title?: string } }>(
+    '/api/sessions/:id',
+    async (req, reply) => {
+      try {
+        const adapter = getChatAdapter();
+        if (!adapter || typeof adapter.renameSession !== 'function') {
+          return reply.code(501).send({
+            error: '当前后端不支持重命名会话',
+            message: '请使用支持 renameSession 的 CHAT_PROVIDER（如 matrix、mock）',
+          });
+        }
+        const sessionId = req.params?.id;
+        if (!sessionId) {
+          return reply.code(400).send({ error: 'session id is required' });
+        }
+        const body = (req.body as { title?: string }) || {};
+        const title = typeof body.title === 'string' ? body.title.trim() : '';
+        if (!title) {
+          return reply.code(400).send({ error: 'title is required and must be non-empty' });
+        }
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (config.chat?.provider === 'matrix' && (await requireMatrixToken(req, session, reply))) return;
+        if (config.chat?.provider === 'matrix' && !session?.matrixAccessToken?.trim()) {
+          return reply.code(401).send({ error: '需要 Matrix 会话，请刷新后重试' });
+        }
+
+        const userId = await resolveUserId(req);
+        await adapter.renameSession({
+          sessionId,
+          backendSessionId: sessionId,
+          userId,
+          title,
+          matrixAccessToken: session?.matrixAccessToken,
+        });
+        return reply.send({ ok: true, title });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '重命名会话失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
   app.delete<{ Params: { id?: string } }>('/api/sessions/:id', async (req, reply) => {
     try {
       const adapter = getChatAdapter();

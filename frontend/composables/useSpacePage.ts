@@ -97,6 +97,7 @@ export function useSpacePage() {
     ensureChat,
     getConversationId,
     setConversationId,
+    onRenameSession: listApi.onSessionRename,
   })
 
   const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))

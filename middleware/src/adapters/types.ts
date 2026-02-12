@@ -91,6 +91,14 @@ export interface DeleteSessionParams {
   matrixAccessToken?: string;
 }
 
+export interface RenameSessionParams {
+  sessionId: string;
+  backendSessionId?: string;
+  userId: string;
+  title: string;
+  matrixAccessToken?: string;
+}
+
 /**
  * 聊天后端适配器接口（各适配器实现此契约）
  */
@@ -105,4 +113,5 @@ export interface ChatBackendAdapter {
   createSession?(params: CreateSessionParams): Promise<NormalizedSession>;
   inviteToSession?(params: InviteToSessionParams): Promise<void>;
   deleteSession?(params: DeleteSessionParams): Promise<void>;
+  renameSession?(params: RenameSessionParams): Promise<void>;
 }

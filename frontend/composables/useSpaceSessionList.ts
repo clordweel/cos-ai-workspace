@@ -72,7 +72,7 @@ export function useSpaceSessionList(options: {
   const { isAuthenticated } = useAuth()
   const { favoriteIds } = useAppFavorites()
   const mockSessionListEnabled = useMockSessionListEnabled()
-  const { deleteSession } = useChatSessionsApi()
+  const { deleteSession, renameSession } = useChatSessionsApi()
 
   const drawerCommonApps = computed<DrawerAppItem[]>(() => [
     { id: 'home', title: '导航', view: 'home', icon: Home },
@@ -235,7 +235,7 @@ export function useSpaceSessionList(options: {
     showAppList.value = false
   }
 
-  function onSessionRename(id: string) {
+  async function onSessionRename(id: string) {
     const c = displayChats.value.find((x) => x.id === id)
     const currentTitle = c?.title ?? ''
     const next = window.prompt('重命名会话', currentTitle)
@@ -245,7 +245,7 @@ export function useSpaceSessionList(options: {
       mockTitleOverrides.value = { ...mockTitleOverrides.value, [id]: title }
       return
     }
-    ensureChat(id, title)
+    await renameSession(id, title)
   }
 
   async function onSessionDelete(id: string) {

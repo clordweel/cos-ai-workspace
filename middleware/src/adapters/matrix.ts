@@ -12,6 +12,7 @@ import {
   createRoom,
   inviteToRoom,
   leaveRoom,
+  setRoomName,
   verifyMatrixTokenUserId,
 } from './matrixClient.js';
 import { config } from '../config.js';
@@ -26,6 +27,7 @@ import type {
   CreateSessionParams,
   InviteToSessionParams,
   DeleteSessionParams,
+  RenameSessionParams,
   SSESend,
 } from './types.js';
 
@@ -179,6 +181,13 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       const roomId = backendSessionId || sessionId;
       if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
       await leaveRoom(roomId, userToken);
+    },
+
+    async renameSession(params: RenameSessionParams): Promise<void> {
+      const { backendSessionId, sessionId, title, matrixAccessToken: userToken } = params;
+      const roomId = backendSessionId || sessionId;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      await setRoomName(roomId, title.trim(), userToken);
     },
   };
 }

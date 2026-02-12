@@ -226,6 +226,31 @@ export async function getRoomName(roomId: string, userToken?: string): Promise<s
   return data.name || roomId;
 }
 
+/**
+ * 设置房间名称（PUT state m.room.name）
+ * userToken 必填：须以当前用户 token 发送，需为房间成员且有权限
+ */
+export async function setRoomName(
+  roomId: string,
+  name: string,
+  userToken: string
+): Promise<void> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('setRoomName 需要用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/state/m.room.name`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ name: name.trim() || roomId }),
+    },
+    userToken
+  );
+  const data = (await res.json().catch(() => ({}))) as { error?: string };
+  if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
+}
+
 export interface MatrixMessageEvent {
   event_id: string;
   sender: string;
