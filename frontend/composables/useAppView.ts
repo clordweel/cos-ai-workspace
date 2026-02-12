@@ -2,7 +2,7 @@ import {
   type AppView,
   type AppTab,
   VIEW_TITLES,
-  defaultProfileTab,
+  isSingleInstanceView,
   defaultHomeTab,
 } from './useAppViewConstants'
 
@@ -18,10 +18,10 @@ function tabTitle(view: AppView, appId?: string): string {
   return view === 'app' ? '应用' : VIEW_TITLES[view]
 }
 
-/** 已打开的标签列表（侧栏展示顺序）；用户信息固定在顶部，默认首项为「用户信息」+「首页」 */
-const tabs = ref<AppTab[]>([defaultProfileTab, defaultHomeTab])
+/** 已打开的标签列表；个人信息与设置不常驻，可从其它入口用 openView 打开 */
+const tabs = ref<AppTab[]>([defaultHomeTab])
 /** 当前选中的标签 id；null 表示无标签（面板可关闭） */
-const activeTabId = ref<string | null>(defaultProfileTab.id)
+const activeTabId = ref<string | null>(defaultHomeTab.id)
 
 /** 应用区是否展示 */
 const isPanelOpen = ref(true)
@@ -87,50 +87,54 @@ export function useAppView() {
     return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   }
 
-  /** 新增一个标签并选中（不复用同 view 的标签）。用户信息固定于顶部，新标签插在首页之后。 */
+  /** 新增一个标签并选中，追加到列表末尾 */
   function addTab(view: AppView, appId?: string, opts?: { isAuthRequired?: boolean }) {
     const id = genId()
     const title = tabTitle(view, appId)
     const newTab: AppTab = { id, view, title, appId, isAuthRequired: opts?.isAuthRequired }
-    const list = tabs.value
-    const profileIndex = list.findIndex((t) => t.view === 'profile')
-    if (profileIndex >= 0) {
-      const afterProfile = list.slice(0, profileIndex + 1)
-      const rest = list.slice(profileIndex + 1)
-      tabs.value = [...afterProfile, newTab, ...rest]
-    } else {
-      tabs.value = [defaultProfileTab, newTab, ...list]
-    }
+    tabs.value = [...tabs.value, newTab]
     activeTabId.value = id
     isPanelOpen.value = true
     isContentVisible.value = true
     return id
   }
 
-  /** 打开认证登录标签（未登录时不可关闭）；若已有认证标签则切换过去 */
-  function openAuthTab() {
+  /**
+   * 按「应用激活类型」打开视图：
+   * - 单例视图（设置、用户信息、认证）：若已有该标签则仅切换过去，不新建
+   * - 可重复创建（首页、联系人、机器人、应用扩展）：每次新建标签并选中
+   */
+  function openView(view: AppView, appId?: string, opts?: { isAuthRequired?: boolean }): string {
     isPanelOpen.value = true
     isContentVisible.value = true
-    const authTab = tabs.value.find((t) => t.view === 'auth')
-    if (authTab) {
-      activeTabId.value = authTab.id
-      return authTab.id
+    if (isSingleInstanceView(view)) {
+      const same = (t: AppTab) =>
+        t.view === view && (appId == null ? t.appId == null : t.appId === appId)
+      const existing = tabs.value.find(same)
+      if (existing) {
+        activeTabId.value = existing.id
+        return existing.id
+      }
     }
-    return addTab('auth', undefined, { isAuthRequired: true })
+    return addTab(view, appId, opts)
   }
 
-  /** 关闭指定标签；若为当前标签则切换到相邻标签。用户信息（profile）与认证标签不可关闭。 */
+  /** 打开认证登录标签（未登录时不可关闭）；若已有认证标签则切换过去 */
+  function openAuthTab() {
+    return openView('auth', undefined, { isAuthRequired: true })
+  }
+
+  /** 关闭指定标签；若为当前标签则切换到相邻标签。仅认证标签在未登录时不可关闭。 */
   function closeTab(id: string, options?: { force?: boolean }) {
     const list = tabs.value
     const tab = list.find((t) => t.id === id)
     if (!tab) return
-    if (tab.view === 'profile') return
     if (tab.isAuthRequired && !options?.force) return
     const index = list.findIndex((t) => t.id === id)
     const nextList = list.filter((t) => t.id !== id)
     if (nextList.length === 0) {
-      tabs.value = [defaultProfileTab]
-      activeTabId.value = defaultProfileTab.id
+      tabs.value = [defaultHomeTab]
+      activeTabId.value = defaultHomeTab.id
       return
     }
     tabs.value = nextList
@@ -149,25 +153,51 @@ export function useAppView() {
     }
   }
 
-  /** 兼容旧 API：在标签模型中「打开」某视图 = 新增标签并选中 */
+  /** 关闭除指定 id 外的全部标签，并选中该标签 */
+  function closeOtherTabs(exceptId: string) {
+    const tab = tabs.value.find((t) => t.id === exceptId)
+    if (!tab || tabs.value.length <= 1) return
+    tabs.value = [tab]
+    activeTabId.value = exceptId
+  }
+
+  /** 关闭指定标签右侧的所有标签 */
+  function closeTabsToTheRight(id: string) {
+    const list = tabs.value
+    const index = list.findIndex((t) => t.id === id)
+    if (index < 0 || index >= list.length - 1) return
+    const nextList = list.slice(0, index + 1)
+    tabs.value = nextList
+    if (!nextList.some((t) => t.id === activeTabId.value)) {
+      activeTabId.value = nextList[nextList.length - 1].id
+    }
+  }
+
+  /** 关闭全部标签，仅保留首页 */
+  function closeAllTabs() {
+    tabs.value = [defaultHomeTab]
+    activeTabId.value = defaultHomeTab.id
+  }
+
+  /** 兼容旧 API：打开某视图（单例则切换已有标签，否则新建） */
   function setView(view: AppView) {
-    addTab(view)
+    openView(view)
   }
 
   function openPanel(view?: AppView) {
     isPanelOpen.value = true
     isContentVisible.value = true
     if (view) {
-      addTab(view)
+      openView(view)
     } else if (tabs.value.length === 0) {
-      tabs.value = [defaultProfileTab, defaultHomeTab]
-      activeTabId.value = defaultProfileTab.id
+      tabs.value = [defaultHomeTab]
+      activeTabId.value = defaultHomeTab.id
     } else if (!activeTabId.value && tabs.value.length > 0) {
       activeTabId.value = tabs.value[0].id
     }
   }
 
-  /** 打开/切换到「首页」标签：若已有首页标签则选中，否则新建。用户信息始终在首项。 */
+  /** 打开/切换到「首页」标签：若已有无 appId 的首页标签则选中，否则新建（仅此入口单例；底部「新标签」仍用 addTab 可重复创建）。 */
   function openNavPage() {
     isPanelOpen.value = true
     isContentVisible.value = true
@@ -181,7 +211,7 @@ export function useAppView() {
 
   function closePanel() {
     isPanelOpen.value = false
-    tabs.value = [defaultProfileTab]
+    tabs.value = [defaultHomeTab]
     activeTabId.value = null
   }
   function toggleContentPanel() {
@@ -283,7 +313,11 @@ export function useAppView() {
     toggleSidebarPinned,
     setView,
     addTab,
+    openView,
     closeTab,
+    closeOtherTabs,
+    closeTabsToTheRight,
+    closeAllTabs,
     switchTab,
     goBack,
     openPanel,

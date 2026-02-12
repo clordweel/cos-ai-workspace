@@ -64,6 +64,7 @@
       >
         <template v-if="chatId && !showChatPlaceholderOnFirstLoad">
           <SpaceChatPane
+            :display-items="displayItems"
             :ui-messages="uiMessages"
             :chat-status="chatStatus"
             :chat-title="chatTitle"
@@ -140,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { getMessageTimestampDisplay } from '~/composables/useMessageTimestamp'
+import { getMessageTimestampDisplay, getDateSeparatorBefore } from '~/composables/useMessageTimestamp'
 
 definePageMeta({ layout: 'workspace' })
 
@@ -225,6 +226,21 @@ const {
   onListenReply,
   retryMessage,
 } = useSpacePage()
+
+/** 日期分隔线与消息交错列表，用于在消息容器外渲染分隔线（与消息同级） */
+const displayItems = computed(() => {
+  const items: Array<
+    { type: 'date'; label: string } | { type: 'message'; uiMessage: import('~/composables/useSpaceChatPane').UiMessage }
+  > = []
+  const msgs = displayMessages.value
+  const ui = uiMessages.value
+  for (let i = 0; i < msgs.length; i++) {
+    const label = getDateSeparatorBefore(msgs, i)
+    if (label) items.push({ type: 'date', label })
+    if (ui[i]) items.push({ type: 'message', uiMessage: ui[i] })
+  }
+  return items
+})
 </script>
 
 <style scoped>

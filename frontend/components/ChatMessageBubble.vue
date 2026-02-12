@@ -134,12 +134,16 @@
       </span>
     </div>
   </div>
-  <!-- 系统消息：全宽、文字居中、无背景、最小间距 -->
+  <!-- 系统消息：全宽、文字居中、浅底胶囊样式，与对话气泡区分 -->
   <div
     v-else-if="message.role === 'system'"
-    class="w-full py-0.5 text-center text-[11px] text-zinc-500 dark:text-zinc-400"
+    class="w-full py-1 flex justify-center"
   >
-    {{ message.content }}
+    <span
+      class="inline-flex items-center rounded-full px-3 py-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-100/90 dark:bg-zinc-700/60 border border-zinc-200/60 dark:border-zinc-600/50"
+    >
+      {{ message.content }}
+    </span>
   </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-xs text-zinc-800 dark:text-zinc-200">

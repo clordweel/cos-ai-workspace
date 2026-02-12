@@ -35,6 +35,10 @@
 - **应用内容区**  
   - 当 `isContentVisible` 为 true 时显示：内层容器圆角 `rounded-xl`、浅底 `bg-zinc-50/50`、内阴影 + 边框外阴影。  
   - 由 **AppPanel** 根据 `useAppView()` 的 `currentView` 切换：**home**（导航页，应用卡片网格）、**contacts**（联系人列表）、**bots**（机器人列表）、**settings**（设置项）、**auth**（认证登录，未登录时可选强制打开）、**app**（扩展应用，由 `appId` 指定）。
+- **应用标签栏布局**：可滚动区为全部已打开标签（含首页、用户信息、设置、联系人、应用等，均可关闭；至少保留一个标签）；分割线下方仅「新标签」按钮。个人信息与设置不常驻，需从抽屉等其它入口通过 openView 打开。
+- **应用标签激活类型**（`useAppView.openView` / `useAppViewConstants.SINGLE_INSTANCE_VIEWS`）：  
+  - **单例**（只能创建一次）：**profile**（用户信息）、**settings**（设置）、**auth**（认证登录）。再次激活时仅切换到已有标签，不新建。  
+  - **可重复创建**：**home**、**contacts**、**bots**、**app**（扩展）。每次激活可新建标签；底部「新标签」固定为新建首页标签。
 
 ### 会话区（space 页）
 

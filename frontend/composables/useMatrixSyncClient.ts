@@ -3,6 +3,7 @@
  * 使用 /api/auth/me 下发的 matrixSyncToken + matrix_base_url + matrix_user_id，
  * 仅用于：收 sync 新消息、发 typing、发已读回执。禁止用于发消息、拉列表、拉历史。
  */
+import { nextTick } from 'vue'
 import type { MatrixClient } from 'matrix-js-sdk'
 
 const syncClient = ref<MatrixClient | null>(null)
@@ -87,12 +88,16 @@ export function useMatrixSyncClient() {
         const eventId = event.getId?.()
         const existing = getMessages(roomId)
         if (eventId && existing.some((m) => m.id === eventId)) return
-        ensureChat(roomId, roomId)
         const role = event.getSender?.() === userId ? 'user' : 'assistant'
-        appendMessage(roomId, {
+        const msg = {
           role: role as 'user' | 'assistant',
           content: String(body),
           id: eventId ?? undefined,
+        }
+        // 放入 nextTick，确保在 Vue 更新周期内写入状态，使聊天框及时渲染
+        nextTick(() => {
+          ensureChat(roomId, roomId)
+          appendMessage(roomId, { ...msg })
         })
       })
 

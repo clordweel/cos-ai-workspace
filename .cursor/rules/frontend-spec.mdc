@@ -18,7 +18,7 @@ alwaysApply: false
 - **右栏（应用区）**：`section`（`rounded-2xl`、白底、`max-width` 由 `useWorkspaceLayout` 提供）。内为 **WorkspaceAppNav** + 应用内容区；由 `useAppView()` 的 `isPanelOpen`、`isContentVisible`、`appSidebarExpanded` 等控制，过渡动画 `app-panel`。
 
 ## 应用区结构
-- **WorkspaceAppNav**：侧栏为**浏览器标签式**，宽度 `w-48`/`w-12` 可折叠，宽度过渡 200ms。悬停 500ms 才展开，移出 180ms 延迟收起；可固定侧栏（顶部工具栏按钮）。自上而下：**已打开标签列表**（图标 + 标题 + 悬停显示关闭按钮，点击切换、× 关闭）→ 底部固定「新标签」「设置」按钮。
+- **WorkspaceAppNav**：侧栏为**浏览器标签式**，宽度 `w-48`/`w-12` 可折叠，宽度过渡 200ms。悬停 500ms 才展开，移出 180ms 延迟收起；可固定侧栏（顶部工具栏按钮）。自上而下：**可滚动标签列表**（全部已打开标签，至少保留一个；个人信息与设置不常驻，从其它入口 openView 打开）→ 分割线 →「新标签」按钮。
 - **应用内容区**：内层 `rounded-xl`、`bg-zinc-50/50`、内阴影+外阴影。**AppPanel** 按当前选中标签的 `currentView` 切换：`home` | `contacts` | `bots` | `settings` | `auth` | `app`。
 
 ## 会话区（space 页）

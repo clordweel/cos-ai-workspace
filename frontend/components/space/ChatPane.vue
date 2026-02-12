@@ -27,21 +27,34 @@
       <!-- 顶部边距至少超过顶栏 + 回到底部按钮高度，避免首条消息被遮挡 -->
       <div
         ref="chatScrollRef"
-        class="chat-messages-scroll flex-1 min-h-0 overflow-y-auto pt-24 pb-3"
+        class="chat-messages-scroll flex-1 min-h-0 overflow-x-hidden overflow-y-auto pt-24 pb-[35vh]"
         @scroll="onChatScroll"
       >
-        <UChatMessages
-          :messages="uiMessages"
-          :status="chatStatus"
-          should-scroll-to-bottom
-          should-auto-scroll
-          :auto-scroll="false"
-          class="flex flex-col gap-0.5 min-h-full"
-        >
-          <template #content="{ message }">
-            <slot name="content" :message="message" />
+        <!-- 日期分隔线与消息同级渲染（在消息容器外），便于全宽与居中样式生效 -->
+        <div class="chat-messages-list flex min-w-0 flex-col gap-0.5 min-h-full w-full">
+          <template v-for="(item, idx) in displayItems" :key="item.type === 'date' ? `date-${idx}-${item.label}` : item.uiMessage.id">
+            <div
+              v-if="item.type === 'date'"
+              class="date-separator-full relative my-3 w-full min-w-0 shrink-0 py-2 pl-2"
+              aria-hidden
+            >
+              <!-- 占位：撑满容器宽度，避免仅绝对定位子元素时宽度塌陷 -->
+              <span class="date-separator-strut block w-full overflow-hidden" style="height: 0" aria-hidden />
+              <!-- 横线：两端渐隐，铺满容器 -->
+              <div
+                class="date-separator-line absolute inset-x-0 top-1/2 h-[0.5px] -translate-y-1/2 bg-[linear-gradient(to_right,transparent_0%,rgb(212_212_216)_12%,rgb(212_212_216)_88%,transparent_100%)] dark:bg-[linear-gradient(to_right,transparent_0%,rgb(82_82_91)_12%,rgb(82_82_91)_88%,transparent_100%)]"
+                aria-hidden
+              />
+              <!-- 标签：相对容器中线水平与垂直居中，与横线同轴 -->
+              <span
+                class="date-separator-label absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-white dark:bg-zinc-800 px-2 text-[11px] text-zinc-500 dark:text-zinc-400"
+              >
+                {{ item.label }}
+              </span>
+            </div>
+            <slot v-else name="content" :message="item.uiMessage" />
           </template>
-        </UChatMessages>
+        </div>
       </div>
       <Transition name="fade">
         <button
@@ -122,10 +135,10 @@ function onChatScroll() {
   checkScrollPosition()
 }
 
-function scrollToBottom() {
+function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
   const el = scrollParentRef.value ?? chatScrollRef.value
   if (!el) return
-  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  el.scrollTo({ top: el.scrollHeight, behavior })
   showScrollToBottom.value = false
 }
 
@@ -153,7 +166,13 @@ onMounted(() => {
   })
 })
 
+export type ChatDisplayItem =
+  | { type: 'date'; label: string }
+  | { type: 'message'; uiMessage: UiMessage }
+
 const props = defineProps<{
+  /** 日期分隔线与消息交错列表，与消息容器同级渲染 */
+  displayItems: ChatDisplayItem[]
   uiMessages: UiMessage[]
   chatStatus: 'submitted' | 'streaming' | 'ready' | 'error'
   chatTitle: string
@@ -185,9 +204,32 @@ const emit = defineEmits<{
   'cancel-reply': []
 }>()
 
-watch(() => props.uiMessages.length, () => {
+watch(() => props.displayItems.length, () => {
   nextTick(checkScrollPosition)
 })
+
+/** 打开/切换会话或消息列表变化时滚动到底部，便于看到最新消息 */
+function scheduleScrollToBottom() {
+  nextTick(() => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToBottom('auto'))
+    })
+  })
+}
+
+const lastDisplayKey = () => {
+  const items = props.displayItems
+  const last = items[items.length - 1]
+  if (!last) return ''
+  return last.type === 'message' ? last.uiMessage?.id ?? '' : last.label
+}
+
+watch([() => props.displayItems.length, () => lastDisplayKey()], () => {
+  if (props.displayItems.length === 0) return
+  scheduleScrollToBottom()
+}, { immediate: true })
+
+defineExpose({ scrollToBottom })
 </script>
 
 <style scoped>
@@ -199,6 +241,16 @@ watch(() => props.uiMessages.length, () => {
 }
 :deep([data-slot="content"]) {
   padding: 0;
+}
+/* 日期分隔线：占满列表宽度（strut 撑开 + 禁止收缩），标签相对中线居中 */
+:deep(.chat-messages-list) .date-separator-full {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+:deep(.chat-messages-list) .date-separator-strut {
+  display: block;
+  width: 100%;
 }
 :deep([data-slot="container"]) {
   padding-bottom: 0;
