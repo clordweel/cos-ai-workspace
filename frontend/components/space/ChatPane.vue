@@ -62,7 +62,7 @@
           type="button"
           class="scroll-to-bottom-btn absolute left-1/2 top-14 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-md hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors pointer-events-auto"
           aria-label="回到底部"
-          @click="scrollToBottom"
+          @click="() => scrollToBottom()"
         >
           <ArrowDown class="h-4 w-4" aria-hidden />
         </button>

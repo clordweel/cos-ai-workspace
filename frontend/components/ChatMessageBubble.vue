@@ -37,7 +37,7 @@
         <ContextMenuRoot v-if="messageIndex !== undefined">
           <ContextMenuTrigger as-child>
             <div
-              class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit min-w-28 max-w-full"
+              class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit min-w-28 max-w-full"
             >
               <div
                 v-if="message.inReplyTo"
@@ -120,7 +120,7 @@
         </ContextMenuRoot>
         <template v-else>
           <div
-            class="flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground min-w-28"
+            class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground min-w-28"
           >
             <div
               v-if="message.inReplyTo"
@@ -779,6 +779,16 @@ function onCopy() {
 }
 :deep(.chat-message-markdown--on-primary hr) {
   border-top-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+
+/* 发送方气泡内选中：高对比度，避免在 primary 背景上看不清 */
+:deep(.chat-bubble-user *::selection) {
+  background: rgba(255, 255, 255, 0.55);
+  color: hsl(var(--primary));
+}
+:deep(.chat-bubble-user *::-moz-selection) {
+  background: rgba(255, 255, 255, 0.55);
+  color: hsl(var(--primary));
 }
 
 .streaming-cursor {
