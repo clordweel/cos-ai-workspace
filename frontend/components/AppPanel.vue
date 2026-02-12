@@ -156,13 +156,14 @@
                       </div>
                       <p v-if="profileEditError" class="text-xs text-red-600 dark:text-red-400">{{ profileEditError }}</p>
                       <p v-if="profileEditSuccess" class="text-xs text-emerald-600 dark:text-emerald-500">已保存</p>
-                      <button
+                      <Button
                         type="submit"
-                        class="rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium px-4 py-2.5 disabled:opacity-50"
+                        variant="default"
+                        size="default"
                         :disabled="profileEditLoading"
                       >
                         {{ profileEditLoading ? '保存中…' : '保存' }}
-                      </button>
+                      </Button>
                     </form>
                   </div>
 
@@ -207,13 +208,14 @@
                           />
                           <p v-if="logtoPasswordError" class="text-xs text-red-600 dark:text-red-400">{{ logtoPasswordError }}</p>
                           <p v-if="logtoPasswordSuccess" class="text-xs text-emerald-600 dark:text-emerald-500">Logto 密码已修改</p>
-                          <button
+                          <Button
                             type="submit"
-                            class="rounded-lg bg-zinc-800 dark:bg-zinc-600 hover:bg-zinc-700 text-white text-xs font-medium px-3 py-2 disabled:opacity-50"
+                            variant="default"
+                            size="sm"
                             :disabled="logtoPasswordLoading"
                           >
                             {{ logtoPasswordLoading ? '提交中…' : '修改' }}
-                          </button>
+                          </Button>
                         </form>
                       </div>
 
@@ -237,13 +239,14 @@
                           />
                           <p v-if="matrixSetPasswordError" class="text-xs text-red-600 dark:text-red-400">{{ matrixSetPasswordError }}</p>
                           <p v-if="matrixSetPasswordSuccess" class="text-xs text-emerald-600 dark:text-emerald-500">已设置，可用于 Element 登录</p>
-                          <button
+                          <Button
                             type="submit"
-                            class="rounded-lg bg-zinc-800 dark:bg-zinc-600 hover:bg-zinc-700 text-white text-xs font-medium px-3 py-2 disabled:opacity-50"
+                            variant="default"
+                            size="sm"
                             :disabled="matrixSetPasswordLoading"
                           >
                             {{ matrixSetPasswordLoading ? '提交中…' : '设置' }}
-                          </button>
+                          </Button>
                         </form>
                         <div class="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-600">
                           <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">Synapse Admin 中的删除实为禁用，此处可彻底注销 Matrix 账号</p>
