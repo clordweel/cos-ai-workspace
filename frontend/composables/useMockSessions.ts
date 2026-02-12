@@ -13,12 +13,13 @@ import {
 
 let cachedMockEnabled: ReturnType<typeof computed<boolean>> | null = null
 
-/** 是否启用 mock 会话列表（仿真演示）。Matrix 模式下为 false，仅显示真实会话。只读一次 config，避免刷新/水合时列表闪退。 */
+/** 是否启用 mock 会话列表（仿真演示）。Matrix 模式下为 false，仅显示真实会话；调试时可设 NUXT_PUBLIC_DEBUG_MOCK_SESSIONS=true 强制显示。只读一次 config，避免刷新/水合时列表闪退。 */
 export function useMockSessionListEnabled() {
   if (cachedMockEnabled !== null) return cachedMockEnabled
   const config = useRuntimeConfig()
-  const enabled = (config.public?.chatProvider as string) !== 'matrix'
-  cachedMockEnabled = computed(() => enabled)
+  const debugMock = (config.public?.debugMockSessions as boolean) === true
+  const enabledByProvider = (config.public?.chatProvider as string) !== 'matrix'
+  cachedMockEnabled = computed(() => debugMock || enabledByProvider)
   return cachedMockEnabled
 }
 

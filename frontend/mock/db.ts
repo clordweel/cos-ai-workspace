@@ -81,19 +81,24 @@ function buildDebugSession(): MockSessionItem {
   }
 }
 
-/** 全情景调试消息：每条对应一种可展示状态，便于调试气泡、已读、工具栏等 */
+/** 全情景调试消息：每条对应一种可展示状态，便于调试气泡、已读、工具栏等；含时间戳与系统消息 */
 function buildDebugScenarioMessages(): ChatMessage[] {
   const now = Date.now()
+  const t = (minOffset: number) => now - minOffset * 60 * 1000
   return [
+    // ---- 系统消息：会话创建 ----
+    { role: 'system', content: '会话已创建', createdAt: t(130) },
+    { role: 'system', content: 'AI 助手 加入了对话', createdAt: t(129) },
     // ---- 用户消息：各种 receipt 状态 ----
-    { role: 'user', content: '这条是发送中', receiptStatus: 'sending' },
-    { role: 'user', content: '这条是已发送', receiptStatus: 'sent' },
-    { role: 'user', content: '这条是已送达', receiptStatus: 'delivered' },
+    { role: 'user', content: '这条是发送中', receiptStatus: 'sending', createdAt: t(128) },
+    { role: 'user', content: '这条是已发送', receiptStatus: 'sent', createdAt: t(126) },
+    { role: 'user', content: '这条是已送达', receiptStatus: 'delivered', createdAt: t(124) },
     {
       role: 'user',
       content: '这条是已读（气泡外对方头像）',
       receiptStatus: 'read',
       readBy: [{ type: 'bot', label: 'AI 助手' }],
+      createdAt: t(122),
     },
     {
       role: 'user',
@@ -103,13 +108,15 @@ function buildDebugScenarioMessages(): ChatMessage[] {
         { type: 'bot', label: 'AI 助手' },
         { type: 'other_user', label: '李四' },
       ],
+      createdAt: t(120),
     },
-    { role: 'user', content: '这条是发送失败', receiptStatus: 'failed' },
+    { role: 'user', content: '这条是发送失败', receiptStatus: 'failed', createdAt: t(118) },
     // ---- 助手消息：无思考、单来源 ----
     {
       role: 'assistant',
       content: '这是普通回复，单来源 bot，无思考过程。',
       sources: [{ type: 'bot', label: 'AI 助手' }],
+      createdAt: t(116),
     },
     // ---- 助手消息：带思考过程 ----
     {
@@ -117,12 +124,14 @@ function buildDebugScenarioMessages(): ChatMessage[] {
       content: '根据文档内容，三个要点如下：\n1. 项目周期与里程碑\n2. 资源与预算分配\n3. 风险与应对措施。',
       thinking: '用户要求总结文档要点。从上下文中提取并分条列出，保持简洁。',
       sources: [{ type: 'bot', label: 'AI 助手' }],
+      createdAt: t(114),
     },
     // ---- 助手消息：思考中占位（流式前） ----
     {
       role: 'assistant',
       content: '思考中…',
       sources: [{ type: 'bot', label: 'AI 助手' }],
+      createdAt: t(112),
     },
     // ---- 助手消息：多来源（协作） ----
     {
@@ -132,12 +141,14 @@ function buildDebugScenarioMessages(): ChatMessage[] {
         { type: 'bot', label: 'AI 助手' },
         { type: 'other_user', label: '张三' },
       ],
+      createdAt: t(110),
     },
     // ---- 助手消息：系统来源 ----
     {
       role: 'assistant',
       content: '这是一条系统/外部程序触发的回复。',
       sources: [{ type: 'system', label: '定时任务' }],
+      createdAt: t(108),
     },
     // ---- 助手消息：点赞 ----
     {
@@ -148,6 +159,7 @@ function buildDebugScenarioMessages(): ChatMessage[] {
         { type: 'like', by: { type: 'other_user', label: '王五' } },
         { type: 'like', by: { type: 'other_user', label: '李四' } },
       ],
+      createdAt: t(106),
     },
     // ---- 助手消息：已编辑 ----
     {
@@ -156,13 +168,17 @@ function buildDebugScenarioMessages(): ChatMessage[] {
       sources: [{ type: 'bot', label: 'AI 助手' }],
       editedAt: now - 120_000,
       editedBy: { type: 'other_user', label: '张三' },
+      createdAt: t(104),
     },
+    // ---- 系统消息：时间分隔 ----
+    { role: 'system', content: '——— 以下为未读/已读示例 ———', createdAt: t(102) },
     // ---- 助手消息：未读（用于会话角标） ----
     {
       role: 'assistant',
       content: '这是未读的助手消息，会话列表会显示未读角标。',
       sources: [{ type: 'bot', label: 'AI 助手' }],
       receiptStatus: 'unread',
+      createdAt: t(100),
     },
     // ---- 助手消息：已读 ----
     {
@@ -170,6 +186,7 @@ function buildDebugScenarioMessages(): ChatMessage[] {
       content: '这是已读的助手消息。',
       sources: [{ type: 'bot', label: 'AI 助手' }],
       receiptStatus: 'read',
+      createdAt: t(98),
     },
     // ---- 助手消息：对方为更高权限者，当前用户不可编辑 ----
     {
@@ -177,6 +194,7 @@ function buildDebugScenarioMessages(): ChatMessage[] {
       content: '这条来自组织更高权限者，当前用户不可编辑，底部不显示编辑按钮。',
       sources: [{ type: 'other_user', label: '管理员' }],
       editableByCurrentUser: false,
+      createdAt: t(96),
     },
     // ---- 流式展示：contentChunks 分段（可选） ----
     {
@@ -184,6 +202,7 @@ function buildDebugScenarioMessages(): ChatMessage[] {
       content: '流式输出的完整内容在这里。',
       contentChunks: ['流式', '输出的', '完整', '内容', '在这里。'],
       sources: [{ type: 'bot', label: 'AI 助手' }],
+      createdAt: t(94),
     },
   ]
 }
@@ -220,10 +239,27 @@ function buildMessagesForSession(session: MockSessionItem): ChatMessage[] {
   const userLabels = participants.filter((p) => p.kind !== 'bot').map((p) => p.name)
   const botLabels = participants.filter((p) => p.kind === 'bot').map((p) => p.name)
   const allLabels = userLabels.length + botLabels.length > 0 ? [...userLabels, ...botLabels] : [session.title]
+  const baseTime = Date.now() - faker.number.int({ min: 24, max: 72 }) * 60 * 60 * 1000
+  let offsetMin = 0
+  const nextTs = () => {
+    offsetMin += faker.number.int({ min: 2, max: 8 })
+    return baseTime + offsetMin * 60 * 1000
+  }
+
+  // 系统消息：会话创建 / 加入群聊
+  if (isGroup && userLabels.length > 0) {
+    list.push({ role: 'system', content: '会话已创建', createdAt: nextTs() })
+    list.push({ role: 'system', content: `${userLabels[0]} 创建了群聊`, createdAt: nextTs() })
+    if (botLabels.length > 0) {
+      list.push({ role: 'system', content: `${botLabels[0]} 加入了群聊`, createdAt: nextTs() })
+    }
+  } else {
+    list.push({ role: 'system', content: '会话已创建', createdAt: nextTs() })
+  }
 
   for (let i = 0; i < count; i++) {
     if (i % 2 === 0) {
-      list.push({ role: 'user', content: pick(USER_PHRASES) })
+      list.push({ role: 'user', content: pick(USER_PHRASES), createdAt: nextTs() })
     } else {
       const content = pick(ASSISTANT_PHRASES)
       const label = isGroup ? pick(allLabels) : allLabels[0]
@@ -239,6 +275,7 @@ function buildMessagesForSession(session: MockSessionItem): ChatMessage[] {
       const msg: ChatMessage = {
         role: 'assistant',
         content,
+        createdAt: nextTs(),
         ...(session.title === 'AI 助手' && i === 1 ? { thinking: '用户要求总结文档要点，从上下文中提取并分条列出。' } : {}),
         sources,
       }
