@@ -16,7 +16,7 @@ export interface ApiSession {
 /** 中间层返回的标准化消息 */
 export interface ApiMessage {
   id?: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   thinking?: string
   backendMessageId?: string

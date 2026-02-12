@@ -41,6 +41,7 @@ const DEFAULT_MESSAGES = new Map<string, NormalizedMessage[]>([
   [
     'mock-session-1',
     [
+      { id: 's1', role: 'system', content: '会话已创建', backendMessageId: 's1', createdAt: Date.now() - 3600_000 - 1000 },
       { id: 'm1', role: 'user', content: '你好', backendMessageId: 'm1', createdAt: Date.now() - 3600_000 },
       {
         id: 'm2',

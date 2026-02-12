@@ -22,7 +22,7 @@ export type MessageReceiptStatus =
   | 'failed'   // 发送失败
 
 export type ChatMessage = {
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'system'
   content: string
   thinking?: string
   /** 左侧消息可标注多种来源（含多机器人协作），头像堆叠展示 */

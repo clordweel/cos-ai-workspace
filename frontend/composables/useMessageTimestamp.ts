@@ -31,6 +31,7 @@ export function getMessageTimestampDisplay(
 ): { show: boolean; text: string } {
   if (index < 0 || index >= messages.length) return { show: false, text: '' }
   const msg = messages[index]
+  if (msg.role === 'system') return { show: false, text: '' }
   const ts = msg.createdAt
   if (ts == null) return { show: false, text: '' }
 

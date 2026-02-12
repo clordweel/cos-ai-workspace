@@ -97,15 +97,50 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       const currentUserId = currentUserMxid ?? userId;
       const eventMap = new Map<string, { role: 'user' | 'assistant'; content: string }>();
       for (const ev of events) {
-        const r = ev.sender === currentUserId ? 'user' : 'assistant';
-        const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
-        eventMap.set(ev.event_id, { role: r, content: body });
+        if (ev.type === 'm.room.message' && ev.content?.body != null) {
+          const r = ev.sender === currentUserId ? 'user' : 'assistant';
+          eventMap.set(ev.event_id, { role: r, content: ev.content.body });
+        }
       }
       const out: NormalizedMessage[] = [];
       for (const ev of events) {
-        const sender = ev.sender;
+        if (ev.type === 'm.room.member') {
+          const membership = ev.content?.membership ?? '';
+          const stateKey = ev.state_key ?? ev.sender;
+          const displayName = ev.content?.displayname ?? stateKey.replace(/^@/, '').split(':')[0] ?? stateKey;
+          let content: string;
+          if (membership === 'join') {
+            content = `${displayName} 加入了会话`;
+          } else if (membership === 'leave') {
+            content = `${displayName} 离开了会话`;
+          } else if (membership === 'invite') {
+            content = `${displayName} 被邀请加入`;
+          } else {
+            continue;
+          }
+          out.push({
+            id: ev.event_id,
+            role: 'system',
+            content,
+            backendMessageId: ev.event_id,
+            createdAt: ev.origin_server_ts,
+          });
+          continue;
+        }
+        if (ev.type === 'm.room.name') {
+          const name = ev.content?.name?.trim() || '未命名';
+          out.push({
+            id: ev.event_id,
+            role: 'system',
+            content: `会话已改名为「${name}」`,
+            backendMessageId: ev.event_id,
+            createdAt: ev.origin_server_ts,
+          });
+          continue;
+        }
+        const r = ev.sender === currentUserId ? 'user' : 'assistant';
         const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
-        const role = sender === currentUserId ? 'user' : 'assistant';
+        eventMap.set(ev.event_id, { role: r, content: body });
         const replyEventId = ev.content?.['m.relates_to']?.['m.in_reply_to']?.event_id;
         const inReplyTo =
           replyEventId
@@ -120,7 +155,7 @@ export function createMatrixAdapter(): ChatBackendAdapter {
             : undefined;
         out.push({
           id: ev.event_id,
-          role,
+          role: r,
           content: body,
           backendMessageId: ev.event_id,
           createdAt: ev.origin_server_ts,

@@ -261,8 +261,12 @@ export interface MatrixMessageEvent {
     'm.relates_to'?: {
       'm.in_reply_to'?: { event_id?: string };
     };
+    membership?: string;
+    displayname?: string;
+    name?: string;
   };
   type: string;
+  state_key?: string;
 }
 
 export interface RoomMessagesResponse {
@@ -289,7 +293,12 @@ export async function getRoomMessages(
   const data = (await res.json()) as RoomMessagesResponse & { error?: string };
   if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
   const chunk = data.chunk || [];
-  const events = chunk.filter((e) => e.type === 'm.room.message' && e.content?.body != null);
+  const events = chunk.filter(
+    (e) =>
+      (e.type === 'm.room.message' && e.content?.body != null) ||
+      (e.type === 'm.room.member' && e.content?.membership) ||
+      (e.type === 'm.room.name' && e.content?.name != null)
+  );
   return { events, nextToken: data.end };
 }
 

@@ -30,7 +30,7 @@ export interface NormalizedInReplyTo {
 
 export interface NormalizedMessage {
   id?: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   thinking?: string;
   sources?: NormalizedMessageSource[];

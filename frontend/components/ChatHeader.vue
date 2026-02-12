@@ -73,8 +73,11 @@
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-    <div class="flex min-w-0 items-center justify-end gap-1.5">
-      <span v-if="userName" class="shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[8rem]" :title="userName">{{ userName }}</span>
+    <div class="flex min-w-0 items-center justify-end gap-1.5" :title="userName">
+      <span
+        v-if="userName"
+        class="hidden sm:inline shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[6rem]"
+      >{{ userName }}</span>
       <span
         class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-xs font-medium"
         aria-hidden

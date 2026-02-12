@@ -131,6 +131,12 @@
       {{ timestampText }}
     </span>
   </div>
+  <!-- 系统消息：居中、灰字，用于加入/离开/改名等 -->
+  <div v-else-if="message.role === 'system'" class="flex justify-center py-1">
+    <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
+      {{ message.content }}
+    </span>
+  </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-xs text-zinc-800 dark:text-zinc-200">
     <ContextMenuRoot v-if="messageIndex !== undefined">

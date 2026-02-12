@@ -162,6 +162,23 @@
                     </span>
                     命令
                   </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem text-value="粗体" class="gap-2" @select="wrapAtCursor('**', '**')">
+                    <Bold class="h-3 w-3" />
+                    粗体
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="斜体" class="gap-2" @select="wrapAtCursor('*', '*')">
+                    <Italic class="h-3 w-3" />
+                    斜体
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="代码" class="gap-2" @select="wrapAtCursor('`', '`')">
+                    <Code class="h-3 w-3" />
+                    代码
+                  </DropdownMenuItem>
+                  <DropdownMenuItem text-value="代码块" class="gap-2" @select="wrapAtCursor('```\n', '\n```')">
+                    <Code class="h-3 w-3" />
+                    代码块
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <!-- 非 xxs：三个按钮并排 -->
@@ -201,6 +218,33 @@
                     <Slash class="h-2 w-2" />
                   </span>
                   <span class="text-[10px] font-medium text-black dark:text-white">命令</span>
+                </button>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="粗体"
+                  aria-label="粗体"
+                  @click="wrapAtCursor('**', '**')"
+                >
+                  <Bold class="h-3 w-3 text-black dark:text-white" />
+                </button>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="斜体"
+                  aria-label="斜体"
+                  @click="wrapAtCursor('*', '*')"
+                >
+                  <Italic class="h-3 w-3 text-black dark:text-white" />
+                </button>
+                <button
+                  type="button"
+                  class="input-toolbar-chip relative flex h-6 w-6 items-center justify-center rounded-lg border border-zinc-200/80 dark:border-zinc-600/80 bg-white/90 dark:bg-zinc-700/60 shadow-sm transition-all duration-200 hover:scale-[1.02] hover:border-zinc-300 hover:bg-zinc-50 hover:shadow active:scale-[0.98] dark:border-zinc-600 dark:hover:border-zinc-500 dark:hover:bg-zinc-600/80"
+                  title="行内代码"
+                  aria-label="行内代码"
+                  @click="wrapAtCursor('`', '`')"
+                >
+                  <Code class="h-3 w-3 text-black dark:text-white" />
                 </button>
               </template>
             </div>
@@ -259,7 +303,7 @@
 </template>
 
 <script setup lang="ts">
-import { AtSign, Bot, ChevronDown, GripHorizontal, Hash, Image as ImageIcon, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
+import { AtSign, Bold, Bot, ChevronDown, Code, GripHorizontal, Hash, Image as ImageIcon, Italic, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
 import { ref, watch, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useBreakpoint } from '~/composables/useBreakpoint'
 import { useContactsAndBots } from '~/composables/useContactsAndBots'
@@ -267,6 +311,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 
@@ -393,6 +438,25 @@ function insertAtCursor(char: string) {
     el.focus()
     el.setSelectionRange(newPos, newPos)
     if (char === '@') parseAtMention(newValue, newPos)
+    adjustTextareaHeight()
+  })
+}
+
+/** 在选中区域前后插入字符（用于粗体、斜体、代码等格式） */
+function wrapAtCursor(before: string, after: string = before) {
+  const el = textareaRef.value
+  if (!el) return
+  const value = props.modelValue
+  const start = el.selectionStart ?? value.length
+  const end = el.selectionEnd ?? start
+  const selected = value.slice(start, end)
+  const newValue = value.slice(0, start) + before + selected + after + value.slice(end)
+  emit('update:modelValue', newValue)
+  nextTick(() => {
+    el.focus()
+    const newEnd = start + before.length + selected.length + after.length
+    const newStart = selected ? newEnd : start + before.length
+    el.setSelectionRange(newStart, newEnd)
     adjustTextareaHeight()
   })
 }
