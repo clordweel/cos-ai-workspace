@@ -24,9 +24,10 @@
         marginBottom: 'var(--chat-input-area-height)'
       }"
     >
+      <!-- 顶部边距至少超过顶栏 + 回到底部按钮高度，避免首条消息被遮挡 -->
       <div
         ref="chatScrollRef"
-        class="chat-messages-scroll flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-3"
+        class="chat-messages-scroll flex-1 min-h-0 overflow-y-auto pt-24 pb-3"
         @scroll="onChatScroll"
       >
         <UChatMessages
@@ -185,11 +186,14 @@ watch(() => props.uiMessages.length, () => {
 </script>
 
 <style scoped>
-/* 去除 Nuxt UI ChatMessage 自带的 content/container 背景，仅保留气泡自身背景；移除 container 默认 pb-8 */
+/* 去除 Nuxt UI ChatMessage 自带的 content/container 背景，仅保留气泡自身背景；移除 container 默认 pb-8；移除 content 四周边距 */
 :deep([data-slot="root"]),
 :deep([data-slot="container"]),
 :deep([data-slot="content"]) {
   background: transparent;
+}
+:deep([data-slot="content"]) {
+  padding: 0;
 }
 :deep([data-slot="container"]) {
   padding-bottom: 0;
@@ -197,6 +201,12 @@ watch(() => props.uiMessages.length, () => {
 /* 左侧接收的消息保留底边距 */
 :deep([data-role="assistant"] [data-slot="container"]) {
   padding-bottom: 1rem;
+}
+/* 右侧发送方消息：去除外层容器（root/container）的上下边距，仅保留气泡本身间距 */
+:deep([data-role="user"] [data-slot="root"]),
+:deep([data-role="user"] [data-slot="container"]) {
+  padding-top: 0;
+  padding-bottom: 0;
 }
 /* 保持与原有聊天区一致的选中样式 */
 :deep([data-slot="content"]) *::selection {
@@ -213,15 +223,15 @@ watch(() => props.uiMessages.length, () => {
   scrollbar-color: rgb(212 212 216) transparent;
 }
 :deep(.chat-messages-scroll)::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 2px;
+  height: 2px;
 }
 :deep(.chat-messages-scroll)::-webkit-scrollbar-track {
   background: transparent;
 }
 :deep(.chat-messages-scroll)::-webkit-scrollbar-thumb {
   background-color: rgb(212 212 216);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 :global(.dark) :deep(.chat-messages-scroll) {
   scrollbar-color: rgb(82 82 91) transparent;

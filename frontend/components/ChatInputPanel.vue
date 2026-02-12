@@ -628,7 +628,7 @@ onUnmounted(() => {
   background: transparent;
 }
 .chat-input-inner-scroll::-webkit-scrollbar-thumb {
-  border-radius: 4px;
+  border-radius: 2px;
   background: rgb(161 161 170 / 0.4);
 }
 .chat-input-inner-scroll::-webkit-scrollbar-thumb:hover {

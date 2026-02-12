@@ -31,6 +31,7 @@
       />
       <SpaceAppDrawer
         :open="showAppList"
+        :top="appDrawerTop"
         :height-rem="appDrawerHeightRem"
         :common-apps="drawerCommonApps"
         :favorite-apps="drawerFavoriteApps"
@@ -92,6 +93,7 @@ defineProps<{
   searchQuery: string
   showAppList: boolean
   showSearchBar: boolean
+  appDrawerTop: string
   appDrawerHeightRem: number
   drawerCommonApps: DrawerAppItem[]
   drawerFavoriteApps: DrawerAppItem[]

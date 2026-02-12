@@ -1,10 +1,10 @@
 <template>
   <div
-    class="session-list-scroll-area absolute left-0 right-0 bottom-0 z-0 overflow-y-auto overscroll-contain pb-24"
-    :style="{ top: listPaddingTop }"
+    class="session-list-scroll-area absolute left-0 right-0 bottom-0 top-0 z-0 overflow-y-auto overscroll-contain pb-24"
   >
-    <template v-if="listViewTab === 'active'">
-      <div class="min-h-full flex flex-col">
+    <div class="session-list-inner min-h-full flex flex-col" :style="{ paddingTop: listPaddingTop }">
+      <template v-if="listViewTab === 'active'">
+        <div class="min-h-full flex flex-col">
         <section class="session-list-pinned border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
           <button
             type="button"
@@ -103,9 +103,9 @@
             />
           </div>
         </section>
-      </div>
-    </template>
-    <template v-else-if="listViewTab === 'favorites'">
+        </div>
+      </template>
+      <template v-else-if="listViewTab === 'favorites'">
       <div class="min-h-full flex flex-col items-center justify-center">
         <Empty
           compact
@@ -156,9 +156,10 @@
         </div>
       </div>
     </template>
-    <template v-else-if="listViewTab === 'settings'">
-      <SessionListSettings padding-top="0" />
-    </template>
+      <template v-else-if="listViewTab === 'settings'">
+        <SessionListSettings padding-top="0" />
+      </template>
+    </div>
   </div>
 </template>
 
@@ -226,6 +227,11 @@ const emit = defineEmits<{
 }
 .session-list-scroll-area {
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(161 161 170 / 0.5) transparent;
+}
+:global(.dark) .session-list-scroll-area {
+  scrollbar-color: rgb(113 113 122 / 0.5) transparent;
 }
 .session-list-scroll-area::-webkit-scrollbar {
   width: 2px;
@@ -234,10 +240,16 @@ const emit = defineEmits<{
   background: transparent;
 }
 .session-list-scroll-area::-webkit-scrollbar-thumb {
-  border-radius: 4px;
+  border-radius: 2px;
   background: rgb(161 161 170 / 0.4);
 }
 .session-list-scroll-area::-webkit-scrollbar-thumb:hover {
   background: rgb(161 161 170 / 0.6);
+}
+:global(.dark) .session-list-scroll-area::-webkit-scrollbar-thumb {
+  background: rgb(113 113 122 / 0.5);
+}
+:global(.dark) .session-list-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgb(113 113 122 / 0.7);
 }
 </style>

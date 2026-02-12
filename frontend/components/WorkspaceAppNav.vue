@@ -193,7 +193,7 @@ function tabIcon(tab: AppTab) {
   height: 0;
 }
 
-/* 展开：最细滚动条（与 zinc 色系一致） */
+/* 展开：极细滚动条（与 zinc 色系一致） */
 .nav-tabs-scroll-expanded {
   scrollbar-width: thin;
   scrollbar-color: rgb(212 212 216) transparent;
@@ -202,14 +202,14 @@ function tabIcon(tab: AppTab) {
   scrollbar-color: rgb(82 82 91) transparent;
 }
 .nav-tabs-scroll-expanded::-webkit-scrollbar {
-  width: 5px;
+  width: 2px;
 }
 .nav-tabs-scroll-expanded::-webkit-scrollbar-track {
   background: transparent;
 }
 .nav-tabs-scroll-expanded::-webkit-scrollbar-thumb {
   background-color: rgb(212 212 216);
-  border-radius: 9999px;
+  border-radius: 2px;
 }
 .dark .nav-tabs-scroll-expanded::-webkit-scrollbar-thumb {
   background-color: rgb(82 82 91);

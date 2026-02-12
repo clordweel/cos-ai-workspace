@@ -32,6 +32,7 @@
         :search-query="searchQuery"
         :show-app-list="showAppList"
         :show-search-bar="showSearchBar"
+        :app-drawer-top="appDrawerTop"
         :app-drawer-height-rem="appDrawerHeightRem"
         :drawer-common-apps="drawerCommonApps"
         :drawer-favorite-apps="drawerFavoriteApps"
@@ -93,8 +94,11 @@
           >
             <template #content="{ message }">
               <div
-                class="flex w-full pb-1.5"
-                :class="(displayMessages[getMessageIndexByUiId(message.id)]?.role === 'user' ? 'justify-end' : 'justify-start')"
+                class="flex w-full"
+                :class="[
+                  displayMessages[getMessageIndexByUiId(message.id)]?.role === 'user' ? 'justify-end' : 'justify-start pl-2',
+                  displayMessages[getMessageIndexByUiId(message.id)]?.role === 'system' ? 'pb-0.5' : 'pb-1.5'
+                ]"
               >
                 <ChatMessageBubble
                   v-if="displayMessages[getMessageIndexByUiId(message.id)]"
@@ -154,6 +158,7 @@ const {
   listViewTab,
   listPaddingTop,
   toolbarTop,
+  appDrawerTop,
   pinnedCollapsed,
   pinnedChats,
   mockSessionListEnabled,

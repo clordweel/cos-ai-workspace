@@ -3,7 +3,7 @@
     <div
       v-show="open"
       class="app-drawer absolute left-0 right-0 z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate relative overflow-hidden"
-      :style="{ top: 0, height: `${heightRem}rem` }"
+      :style="{ top, height: `${heightRem}rem` }"
     >
       <!-- 左上射出的渐变色带（仅装饰） -->
       <div
@@ -162,13 +162,18 @@ const profileAppItem: DrawerAppItem = {
   view: 'profile',
 }
 
-defineProps<{
-  open: boolean
-  heightRem: number
-  commonApps: DrawerAppItem[]
-  favoriteApps: DrawerAppItem[]
-  isActive: (app: DrawerAppItem) => boolean
-}>()
+withDefaults(
+  defineProps<{
+    open: boolean
+    /** 抽屉定位 top，贴顶时为 '0' */
+    top?: string
+    heightRem: number
+    commonApps: DrawerAppItem[]
+    favoriteApps: DrawerAppItem[]
+    isActive: (app: DrawerAppItem) => boolean
+  }>(),
+  { top: '0' },
+)
 
 const emit = defineEmits<{
   select: [app: DrawerAppItem]

@@ -697,7 +697,7 @@ function goToAuth() {
 </script>
 
 <style scoped>
-/* 应用内容区：最细滚动条（与侧栏一致） */
+/* 应用内容区：极细滚动条 */
 .app-panel-scroll {
   scrollbar-width: thin;
   scrollbar-color: rgb(212 212 216) transparent;
@@ -706,14 +706,14 @@ function goToAuth() {
   scrollbar-color: rgb(82 82 91) transparent;
 }
 .app-panel-scroll::-webkit-scrollbar {
-  width: 5px;
+  width: 2px;
 }
 .app-panel-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 .app-panel-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(212 212 216);
-  border-radius: 9999px;
+  border-radius: 2px;
 }
 .dark .app-panel-scroll::-webkit-scrollbar-thumb {
   background-color: rgb(82 82 91);

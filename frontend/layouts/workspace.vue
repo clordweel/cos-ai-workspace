@@ -151,15 +151,15 @@ watch(() => route.query?.auth_error, (authError) => {
   scrollbar-color: rgb(212 212 216) transparent;
 }
 .workspace-app-content::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 2px;
+  height: 2px;
 }
 .workspace-app-content::-webkit-scrollbar-track {
   background: transparent;
 }
 .workspace-app-content::-webkit-scrollbar-thumb {
   background-color: rgb(212 212 216);
-  border-radius: 3px;
+  border-radius: 2px;
 }
 .dark .workspace-app-content {
   scrollbar-color: rgb(82 82 91) transparent;

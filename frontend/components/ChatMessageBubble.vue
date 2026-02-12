@@ -131,11 +131,12 @@
       {{ timestampText }}
     </span>
   </div>
-  <!-- 系统消息：居中、灰字，用于加入/离开/改名等 -->
-  <div v-else-if="message.role === 'system'" class="flex justify-center py-1">
-    <span class="text-[11px] text-zinc-400 dark:text-zinc-500">
-      {{ message.content }}
-    </span>
+  <!-- 系统消息：全宽、文字居中、无背景、最小间距 -->
+  <div
+    v-else-if="message.role === 'system'"
+    class="w-full py-0.5 text-center text-[11px] text-zinc-500 dark:text-zinc-400"
+  >
+    {{ message.content }}
   </div>
   <!-- 左侧消息：标准宽度容器；仅气泡内容区可右键菜单 -->
   <div v-else class="min-w-[20rem] max-w-[85%] text-xs text-zinc-800 dark:text-zinc-200">

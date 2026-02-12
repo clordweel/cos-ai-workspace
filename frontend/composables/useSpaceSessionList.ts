@@ -27,6 +27,8 @@ export type DisplayChatItem = {
 }
 
 const APP_DRAWER_HEIGHT_REM = 24
+/** 会话列表顶栏高度 (h-12)，与 SessionListHeader 一致 */
+const SESSION_LIST_HEADER_HEIGHT_REM = 3
 
 export function useSpaceSessionList(options: {
   chatId: Ref<string | undefined>
@@ -157,8 +159,12 @@ export function useSpaceSessionList(options: {
     displayChats.value.reduce((sum, c) => sum + getNonReadCount(c.id), 0)
   )
 
-  const toolbarTop = computed(() => (showAppList.value ? `${APP_DRAWER_HEIGHT_REM}rem` : '0'))
-  const listPaddingTop = computed(() => `${showAppList.value ? APP_DRAWER_HEIGHT_REM + 3 : 3}rem`)
+  /** 顶栏浮在顶部；滚动区从顶部延伸，内容用 listPaddingTop 留出顶栏/抽屉高度 */
+  const toolbarTop = computed(() => '0')
+  const listPaddingTop = computed(
+    () => `${(showAppList.value ? APP_DRAWER_HEIGHT_REM : 0) + SESSION_LIST_HEADER_HEIGHT_REM}rem`,
+  )
+  const appDrawerTop = computed(() => '0')
 
   const isMounted = ref(false)
   onMounted(() => { isMounted.value = true })
@@ -288,6 +294,7 @@ export function useSpaceSessionList(options: {
     totalPendingCount,
     toolbarTop,
     listPaddingTop,
+    appDrawerTop,
     getChatDateLabel,
     getNonReadCount,
     isMockSession,
