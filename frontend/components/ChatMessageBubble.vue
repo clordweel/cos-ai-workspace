@@ -50,7 +50,15 @@
                   {{ message.inReplyTo.content || '…' }}
                 </p>
               </div>
-              <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
+              <div
+                v-if="userBodyHtml"
+                class="chat-message-text chat-message-markdown break-words flex-1 min-w-0 w-full"
+                role="region"
+                aria-label="消息正文"
+              >
+                <div v-html="userBodyHtml" />
+              </div>
+              <p v-else class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
             </div>
           </ContextMenuTrigger>
           <ContextMenuPortal>
@@ -125,7 +133,15 @@
                 {{ message.inReplyTo.content || '…' }}
               </p>
             </div>
-            <p class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
+            <div
+              v-if="userBodyHtml"
+              class="chat-message-text chat-message-markdown break-words flex-1 min-w-0 w-full"
+              role="region"
+              aria-label="消息正文"
+            >
+              <div v-html="userBodyHtml" />
+            </div>
+            <p v-else class="chat-message-text whitespace-pre-wrap break-words flex-1 min-w-0 w-full">{{ message.content }}</p>
           </div>
         </template>
       </div>
@@ -191,6 +207,14 @@
               <span class="thinking-dot thinking-dot-2" />
               <span class="thinking-dot thinking-dot-3" />
             </span>
+          </div>
+          <div
+            v-else-if="useMarkdown && assistantBodyHtml"
+            class="chat-message-text chat-message-markdown break-words"
+            role="region"
+            aria-label="消息正文"
+          >
+            <div v-html="assistantBodyHtml" />
           </div>
           <p v-else class="chat-message-text whitespace-pre-wrap break-words">
             <template v-if="message.contentChunks?.length">
@@ -321,6 +345,14 @@
           <span class="thinking-dot thinking-dot-2" />
           <span class="thinking-dot thinking-dot-3" />
         </span>
+      </div>
+      <div
+        v-else-if="useMarkdown && assistantBodyHtml"
+        class="chat-message-text chat-message-markdown break-words"
+        role="region"
+        aria-label="消息正文"
+      >
+        <div v-html="assistantBodyHtml" />
       </div>
       <p v-else class="chat-message-text whitespace-pre-wrap break-words">
         <template v-if="message.contentChunks?.length">
@@ -479,6 +511,7 @@ const props = defineProps<{
   message: {
     role: string
     content: string
+    formattedBody?: string
     thinking?: string
     sources?: MessageSource[]
     contentChunks?: string[]
@@ -519,6 +552,28 @@ const hasBotSource = computed(() => displaySources.value.some((s) => s.type === 
 const isThinkingPlaceholder = computed(
   () => props.message.role === 'assistant' && props.message.content === THINKING_PLACEHOLDER
 )
+
+/** 助手消息且非流式时渲染（formattedBody 优先净化 HTML，否则 content 作 Markdown） */
+const useMarkdown = computed(
+  () =>
+    props.message.role === 'assistant' &&
+    !props.streaming &&
+    !isThinkingPlaceholder.value &&
+    ((props.message.content?.trim() ?? '') !== '' || (props.message.formattedBody?.trim() ?? '') !== ''),
+)
+const { render: renderMarkdown, renderFormattedBody } = useMarkdownRender()
+const assistantBodyHtml = computed(() => {
+  if (!useMarkdown.value) return ''
+  if (props.message.formattedBody?.trim()) return renderFormattedBody(props.message.formattedBody)
+  if (props.message.content) return renderMarkdown(props.message.content)
+  return ''
+})
+/** 用户消息：有 formattedBody 时渲染净化 HTML，否则纯文本 */
+const userBodyHtml = computed(() => {
+  if (props.message.role !== 'user') return ''
+  if (props.message.formattedBody?.trim()) return renderFormattedBody(props.message.formattedBody)
+  return ''
+})
 
 const likeReactions = computed(() => (props.message.reactions ?? []).filter((r) => r.type === 'like'))
 const likeReactionsLabel = computed(() => {
@@ -585,6 +640,111 @@ function onCopy() {
 :deep(.chat-message-text) {
   font-size: calc(1rem * var(--chat-text-scale, 1)) !important;
 }
+
+/* Markdown 渲染块：与气泡主题一致的段落、列表、代码块等 */
+:deep(.chat-message-markdown) {
+  line-height: 1.5;
+}
+:deep(.chat-message-markdown p) {
+  margin: 0 0 0.5em;
+}
+:deep(.chat-message-markdown p:last-child) {
+  margin-bottom: 0;
+}
+:deep(.chat-message-markdown h1),
+:deep(.chat-message-markdown h2),
+:deep(.chat-message-markdown h3),
+:deep(.chat-message-markdown h4),
+:deep(.chat-message-markdown h5),
+:deep(.chat-message-markdown h6) {
+  margin: 0.75em 0 0.35em;
+  font-weight: 600;
+  line-height: 1.3;
+}
+:deep(.chat-message-markdown h1) { font-size: 1.15em; }
+:deep(.chat-message-markdown h2) { font-size: 1.08em; }
+:deep(.chat-message-markdown h3) { font-size: 1.02em; }
+:deep(.chat-message-markdown ul),
+:deep(.chat-message-markdown ol) {
+  margin: 0.35em 0;
+  padding-left: 1.4em;
+}
+:deep(.chat-message-markdown li) {
+  margin: 0.15em 0;
+}
+:deep(.chat-message-markdown blockquote) {
+  margin: 0.5em 0;
+  padding-left: 0.85em;
+  border-left: 3px solid var(--tw-border-color, rgb(228 228 231));
+  color: rgb(113 113 122);
+}
+.dark :deep(.chat-message-markdown blockquote) {
+  border-left-color: rgb(82 82 91);
+  color: rgb(161 161 170);
+}
+:deep(.chat-message-markdown pre) {
+  margin: 0.5em 0;
+  padding: 0.6em 0.75em;
+  border-radius: 0.5rem;
+  background: rgb(244 244 245);
+  border: 1px solid rgb(228 228 231);
+  overflow-x: auto;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+.dark :deep(.chat-message-markdown pre) {
+  background: rgb(39 39 42);
+  border-color: rgb(63 63 70);
+}
+:deep(.chat-message-markdown code) {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+:deep(.chat-message-markdown pre code) {
+  padding: 0;
+  background: transparent;
+}
+:deep(.chat-message-markdown :not(pre) > code) {
+  padding: 0.15em 0.35em;
+  border-radius: 0.25rem;
+  background: rgb(244 244 245);
+  border: 1px solid rgb(228 228 231);
+}
+.dark :deep(.chat-message-markdown :not(pre) > code) {
+  background: rgb(39 39 42);
+  border-color: rgb(63 63 70);
+}
+:deep(.chat-message-markdown a) {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+:deep(.chat-message-markdown a:hover) {
+  text-decoration: none;
+}
+:deep(.chat-message-markdown table) {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.95em;
+}
+:deep(.chat-message-markdown th),
+:deep(.chat-message-markdown td) {
+  border: 1px solid rgb(228 228 231);
+  padding: 0.35em 0.6em;
+  text-align: left;
+}
+.dark :deep(.chat-message-markdown th),
+.dark :deep(.chat-message-markdown td) {
+  border-color: rgb(63 63 70);
+}
+:deep(.chat-message-markdown hr) {
+  margin: 0.75em 0;
+  border: none;
+  border-top: 1px solid rgb(228 228 231);
+}
+.dark :deep(.chat-message-markdown hr) {
+  border-top-color: rgb(63 63 70);
+}
+
 .streaming-cursor {
   display: inline-block;
   width: 2px;

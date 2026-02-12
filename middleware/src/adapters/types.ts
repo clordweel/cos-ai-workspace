@@ -32,6 +32,8 @@ export interface NormalizedMessage {
   id?: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  /** Matrix 等：富文本 HTML（如 formatted_body），有则优先用于渲染，须经前端净化 */
+  formattedBody?: string;
   thinking?: string;
   sources?: NormalizedMessageSource[];
   receiptStatus?: string;

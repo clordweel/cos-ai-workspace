@@ -2,6 +2,7 @@
  * 会话/消息标准化 API 对接（GET /api/sessions、GET /api/sessions/:id/messages）
  * 可选、渐进：拉取后合并到 useChatSessions，当前后端不支持时静默降级
  */
+import { nextTick } from 'vue'
 import type { ChatMessage } from '~/composables/useChatSessions'
 
 /** 中间层返回的标准化会话 */
@@ -18,6 +19,7 @@ export interface ApiMessage {
   id?: string
   role: 'user' | 'assistant' | 'system'
   content: string
+  formattedBody?: string
   thinking?: string
   backendMessageId?: string
   createdAt?: number
@@ -28,6 +30,7 @@ function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
   return {
     role: m.role,
     content: m.content,
+    formattedBody: m.formattedBody,
     thinking: m.thinking,
     id: m.id ?? m.backendMessageId,
     createdAt: m.createdAt,
@@ -161,7 +164,8 @@ export function useChatSessionsApi() {
         return false
       }
       if (res.status === 501 || res.status === 502 || !res.ok) return false
-      ensureChat(sessionId, trimmed)
+      // 放入 nextTick，确保在 Vue 更新周期内写入状态，使聊天栏标题与列表及时更新
+      nextTick(() => ensureChat(sessionId, trimmed))
       return true
     } catch {
       return false

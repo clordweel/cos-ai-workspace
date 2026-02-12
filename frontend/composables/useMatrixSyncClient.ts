@@ -78,27 +78,94 @@ export function useMatrixSyncClient() {
         }
       })
 
-      c.on(sdk.ClientEvent.Event, (event: { getRoomId?: () => string; getType?: () => string; getContent?: () => { body?: string }; getSender?: () => string; getId?: () => string }) => {
-        if (event?.getType?.() !== 'm.room.message') return
+      // 房间名称变更（含初次 sync 后的名称）：及时更新聊天栏与列表标题
+      c.on(sdk.RoomEvent.Name, (room: { roomId?: string; name?: string }) => {
+        const roomId = room?.roomId
+        const name = (room?.name ?? '').trim()
+        if (!roomId || !name) return
+        nextTick(() => ensureChat(roomId, name))
+      })
+
+      c.on(sdk.ClientEvent.Event, (event: {
+        getRoomId?: () => string
+        getType?: () => string
+        getContent?: () => Record<string, unknown>
+        getSender?: () => string
+        getId?: () => string
+        getStateKey?: () => string
+        getTs?: () => number
+      }) => {
         const roomId = event.getRoomId?.()
         if (!roomId) return
-        const content = event.getContent?.()
-        const body = content?.body ?? (content as { msgtype?: string; body?: string })?.body
-        if (body == null) return
+        const eventType = event.getType?.()
         const eventId = event.getId?.()
         const existing = getMessages(roomId)
         if (eventId && existing.some((m) => m.id === eventId)) return
-        const role = event.getSender?.() === userId ? 'user' : 'assistant'
-        const msg = {
-          role: role as 'user' | 'assistant',
-          content: String(body),
-          id: eventId ?? undefined,
+        const ts = typeof event.getTs === 'function' ? event.getTs() : undefined
+        const createdAt = ts && ts > 0 ? ts : Date.now()
+
+        if (eventType === 'm.room.message') {
+          const content = event.getContent?.() ?? {}
+          const body = (content.body ?? (content as { msgtype?: string; body?: string }).body) as string | undefined
+          if (body == null) return
+          const formattedBody = (content as { formatted_body?: string }).formatted_body
+          const role = event.getSender?.() === userId ? 'user' : 'assistant'
+          const msg = {
+            role: role as 'user' | 'assistant',
+            content: String(body),
+            ...(typeof formattedBody === 'string' && formattedBody ? { formattedBody } : {}),
+            id: eventId ?? undefined,
+            createdAt,
+          }
+          nextTick(() => {
+            ensureChat(roomId, roomId)
+            appendMessage(roomId, msg)
+          })
+          return
         }
-        // 放入 nextTick，确保在 Vue 更新周期内写入状态，使聊天框及时渲染
-        nextTick(() => {
-          ensureChat(roomId, roomId)
-          appendMessage(roomId, { ...msg })
-        })
+
+        if (eventType === 'm.room.name') {
+          const content = event.getContent?.() ?? {}
+          const name = (content.name as string)?.trim() || '未命名'
+          const systemMsg = {
+            role: 'system' as const,
+            content: `会话已改名为「${name}」`,
+            id: eventId ?? undefined,
+            createdAt,
+          }
+          nextTick(() => {
+            ensureChat(roomId, name)
+            appendMessage(roomId, systemMsg)
+          })
+          return
+        }
+
+        if (eventType === 'm.room.member') {
+          const content = event.getContent?.() ?? {}
+          const membership = (content.membership as string) ?? ''
+          const stateKey = (event.getStateKey?.() ?? event.getSender?.() ?? '') as string
+          const displayName = (content.displayname as string)?.trim() || stateKey.replace(/^@/, '').split(':')[0] || stateKey
+          let contentText: string
+          if (membership === 'join') {
+            contentText = `${displayName} 加入了会话`
+          } else if (membership === 'leave') {
+            contentText = `${displayName} 离开了会话`
+          } else if (membership === 'invite') {
+            contentText = `${displayName} 被邀请加入`
+          } else {
+            return
+          }
+          const systemMsg = {
+            role: 'system' as const,
+            content: contentText,
+            id: eventId ?? undefined,
+            createdAt,
+          }
+          nextTick(() => {
+            ensureChat(roomId, roomId)
+            appendMessage(roomId, systemMsg)
+          })
+        }
       })
 
       await c.startClient({ initialSyncLimit: 50 })

@@ -140,6 +140,9 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         }
         const r = ev.sender === currentUserId ? 'user' : 'assistant';
         const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
+        const formattedBody = typeof (ev.content as { formatted_body?: string })?.formatted_body === 'string'
+          ? (ev.content as { formatted_body: string }).formatted_body
+          : undefined;
         eventMap.set(ev.event_id, { role: r, content: body });
         const replyEventId = ev.content?.['m.relates_to']?.['m.in_reply_to']?.event_id;
         const inReplyTo =
@@ -157,6 +160,7 @@ export function createMatrixAdapter(): ChatBackendAdapter {
           id: ev.event_id,
           role: r,
           content: body,
+          ...(formattedBody ? { formattedBody } : {}),
           backendMessageId: ev.event_id,
           createdAt: ev.origin_server_ts,
           inReplyTo,

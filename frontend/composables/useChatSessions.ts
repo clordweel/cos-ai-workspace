@@ -24,6 +24,8 @@ export type MessageReceiptStatus =
 export type ChatMessage = {
   role: 'user' | 'assistant' | 'system'
   content: string
+  /** Matrix formatted_body 等：富文本 HTML，有则优先用于渲染（经净化） */
+  formattedBody?: string
   thinking?: string
   /** 左侧消息可标注多种来源（含多机器人协作），头像堆叠展示 */
   sources?: MessageSource[]
