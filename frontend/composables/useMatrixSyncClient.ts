@@ -1,5 +1,5 @@
 /**
- * Matrix 仅 sync/typing/已读 客户端（混合方案）
+ * Matrix 仅 sync/typing/已读 客户端（混合方案二/三）
  * 使用 /api/auth/me 下发的 matrixSyncToken + matrix_base_url + matrix_user_id，
  * 仅用于：收 sync 新消息、发 typing、发已读回执。禁止用于发消息、拉列表、拉历史。
  */
@@ -10,6 +10,7 @@ const syncReady = ref(false)
 
 export function useMatrixSyncClient() {
   const auth = useAuth()
+  const config = useRuntimeConfig()
   const { appendMessage, ensureChat, getMessages } = useChatSessions()
 
   watch(
@@ -20,20 +21,27 @@ export function useMatrixSyncClient() {
   )
 
   /** 当前是否有 sync 用 token（有则可能已创建 client） */
-  const hasSyncToken = computed(
-    () =>
-      !!(
-        (auth.matrixSyncToken as { value?: string })?.value &&
-        (auth.matrixBaseUrl as { value?: string })?.value &&
-        (auth.matrixUserId as { value?: string })?.value
-      )
-  )
+  const hasSyncToken = computed(() => {
+    const token = (auth.matrixSyncToken as { value?: string })?.value
+    const userId = (auth.matrixUserId as { value?: string })?.value
+    const fromApi = (auth.matrixBaseUrl as { value?: string })?.value
+    const fromConfig = (config.public?.matrixBaseUrl as string) ?? ''
+    const baseUrl = fromApi || fromConfig
+    return !!(token && baseUrl && userId)
+  })
+
+  /** 解析得到的 baseUrl：优先 API 下发的 matrix_base_url，否则用 NUXT_PUBLIC_MATRIX_BASE_URL（浏览器可达） */
+  function resolveBaseUrl(): string {
+    const fromApi = (auth.matrixBaseUrl as { value?: string })?.value
+    const fromConfig = (config.public?.matrixBaseUrl as string) ?? ''
+    return fromApi || fromConfig
+  }
 
   /** 启动仅 sync 的 Matrix Client（在 token 可用时调用，仅客户端） */
   async function startSyncClient(): Promise<MatrixClient | null> {
     if (import.meta.server) return null
     const token = (auth.matrixSyncToken as { value?: string })?.value
-    const baseUrl = (auth.matrixBaseUrl as { value?: string })?.value
+    const baseUrl = resolveBaseUrl()
     const userId = (auth.matrixUserId as { value?: string })?.value
     if (!token || !baseUrl || !userId) return null
 
@@ -44,23 +52,37 @@ export function useMatrixSyncClient() {
 
     try {
       const sdk = await import('matrix-js-sdk')
+      const noop = () => {}
+      const silentLogger = {
+        trace: noop,
+        debug: noop,
+        info: noop,
+        warn: noop,
+        error: (...args: unknown[]) => { if (import.meta.dev) console.error('[MatrixSync]', ...args) },
+        getChild: function getChild(this: typeof silentLogger) { return this },
+      } as unknown as InstanceType<typeof sdk.DebugLogger>
       const c = sdk.createClient({
         baseUrl,
         accessToken: token,
         userId,
+        logger: silentLogger,
       })
       syncClient.value = c
       syncReady.value = false
 
       c.on(sdk.ClientEvent.Sync, (state: string) => {
         if (state === 'PREPARED' || state === 'SYNCING') syncReady.value = true
+        if (state === 'ERROR' && import.meta.dev) {
+          console.warn('[MatrixSync] sync state ERROR，实时消息可能不可用')
+        }
       })
 
       c.on(sdk.ClientEvent.Event, (event: { getRoomId?: () => string; getType?: () => string; getContent?: () => { body?: string }; getSender?: () => string; getId?: () => string }) => {
         if (event?.getType?.() !== 'm.room.message') return
         const roomId = event.getRoomId?.()
         if (!roomId) return
-        const body = event.getContent?.()?.body
+        const content = event.getContent?.()
+        const body = content?.body ?? (content as { msgtype?: string; body?: string })?.body
         if (body == null) return
         const eventId = event.getId?.()
         const existing = getMessages(roomId)
@@ -74,11 +96,14 @@ export function useMatrixSyncClient() {
         })
       })
 
-      await c.startClient({ initialSyncLimit: 10 })
+      await c.startClient({ initialSyncLimit: 50 })
       return c
     } catch (e) {
       syncClient.value = null
       syncReady.value = false
+      if (import.meta.dev) {
+        console.warn('[MatrixSync] startClient 失败，实时消息不可用:', e)
+      }
       return null
     }
   }

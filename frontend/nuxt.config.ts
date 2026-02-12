@@ -71,6 +71,26 @@ export default defineNuxtConfig({
     resolve: {
       dedupe: ['vue', 'reka-ui'],
     },
+    // matrix-js-sdk 及直接依赖中需 CJS 互操作的包纳入预构建（不含无 "." 入口的包如 @babel/runtime，详见 docs/MATRIX_SYNC_FRONTEND_APPROACH.md）
+    optimizeDeps: {
+      include: [
+        'matrix-js-sdk',
+        '@matrix-org/matrix-sdk-crypto-wasm',
+        'another-json',
+        'bs58',
+        'content-type',
+        'events',
+        'jwt-decode',
+        'loglevel',
+        'matrix-events-sdk',
+        'matrix-widget-api',
+        'oidc-client-ts',
+        'p-retry',
+        'sdp-transform',
+        'unhomoglyph',
+        'uuid',
+      ],
+    },
     server: {
       proxy: {
         '/api': {

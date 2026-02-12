@@ -182,7 +182,26 @@
 
 ---
 
-## 六、故障排查：Logto 授权后 Synapse Admin 无用户
+## 六、前端实时消息（Sync）不可用排查
+
+**现象**：聊天只在刷新时拉取消息，没有实时新消息。
+
+**前端依赖**：`/api/auth/me` 返回 `matrixSyncToken`、`matrix_base_url`、`matrix_user_id` 时，前端才会启动 Matrix sync 客户端（`useMatrixSyncClient`），通过 `ClientEvent.Event` 接收新消息并 append 到当前会话。当前采用**方案二/三**（列表/历史/发消息走中间层，Sync 前端直连），sync 阶段已实现；baseUrl 优先用 API 下发的 `matrix_base_url`，缺省时用 `NUXT_PUBLIC_MATRIX_BASE_URL`。
+
+| 可能原因 | 排查与处理 |
+|----------|------------|
+| **CHAT_PROVIDER 非 matrix** | 确认 `.env` 中 `CHAT_PROVIDER=matrix`；为 `mock` 时后端不返回 sync 用字段，前端不会启动 sync。 |
+| **未登录或 /me 未带 Cookie** | 使用 Logto 登录；确保请求 `/api/auth/me` 时带 `credentials: 'include'`，且会话有效。 |
+| **后端未返回 matrixSyncToken** | `/api/auth/me` 仅在 `config.chat?.provider === 'matrix'` 且能拿到 `matrixAccessToken` 时写入 `matrixSyncToken`。若 `ensureMatrixTokenForSession` 失败（用户未同步、已停用、无 MAS/无密码等），则不会返回 token。查看中间层日志中 `ensureMatrixUser` / `ensureMatrixTokenForSession` 相关错误。 |
+| **前端 startClient 失败** | 开发环境下打开浏览器控制台，若看到 `[MatrixSync] startClient 失败，实时消息不可用:` 则说明 `matrix-js-sdk` 的 `startClient()` 抛错。若报错为「does not provide an export named 'default'」或「does not provide an export named 'EventEmitter'」等，属 **CJS/ESM 互操作**：将报错路径中的包名（如 `events`、`loglevel`）加入 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps.include`，清缓存后重试。详见 `docs/MATRIX_SYNC_FRONTEND_APPROACH.md`。其他报错根据内容修正（CORS、baseUrl、token 等）。 |
+| **Sync 进入 ERROR 状态** | 控制台出现 `[MatrixSync] sync state ERROR` 表示与服务器的长轮询/同步出错，需检查网络与 Matrix 服务可用性。 |
+| **initialSyncLimit 过小** | 前端默认 `initialSyncLimit: 50`；若房间很多且当前房间未在首屏 sync 中，可适当增大或后续用 filter 优化。 |
+
+**验证**：登录后打开开发者工具 Console，无 `[MatrixSync] startClient 失败` 且能收到新消息即表示 sync 正常。
+
+---
+
+## 七、故障排查：Logto 授权后 Synapse Admin 无用户
 
 **现象**：Logto 重新授权后，Synapse Admin 仍看不到该用户。
 
@@ -196,7 +215,7 @@
 
 **验证**：重新登录后查看中间层控制台，成功时应出现 `[auth] Matrix 用户已创建: @xxx:server` 或 `Matrix 用户已存在`。
 
-## 七、建议的改进优先级
+## 八、建议的改进优先级
 
 1. **P0**：若启用 MAS 且 Admin API 仍 403，优先配置 `MATRIX_ACCESS_TOKEN` 替代密码登录
 2. **P1**：增加 Matrix token 过期校验与自动刷新（或清空后重取）

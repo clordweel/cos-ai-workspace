@@ -40,6 +40,33 @@ export function useSpacePage() {
 
   const mockSessionListEnabled = useMockSessionListEnabled()
 
+  /** Matrix 实时消息：token 可用时启动 sync（含 auth 晚于 mount 完成的情况）；失败时单次延迟重试 */
+  const { hasSyncToken, startSyncClient } = useMatrixSyncClient()
+  let syncRetryTimer: ReturnType<typeof setTimeout> | null = null
+  function tryStartSync() {
+    if (!hasSyncToken.value) return
+    startSyncClient()
+      .then((client) => {
+        if (client == null && hasSyncToken.value && !syncRetryTimer) {
+          syncRetryTimer = setTimeout(() => {
+            syncRetryTimer = null
+            startSyncClient().catch(() => {})
+          }, 2500)
+        }
+      })
+      .catch(() => {})
+  }
+  watch(hasSyncToken, (v) => {
+    if (syncRetryTimer) {
+      clearTimeout(syncRetryTimer)
+      syncRetryTimer = null
+    }
+    if (v) tryStartSync()
+  }, { immediate: true })
+  onBeforeUnmount(() => {
+    if (syncRetryTimer) clearTimeout(syncRetryTimer)
+  })
+
   function goToChat(id: string) {
     router.push(`/space/${id}`)
   }
@@ -146,8 +173,6 @@ export function useSpacePage() {
     }
 
     if (mockSessionListEnabled.value) seedMockMessages(getMessages, setMessages)
-    const { hasSyncToken, startSyncClient } = useMatrixSyncClient()
-    if (hasSyncToken.value) startSyncClient().catch(() => {})
 
     function whenAuthReady() {
       loadSessions().catch(() => {})
