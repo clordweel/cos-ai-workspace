@@ -101,6 +101,12 @@ function getScrollParent(node: HTMLElement | null): HTMLElement | null {
 
 /** 实际发生滚动的元素（与 UChatMessages 内部 getScrollParent 结果一致） */
 const scrollParentRef = ref<HTMLElement | null>(null)
+/** 滚动监听与 ResizeObserver 的清理函数，由 onMounted 内 nextTick 后写入；onUnmounted 时调用 */
+const scrollCleanupRef = ref<(() => void) | null>(null)
+
+onUnmounted(() => {
+  scrollCleanupRef.value?.()
+})
 
 function checkScrollPosition() {
   const el = scrollParentRef.value ?? chatScrollRef.value
@@ -131,7 +137,6 @@ onMounted(() => {
     const parent = root ? getScrollParent(root) : wrap
     scrollParentRef.value = parent
     const el = parent ?? wrap
-    const runCheck = () => nextTick(checkScrollPosition)
     const runCheckAfterPaint = () => requestAnimationFrame(() => checkScrollPosition())
     checkScrollPosition()
     runCheckAfterPaint()
@@ -140,11 +145,11 @@ onMounted(() => {
     el.addEventListener('scroll', onChatScroll, { passive: true })
     const ro = new ResizeObserver(runCheckAfterPaint)
     ro.observe(el)
-    onUnmounted(() => {
+    scrollCleanupRef.value = () => {
       el.removeEventListener('scroll', onChatScroll)
       ro.disconnect()
       scrollParentRef.value = null
-    })
+    }
   })
 })
 
