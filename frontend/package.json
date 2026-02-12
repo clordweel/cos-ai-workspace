@@ -26,6 +26,7 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^10.3.0",
+    "@iconify-json/lucide": "^1.2.90",
     "@nuxtjs/color-mode": "^4.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^25.2.1",

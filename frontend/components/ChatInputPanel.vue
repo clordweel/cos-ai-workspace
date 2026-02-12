@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
+  <div ref="inputPanelRootRef" class="absolute bottom-0 left-0 right-0 z-20 flex flex-col pointer-events-none">
     <div
       class="h-16 shrink-0 bg-gradient-to-t from-white/50 via-white/50 to-transparent dark:from-zinc-800/50 dark:via-zinc-800/50 dark:to-transparent"
       aria-hidden
@@ -47,7 +47,7 @@
         >
           <GripHorizontal class="h-2 w-2" />
         </button>
-        <form class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="onFormSubmit">
+        <form ref="inputFormRef" class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="onFormSubmit">
           <!-- 回复预览：回复某条消息时显示引用块，可点击关闭 -->
           <div
             v-if="replyTarget"
@@ -329,6 +329,8 @@ const emit = defineEmits<{
   (e: 'scroll-to-last'): void
   (e: 'add-participant'): void
   (e: 'cancel-reply'): void
+  /** 输入区整体高度变化时发出（px），供父组件抬高滚动区底部 */
+  (e: 'input-area-height', heightPx: number): void
 }>()
 
 const isXxs = useBreakpoint('xxs')
@@ -356,6 +358,8 @@ const textareaWrapRef = ref<HTMLElement | null>(null)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const mentionListRef = ref<HTMLElement | null>(null)
 const editHeightPx = ref(DEFAULT_EDIT_HEIGHT)
+const inputPanelRootRef = ref<HTMLElement | null>(null)
+const inputFormRef = ref<HTMLFormElement | null>(null)
 
 /** 当前 @ 提及起始位置（@ 的索引），null 表示未在输入 @ 状态 */
 const atMentionStart = ref<number | null>(null)
@@ -531,7 +535,29 @@ function onTextareaInput(e: Event) {
 }
 
 watch(() => props.modelValue, adjustTextareaHeight)
-onMounted(adjustTextareaHeight)
+function reportInputAreaHeight() {
+  const root = inputPanelRootRef.value
+  const form = inputFormRef.value
+  if (!root || !form) return
+  const rootRect = root.getBoundingClientRect()
+  const formRect = form.getBoundingClientRect()
+  const heightFromBottomToFormTop = rootRect.bottom - formRect.top
+  if (heightFromBottomToFormTop > 0) {
+    emit('input-area-height', Math.round(heightFromBottomToFormTop))
+  }
+}
+
+onMounted(() => {
+  adjustTextareaHeight()
+  const el = inputPanelRootRef.value
+  if (!el) return
+  const ro = new ResizeObserver(() => {
+    nextTick(reportInputAreaHeight)
+  })
+  ro.observe(el)
+  nextTick(reportInputAreaHeight)
+  onUnmounted(() => ro.disconnect())
+})
 
 let resizeStartY = 0
 let resizeStartHeight = 0

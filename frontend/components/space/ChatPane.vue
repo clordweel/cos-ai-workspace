@@ -15,21 +15,44 @@
       @archive="emit('archive')"
       @delete="emit('delete')"
     />
+    <!-- 用 margin-bottom 抬高滚动区底部；默认 8.75rem，随输入框高度上报更新变量。滚动容器外置，顶部固定「回到底部」按钮。 -->
     <div
-      class="flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col"
-      :style="{ '--chat-text-scale': sessionAreaFontScale }"
+      class="chat-messages-wrap flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col relative"
+      :style="{
+        '--chat-text-scale': sessionAreaFontScale,
+        '--chat-input-area-height': chatInputAreaHeightPx != null ? `${chatInputAreaHeightPx}px` : '8.75rem',
+        marginBottom: 'var(--chat-input-area-height)'
+      }"
     >
-      <UChatMessages
-        :messages="uiMessages"
-        :status="chatStatus"
-        should-scroll-to-bottom
-        should-auto-scroll
+      <div
+        ref="chatScrollRef"
         class="chat-messages-scroll flex-1 min-h-0 overflow-y-auto px-5 pt-3 pb-3"
+        @scroll="onChatScroll"
       >
-        <template #content="{ message }">
-          <slot name="content" :message="message" />
-        </template>
-      </UChatMessages>
+        <UChatMessages
+          :messages="uiMessages"
+          :status="chatStatus"
+          should-scroll-to-bottom
+          should-auto-scroll
+          :auto-scroll="false"
+          class="flex flex-col gap-0.5 min-h-full"
+        >
+          <template #content="{ message }">
+            <slot name="content" :message="message" />
+          </template>
+        </UChatMessages>
+      </div>
+      <Transition name="fade">
+        <button
+          v-if="showScrollToBottom"
+          type="button"
+          class="scroll-to-bottom-btn absolute left-1/2 top-14 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-md hover:bg-zinc-50 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-400 transition-colors pointer-events-auto"
+          aria-label="回到底部"
+          @click="scrollToBottom"
+        >
+          <ArrowDown class="h-4 w-4" aria-hidden />
+        </button>
+      </Transition>
     </div>
     <ChatInputPanel
       :model-value="input"
@@ -42,14 +65,87 @@
       @scroll-to-last="emit('scroll-to-last')"
       @add-participant="emit('add-participant')"
       @cancel-reply="emit('cancel-reply')"
+      @input-area-height="chatInputAreaHeightPx = $event"
     />
   </div>
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
+import { ArrowDown } from 'lucide-vue-next'
 import type { UiMessage } from '~/composables/useSpaceChatPane'
 import ChatHeader from '~/components/ChatHeader.vue'
 import ChatInputPanel from '~/components/ChatInputPanel.vue'
+
+/** 输入区实际高度（px），由 ChatInputPanel ResizeObserver 上报；未上报前用 CSS 默认 8.75rem */
+const chatInputAreaHeightPx = ref<number | null>(null)
+
+const chatScrollRef = ref<HTMLElement | null>(null)
+const showScrollToBottom = ref(false)
+/** 距底部超过该像素即显示「回到底部」按钮 */
+const SCROLL_THRESHOLD = 50
+
+/** 与 Nuxt UI ChatMessages 一致：取最近的可滚动祖先 */
+function getScrollParent(node: HTMLElement | null): HTMLElement | null {
+  if (!node) return null
+  const overflowRegex = /auto|scroll/
+  let current: HTMLElement | null = node
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current)
+    if (overflowRegex.test(style.overflowY)) return current
+    current = current.parentElement
+  }
+  return null
+}
+
+/** 实际发生滚动的元素（与 UChatMessages 内部 getScrollParent 结果一致） */
+const scrollParentRef = ref<HTMLElement | null>(null)
+
+function checkScrollPosition() {
+  const el = scrollParentRef.value ?? chatScrollRef.value
+  if (!el) return
+  const scrollTop = Math.round(el.scrollTop)
+  const clientHeight = el.clientHeight
+  const scrollHeight = el.scrollHeight
+  const distanceFromBottom = scrollHeight - scrollTop - clientHeight
+  showScrollToBottom.value = distanceFromBottom > SCROLL_THRESHOLD
+}
+
+function onChatScroll() {
+  checkScrollPosition()
+}
+
+function scrollToBottom() {
+  const el = scrollParentRef.value ?? chatScrollRef.value
+  if (!el) return
+  el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
+  showScrollToBottom.value = false
+}
+
+onMounted(() => {
+  nextTick(() => {
+    const wrap = chatScrollRef.value
+    if (!wrap) return
+    const root = wrap.querySelector('[data-slot="root"]') as HTMLElement | null
+    const parent = root ? getScrollParent(root) : wrap
+    scrollParentRef.value = parent
+    const el = parent ?? wrap
+    const runCheck = () => nextTick(checkScrollPosition)
+    const runCheckAfterPaint = () => requestAnimationFrame(() => checkScrollPosition())
+    checkScrollPosition()
+    runCheckAfterPaint()
+    setTimeout(checkScrollPosition, 100)
+    setTimeout(checkScrollPosition, 400)
+    el.addEventListener('scroll', onChatScroll, { passive: true })
+    const ro = new ResizeObserver(runCheckAfterPaint)
+    ro.observe(el)
+    onUnmounted(() => {
+      el.removeEventListener('scroll', onChatScroll)
+      ro.disconnect()
+      scrollParentRef.value = null
+    })
+  })
+})
 
 const props = defineProps<{
   uiMessages: UiMessage[]
@@ -82,9 +178,26 @@ const emit = defineEmits<{
   'add-participant': []
   'cancel-reply': []
 }>()
+
+watch(() => props.uiMessages.length, () => {
+  nextTick(checkScrollPosition)
+})
 </script>
 
 <style scoped>
+/* 去除 Nuxt UI ChatMessage 自带的 content/container 背景，仅保留气泡自身背景；移除 container 默认 pb-8 */
+:deep([data-slot="root"]),
+:deep([data-slot="container"]),
+:deep([data-slot="content"]) {
+  background: transparent;
+}
+:deep([data-slot="container"]) {
+  padding-bottom: 0;
+}
+/* 左侧接收的消息保留底边距 */
+:deep([data-role="assistant"] [data-slot="container"]) {
+  padding-bottom: 1rem;
+}
 /* 保持与原有聊天区一致的选中样式 */
 :deep([data-slot="content"]) *::selection {
   background: rgb(59 130 246 / 0.22);
@@ -115,5 +228,15 @@ const emit = defineEmits<{
 }
 :global(.dark) :deep(.chat-messages-scroll)::-webkit-scrollbar-thumb {
   background-color: rgb(82 82 91);
+}
+
+/* 回到底部按钮淡入淡出 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

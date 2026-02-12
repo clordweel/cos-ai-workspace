@@ -93,7 +93,7 @@
           >
             <template #content="{ message }">
               <div
-                class="flex w-full pb-3"
+                class="flex w-full pb-1.5"
                 :class="(displayMessages[getMessageIndexByUiId(message.id)]?.role === 'user' ? 'justify-end' : 'justify-start')"
               >
                 <ChatMessageBubble

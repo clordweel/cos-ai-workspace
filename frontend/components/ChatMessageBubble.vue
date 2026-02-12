@@ -1,10 +1,10 @@
 <template>
   <!-- 用户：发送状态在气泡左侧外侧，已读时顶部外侧对方头像 -->
-  <div v-if="message.role === 'user'" class="max-w-[85%] flex flex-col items-end gap-1">
-    <!-- 已读：气泡顶部外侧，向右对齐、向左排列的对方头像 -->
+  <div v-if="message.role === 'user'" class="w-full flex flex-col items-end gap-1">
+    <!-- 已读：气泡顶部外侧，头像行占满宽度并右对齐，与气泡右侧对齐 -->
     <div
       v-if="userReceiptStatus === 'read' && readBySources.length > 0"
-      class="flex shrink-0 flex-row-reverse items-center gap-0 -space-x-2"
+      class="flex w-full shrink-0 justify-end items-center"
       :title="userReceiptStatusLabel"
     >
       <span
@@ -19,7 +19,7 @@
         <Cog v-else class="h-2.5 w-2.5" />
       </span>
     </div>
-    <div class="flex items-end gap-1.5">
+    <div class="flex items-end gap-1.5 max-w-[85%]">
       <!-- 发送状态：气泡左侧外侧 -->
       <span
         v-if="userReceiptStatus && userReceiptStatus !== 'read'"
@@ -429,7 +429,7 @@
           </DropdownMenuContent>
         </DropdownMenuPortal>
       </DropdownMenuRoot>
-      <div class="flex shrink-0 -space-x-2">
+      <div class="flex shrink-0">
         <span
           v-for="(src, idx) in displaySources"
           :key="idx"

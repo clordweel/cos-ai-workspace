@@ -47,6 +47,8 @@ export default defineNuxtConfig({
       matrixBaseUrl: process.env.NUXT_PUBLIC_MATRIX_BASE_URL ?? '',
       /** 与中间层 CHAT_PROVIDER 一致时关闭前端 mock 会话列表，仅展示真实会话（如 matrix） */
       chatProvider: process.env.NUXT_PUBLIC_CHAT_PROVIDER ?? '',
+      /** 临时样式调试：为 true 时强制显示 Mock 会话区块与列表，与 chatProvider 无关 */
+      debugMockSessions: process.env.NUXT_PUBLIC_DEBUG_MOCK_SESSIONS === 'true',
     },
     /** @logto/nuxt：提供 useLogtoUser / useLogtoClient；登录入口仍为 /logto（跳 Logto）→ /logto-callback → 中间层写 Cookie */
     logto: {
@@ -74,6 +76,11 @@ export default defineNuxtConfig({
         '/api': {
           target: process.env.NUXT_PUBLIC_API_BASE || 'http://localhost:3000',
           changeOrigin: true,
+          // 避免 @nuxt/icon（Nuxt UI 图标）请求被转发到中间层导致 404；bypass 后由 Nuxt 本地 _nuxt_icon 路由处理
+          bypass(req) {
+            const url = req.url ?? ''
+            if (url.includes('_nuxt_icon')) return url.replace(/^\/api/, '')
+          },
         },
       },
     },
