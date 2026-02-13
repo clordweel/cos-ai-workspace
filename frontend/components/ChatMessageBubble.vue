@@ -37,7 +37,7 @@
         <ContextMenuRoot v-if="messageIndex !== undefined">
           <ContextMenuTrigger as-child>
             <div
-              class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit min-w-28 max-w-full"
+              class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit max-w-full"
             >
               <div
                 v-if="message.inReplyTo"
@@ -108,9 +108,10 @@
                 删除
               </ContextMenuItem>
               <ContextMenuItem
-                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-black dark:text-white outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                class="flex cursor-pointer select-none items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-zinc-400 dark:text-zinc-500 outline-none"
                 text-value="更多"
                 disabled
+                title="更多功能敬请期待"
               >
                 <MoreHorizontal class="h-3.5 w-3.5 shrink-0 opacity-70" />
                 更多
@@ -120,7 +121,7 @@
         </ContextMenuRoot>
         <template v-else>
           <div
-            class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground min-w-28"
+            class="chat-bubble-user flex flex-col items-end gap-1.5 rounded-xl rounded-tr-none px-4 py-2.5 text-xs bg-primary text-primary-foreground w-fit max-w-full"
           >
             <div
               v-if="message.inReplyTo"

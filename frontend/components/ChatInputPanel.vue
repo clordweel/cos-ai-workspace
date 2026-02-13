@@ -48,9 +48,24 @@
           <GripHorizontal class="h-2 w-2" />
         </button>
         <form ref="inputFormRef" class="flex flex-col overflow-hidden rounded-xl" @submit.prevent="onFormSubmit">
+          <!-- 编辑中：正在编辑某条消息时显示，可点击取消 -->
+          <div
+            v-if="editingMessageId"
+            class="flex items-center gap-2 mx-3 mt-2 mb-0 py-2 px-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/20"
+          >
+            <span class="text-[10px] text-amber-700 dark:text-amber-400 flex-1">正在编辑消息</span>
+            <button
+              type="button"
+              class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-amber-600 dark:text-amber-400 hover:bg-amber-200/60 dark:hover:bg-amber-800/40 transition-colors"
+              aria-label="取消编辑"
+              @click="$emit('cancel-edit')"
+            >
+              <X class="h-3.5 w-3.5" />
+            </button>
+          </div>
           <!-- 回复预览：回复某条消息时显示引用块，可点击关闭 -->
           <div
-            v-if="replyTarget"
+            v-if="replyTarget && !editingMessageId"
             class="flex items-center gap-2 mx-3 mt-2 mb-0 py-2 px-3 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800/80"
           >
             <div class="min-w-0 flex-1 text-left">
@@ -131,6 +146,26 @@
                     </span>
                     命令
                   </DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger class="gap-2">
+                      <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-zinc-200/80 dark:bg-zinc-600/80">
+                        <Smile class="h-2.5 w-2.5 text-black dark:text-white" />
+                      </span>
+                      表情
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent class="max-h-52 overflow-auto p-2 w-auto" :side-offset="4">
+                      <div class="grid grid-cols-8 gap-0">
+                        <DropdownMenuItem
+                          v-for="e in EMOJI_LIST"
+                          :key="e"
+                          class="justify-center p-1.5 rounded min-w-0 text-base cursor-pointer"
+                          @select="insertEmoji(e)"
+                        >
+                          {{ e }}
+                        </DropdownMenuItem>
+                      </div>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem text-value="粗体" class="gap-2" @select="editorRef?.chain().focus().toggleBold().run()">
                     <Bold class="h-3 w-3" />
@@ -224,14 +259,32 @@
               >
                 <Loader2 class="h-3.5 w-3.5 animate-spin" />
               </span>
-              <button
-                type="button"
-                class="relative flex h-6 w-8 shrink-0 flex-col items-center justify-center gap-0 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40"
-                title="图片"
-                aria-label="上传图片"
-              >
-                <ImageIcon class="h-3.5 w-3.5 shrink-0" />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  as-child
+                >
+                  <button
+                    type="button"
+                    class="relative flex h-6 w-8 shrink-0 flex-col items-center justify-center gap-0 rounded-lg text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-white/50 dark:hover:bg-zinc-600/40"
+                    title="表情"
+                    aria-label="插入表情"
+                  >
+                    <Smile class="h-3.5 w-3.5 shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top" class="p-2 w-auto max-h-52 overflow-auto" :side-offset="4">
+                  <div class="grid grid-cols-8 gap-0">
+                    <DropdownMenuItem
+                      v-for="e in EMOJI_LIST"
+                      :key="e"
+                      class="justify-center p-1.5 rounded min-w-0 text-base cursor-pointer"
+                      @select="insertEmoji(e)"
+                    >
+                      {{ e }}
+                    </DropdownMenuItem>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 v-if="streaming"
                 type="button"
@@ -251,12 +304,12 @@
                   class="send-btn-inner group relative flex h-6 min-w-8 items-center justify-center gap-0.5 rounded-[calc(0.5rem-1px)] pl-1 pr-1.5 transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50"
                   :class="canSubmit ? 'text-black dark:text-white bg-white dark:bg-zinc-800 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25 hover:bg-zinc-50 dark:hover:bg-zinc-700' : 'text-black dark:text-white bg-white dark:bg-zinc-800 hover:text-black dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-700'"
                   :disabled="!canSubmit"
-                  aria-label="发送"
+                  :aria-label="editingMessageId ? '保存' : '发送'"
                 >
                   <span class="flex shrink-0 pl-0.5 transition-transform duration-200 group-hover:-rotate-90">
                     <SendHorizontal class="h-3 w-3" />
                   </span>
-                  <span class="text-[10px] font-medium">发送</span>
+                  <span class="text-[10px] font-medium">{{ editingMessageId ? '保存' : '发送' }}</span>
                 </button>
               </div>
             </div>
@@ -271,7 +324,7 @@
 </template>
 
 <script setup lang="ts">
-import { AtSign, Bold, ChevronDown, Code, GripHorizontal, Hash, Image as ImageIcon, Italic, Loader2, SendHorizontal, Slash, Square, X } from 'lucide-vue-next'
+import { AtSign, Bold, ChevronDown, Code, GripHorizontal, Hash, Italic, Loader2, SendHorizontal, Slash, Smile, Square, X } from 'lucide-vue-next'
 import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { useBreakpoint } from '~/composables/useBreakpoint'
 import { useContactsAndBots } from '~/composables/useContactsAndBots'
@@ -280,6 +333,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import type { Editor } from '@tiptap/vue-3'
@@ -290,6 +346,8 @@ const props = defineProps<{
   streaming: boolean
   /** 当前回复的目标消息，有则显示引用预览 */
   replyTarget?: { id: string; role: string; content: string } | null
+  /** 正在编辑的消息 id，有则显示「正在编辑」条与「保存」按钮 */
+  editingMessageId?: string | null
 }>()
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void
@@ -299,12 +357,24 @@ const emit = defineEmits<{
   (e: 'scroll-to-last'): void
   (e: 'add-participant'): void
   (e: 'cancel-reply'): void
+  (e: 'cancel-edit'): void
   /** 输入区整体高度变化时发出（px），供父组件抬高滚动区底部 */
   (e: 'input-area-height', heightPx: number): void
 }>()
 
 const isXxs = useBreakpoint('xxs')
 const { contacts, bots, getMentionedBotIdsFromText } = useContactsAndBots()
+
+/** 常用表情列表，供插入到输入框 */
+const EMOJI_LIST = [
+  '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂', '😉', '😌', '😍', '🥰', '😘', '😋', '😛', '😜', '🤪', '😝',
+  '👍', '👎', '👏', '🙌', '🤝', '🙏', '✌️', '🤞', '🤟', '👌', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💕', '💞',
+  '💓', '💗', '💖', '💘', '💝', '🔥', '✨', '⭐', '🌟', '💫', '✅', '❌', '❓', '❗', '💬', '🎉', '🎊', '🙈', '🙉', '🙊',
+]
+
+function insertEmoji(emoji: string) {
+  editorRef.value?.chain().focus().insertContent(emoji).run()
+}
 
 /** 输入中是否 @ 了机器人（支持纯文本 @名称 与指令块 [@id="..." label="..."]） */
 const showAssistantToolbar = computed(() =>

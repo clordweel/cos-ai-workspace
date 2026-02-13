@@ -1,11 +1,11 @@
 <template>
   <div
-    class="session-list-scroll-area absolute left-0 right-0 bottom-0 top-0 z-0 overflow-y-auto overscroll-contain pb-24"
+    class="session-list-scroll-area absolute left-0 right-0 bottom-0 top-0 z-0 flex flex-col overflow-hidden overscroll-contain pb-24"
   >
-    <div class="session-list-inner min-h-full flex flex-col" :style="{ paddingTop: listPaddingTop }">
+    <div class="session-list-inner flex-1 min-h-0 flex flex-col" :style="{ paddingTop: listPaddingTop }">
       <template v-if="listViewTab === 'active'">
-        <div class="min-h-full flex flex-col">
-        <section class="session-list-pinned border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
+        <div class="flex-1 min-h-0 flex flex-col">
+        <section class="session-list-pinned shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
           <button
             type="button"
             class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
@@ -40,7 +40,7 @@
         <!-- Mock 会话折叠区：与置顶区同结构，便于开发前样式调试 -->
         <section
           v-if="showMockSection"
-          class="session-list-mock border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
+          class="session-list-mock shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
         >
           <button
             type="button"
@@ -73,23 +73,43 @@
             />
           </ul>
         </section>
-        <section class="flex-1 min-h-0 flex flex-col">
+        <section class="flex-1 min-h-0 flex flex-col min-w-0">
           <template v-if="activeChats.length !== 0">
-            <ul class="divide-y divide-zinc-100 dark:divide-zinc-700 min-h-full">
-              <SessionListItem
-                v-for="c in activeChats"
-                :key="c.id"
-                :item="c"
-                :is-active="c.id === chatId && isSessionExpanded"
-                :is-mock="isMock(c.id)"
-                :is-pinned="pinnedIds.includes(c.id)"
-                :date-label="getChatDateLabel(c.id)"
-                @click="emit('session-click', c.id)"
-                @toggle-pin="emit('toggle-pin', c.id)"
-                @rename="emit('rename', c.id)"
-                @delete="emit('delete', c.id)"
-              />
-            </ul>
+            <div
+              ref="activeListScrollRef"
+              class="active-list-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-zinc-100 dark:divide-zinc-700"
+            >
+              <div
+                :style="{
+                  height: `${activeListVirtualizer.getTotalSize()}px`,
+                  position: 'relative',
+                  width: '100%',
+                }"
+              >
+                <template v-for="virtualRow in activeListVirtualizer.getVirtualItems()" :key="virtualRow.key">
+                  <div
+                    v-if="activeChats[virtualRow.index]"
+                    class="absolute left-0 top-0 w-full"
+                    :style="{
+                      transform: `translateY(${virtualRow.start}px)`,
+                      minHeight: `${virtualRow.size}px`,
+                    }"
+                  >
+                    <SessionListItem
+                      :item="activeChats[virtualRow.index]!"
+                      :is-active="activeChats[virtualRow.index]!.id === chatId && isSessionExpanded"
+                      :is-mock="isMock(activeChats[virtualRow.index]!.id)"
+                      :is-pinned="pinnedIds.includes(activeChats[virtualRow.index]!.id)"
+                      :date-label="getChatDateLabel(activeChats[virtualRow.index]!.id)"
+                      @click="emit('session-click', activeChats[virtualRow.index]!.id)"
+                      @toggle-pin="emit('toggle-pin', activeChats[virtualRow.index]!.id)"
+                      @rename="emit('rename', activeChats[virtualRow.index]!.id)"
+                      @delete="emit('delete', activeChats[virtualRow.index]!.id)"
+                    />
+                  </div>
+                </template>
+              </div>
+            </div>
           </template>
           <div
             v-else-if="searchQuery"
@@ -106,7 +126,7 @@
         </div>
       </template>
       <template v-else-if="listViewTab === 'favorites'">
-      <div class="min-h-full flex flex-col items-center justify-center">
+      <div class="flex-1 min-h-0 flex flex-col items-center justify-center">
         <Empty
           compact
           title="收藏与归档"
@@ -116,7 +136,7 @@
       </div>
     </template>
     <template v-else-if="listViewTab === 'pending'">
-      <div class="min-h-full flex flex-col">
+      <div class="flex-1 min-h-0 flex flex-col">
         <section class="border-b border-zinc-100 dark:border-zinc-700/80 px-3 py-2">
           <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">未读、发送中、已送达等（非已读）</p>
         </section>
@@ -164,7 +184,9 @@
 </template>
 
 <script setup lang="ts">
+import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search } from 'lucide-vue-next'
+import { computed, onMounted, ref } from 'vue'
 import { Empty } from '~/components/ui/empty'
 import SessionListItem from '~/components/SessionListItem.vue'
 import SessionListThumb from '~/components/SessionListThumb.vue'
@@ -197,6 +219,16 @@ const props = defineProps<{
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
 }>()
+
+const activeListScrollRef = ref<HTMLElement | null>(null)
+const activeListVirtualizer = useVirtualizer(
+  computed(() => ({
+    getScrollElement: () => activeListScrollRef.value,
+    count: props.activeChats.length,
+    estimateSize: () => 56,
+    overscan: 2,
+  })),
+)
 
 /** 水合前使用固定值，避免服务端与客户端图标/列表显隐不一致导致 hydration mismatch */
 const mounted = ref(false)

@@ -117,6 +117,26 @@ export interface RenameSessionParams {
   matrixAccessToken?: string;
 }
 
+export interface EditMessageParams {
+  sessionId: string;
+  backendSessionId?: string;
+  messageId: string;
+  content: string;
+  formattedBody?: string;
+  userId: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
+}
+
+export interface RedactMessageParams {
+  sessionId: string;
+  backendSessionId?: string;
+  messageId: string;
+  userId: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
+}
+
 /**
  * 聊天后端适配器接口（各适配器实现此契约）
  */
@@ -132,4 +152,6 @@ export interface ChatBackendAdapter {
   inviteToSession?(params: InviteToSessionParams): Promise<void>;
   deleteSession?(params: DeleteSessionParams): Promise<void>;
   renameSession?(params: RenameSessionParams): Promise<void>;
+  editMessage?(params: EditMessageParams): Promise<void>;
+  redactMessage?(params: RedactMessageParams): Promise<void>;
 }

@@ -1,5 +1,23 @@
 <template>
   <div class="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
+    <!-- 刷新/首屏加载过场：鉴权完成且至少播完一轮 Logo 动画后再进入主界面 -->
+    <Transition name="app-loading-fade">
+      <div
+        v-if="showLoadingOverlay"
+        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-50/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 backdrop-blur-sm"
+        aria-live="polite"
+        aria-busy="true"
+        role="status"
+      >
+        <Logo
+          :size="100"
+          color="currentColor"
+          class="text-zinc-700 dark:text-zinc-200"
+          :animated="true"
+          :loading="false"
+        />
+      </div>
+    </Transition>
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
       <div
         class="workspace-grid flex-1 grid min-h-0 p-3 relative"
@@ -86,6 +104,26 @@ useTheme()
 const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave, openAuthTab } = useAppView()
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
 const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isXl } = useWorkspaceLayout()
+
+/** 至少完成一轮 Logo 路径动画（3.2s）后再进入主界面 */
+const LOGO_CYCLE_MS = 3200
+const logoCycleDone = ref(false)
+let logoCycleTimer: ReturnType<typeof setTimeout> | null = null
+const showLoadingOverlay = computed(() => authLoading.value || !logoCycleDone.value)
+watch(authLoading, (loading) => {
+  if (loading) {
+    logoCycleDone.value = false
+    if (logoCycleTimer) clearTimeout(logoCycleTimer)
+    logoCycleTimer = setTimeout(() => {
+      logoCycleDone.value = true
+      logoCycleTimer = null
+    }, LOGO_CYCLE_MS)
+  }
+  // 鉴权提前结束时不清除 timer，保证至少播完一轮 3.2s 后再隐藏
+}, { immediate: true })
+onBeforeUnmount(() => {
+  if (logoCycleTimer) clearTimeout(logoCycleTimer)
+})
 
 /** 按实际视口判断 xl：与 SSR 一致初值为 false，仅在 onMounted 后更新，避免水合时 grid-template-columns 不一致 */
 const isXlFromViewport = ref(false)
@@ -229,5 +267,15 @@ watch(() => route.query?.auth_error, (authError) => {
 .app-panel-leave-to {
   opacity: 0;
   transform: translateX(0.5rem);
+}
+
+/* 首屏加载遮罩：淡入淡出 */
+.app-loading-fade-enter-active,
+.app-loading-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.app-loading-fade-enter-from,
+.app-loading-fade-leave-to {
+  opacity: 0;
 }
 </style>

@@ -11,6 +11,8 @@ import {
   verifyMatrixTokenUserId,
   getMatrixUserIdFromToken,
   getMatrixAdminUserId,
+  getAccountData,
+  setAccountData,
 } from '../adapters/matrixClient.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import { config } from '../config.js';
@@ -238,6 +240,53 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  /** Matrix 置顶会话：读写 account_data com.workspace.pinned_rooms，仅 provider=matrix 时有效 */
+  const PINNED_ACCOUNT_DATA_TYPE = 'com.workspace.pinned_rooms';
+
+  app.get('/api/sessions/pinned', async (req, reply) => {
+    if (config.chat?.provider !== 'matrix') {
+      return reply.code(501).send({ error: '当前后端不支持置顶列表', pinnedRoomIds: [] });
+    }
+    try {
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const data = await getAccountData(session!.matrixAccessToken!, PINNED_ACCOUNT_DATA_TYPE);
+      const pinnedRoomIds = Array.isArray(data.pinnedRoomIds)
+        ? (data.pinnedRoomIds as string[]).filter((id): id is string => typeof id === 'string')
+        : [];
+      return reply.send({ pinnedRoomIds });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '拉取置顶列表失败',
+        pinnedRoomIds: [],
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
+  app.put('/api/sessions/pinned', async (req, reply) => {
+    if (config.chat?.provider !== 'matrix') {
+      return reply.code(501).send({ error: '当前后端不支持置顶列表' });
+    }
+    try {
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const body = (req.body as { pinnedRoomIds?: unknown }) ?? {};
+      const pinnedRoomIds = Array.isArray(body.pinnedRoomIds)
+        ? (body.pinnedRoomIds as string[]).filter((id): id is string => typeof id === 'string')
+        : [];
+      await setAccountData(session!.matrixAccessToken!, PINNED_ACCOUNT_DATA_TYPE, { pinnedRoomIds });
+      return reply.send({ pinnedRoomIds });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '保存置顶列表失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
   app.get<{ Params: { id?: string }; Querystring: { user_id?: string; user?: string; limit?: string; before_id?: string } }>(
     '/api/sessions/:id/messages',
     async (req, reply) => {
@@ -279,6 +328,103 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         req.log.error(e);
         return reply.code(502).send({
           error: '拉取会话历史失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
+  app.patch<{
+    Params: { id: string; messageId: string };
+    Body: { content?: string; formatted_body?: string };
+  }>('/api/sessions/:id/messages/:messageId', async (req, reply) => {
+    try {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.editMessage !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持编辑消息',
+          message: '请使用支持 editMessage 的 CHAT_PROVIDER（如 matrix）',
+        });
+      }
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const sessionId = decodeURIComponent(req.params.id ?? '');
+      const messageId = decodeURIComponent(req.params.messageId ?? '');
+      if (!messageId) {
+        return reply.code(400).send({ error: 'messageId is required' });
+      }
+      const body = (req.body as { content?: string; formatted_body?: string }) ?? {};
+      const content = typeof body.content === 'string' ? body.content.trim() : '';
+      if (!content) {
+        return reply.code(400).send({ error: 'content is required' });
+      }
+      const userId = await resolveUserId(req);
+      const currentUserMxid = session?.logtoSub
+        ? getMatrixUserIdForSession(
+            session.logtoSub,
+            session.userProfile?.username,
+            session.matrixUserId
+          )
+        : undefined;
+      await adapter.editMessage({
+        sessionId,
+        backendSessionId: sessionId,
+        messageId,
+        content,
+        formattedBody: typeof body.formatted_body === 'string' ? body.formatted_body : undefined,
+        userId,
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid,
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '编辑消息失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
+  app.delete<{ Params: { id: string; messageId: string } }>(
+    '/api/sessions/:id/messages/:messageId',
+    async (req, reply) => {
+      try {
+        const adapter = getChatAdapter();
+        if (!adapter || typeof adapter.redactMessage !== 'function') {
+          return reply.code(501).send({
+            error: '当前后端不支持撤回/删除消息',
+            message: '请使用支持 redactMessage 的 CHAT_PROVIDER（如 matrix）',
+          });
+        }
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (await requireMatrixToken(req, session, reply)) return;
+        const sessionId = decodeURIComponent(req.params.id ?? '');
+        const messageId = decodeURIComponent(req.params.messageId ?? '');
+        if (!messageId) {
+          return reply.code(400).send({ error: 'messageId is required' });
+        }
+        const userId = await resolveUserId(req);
+        const currentUserMxid = session?.logtoSub
+          ? getMatrixUserIdForSession(
+              session.logtoSub,
+              session.userProfile?.username,
+              session.matrixUserId
+            )
+          : undefined;
+        await adapter.redactMessage({
+          sessionId,
+          backendSessionId: sessionId,
+          messageId,
+          userId,
+          matrixAccessToken: session?.matrixAccessToken,
+          currentUserMxid,
+        });
+        return reply.send({ ok: true });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '撤回消息失败',
           message: e instanceof Error ? e.message : String(e),
         });
       }

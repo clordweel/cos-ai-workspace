@@ -31,7 +31,7 @@
         @scroll="onChatScroll"
       >
         <!-- 日期分隔线与消息同级渲染（在消息容器外），便于全宽与居中样式生效 -->
-        <div class="chat-messages-list flex min-w-0 flex-col gap-0.5 min-h-full w-full">
+        <div class="chat-messages-list flex min-w-0 flex-col gap-0.5 min-h-full w-full pl-4 pr-2">
           <template v-for="(item, idx) in displayItems" :key="item.type === 'date' ? `date-${idx}-${item.label}` : item.uiMessage.id">
             <div
               v-if="item.type === 'date'"
@@ -72,6 +72,7 @@
       :model-value="input"
       :streaming="streaming"
       :reply-target="replyTarget"
+      :editing-message-id="editingMessageId"
       @update:model-value="emit('update:input', $event)"
       @submit="emit('submit')"
       @stop="emit('stop')"
@@ -79,6 +80,7 @@
       @scroll-to-last="emit('scroll-to-last')"
       @add-participant="emit('add-participant')"
       @cancel-reply="emit('cancel-reply')"
+      @cancel-edit="emit('cancel-edit')"
       @input-area-height="chatInputAreaHeightPx = $event"
     />
   </div>
@@ -183,6 +185,10 @@ const props = defineProps<{
   input: string
   streaming: boolean
   replyTarget?: { id: string; role: string; content: string } | null
+  /** 正在编辑的消息 id，有则输入框显示「保存」/「取消编辑」 */
+  editingMessageId?: string | null
+  /** 父级传入的 ref，用于接收本组件聊天消息滚动容器 DOM（截屏用） */
+  scrollTargetRef?: { value: HTMLElement | null } | null
 }>()
 
 const emit = defineEmits<{
@@ -202,11 +208,16 @@ const emit = defineEmits<{
   'scroll-to-last': []
   'add-participant': []
   'cancel-reply': []
+  'cancel-edit': []
 }>()
 
 watch(() => props.displayItems.length, () => {
   nextTick(checkScrollPosition)
 })
+
+watch(chatScrollRef, (el) => {
+  if (props.scrollTargetRef) props.scrollTargetRef.value = el ?? null
+}, { immediate: true })
 
 /** 打开/切换会话或消息列表变化时滚动到底部，便于看到最新消息 */
 function scheduleScrollToBottom() {
@@ -274,8 +285,9 @@ defineExpose({ scrollToBottom })
   background: rgb(96 165 250 / 0.28);
 }
 
-/* 聊天消息区极细滚动条 */
+/* 聊天消息区极细滚动条；stable 预留滚动条位避免出现/消失时内容左右跳动，右侧仅配合 pr-2 不显宽 */
 :deep(.chat-messages-scroll) {
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
   scrollbar-color: rgb(212 212 216) transparent;
 }

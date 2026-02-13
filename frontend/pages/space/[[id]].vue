@@ -72,9 +72,11 @@
             :chat-user-avatar="chatUserAvatar"
             :is-session-expanded="isSessionExpanded"
             :session-area-font-scale="sessionAreaFontScale"
+            :scroll-target-ref="chatScrollElRef"
             v-model:input="input"
             :streaming="streaming"
             :reply-target="replyTarget"
+            :editing-message-id="editingMessageId"
             @close="onCloseChat"
             @rename="onRenameChat"
             @share="onShareConversation"
@@ -90,6 +92,7 @@
             @scroll-to-last="scrollToLastMessage"
             @add-participant="openAddParticipant"
             @cancel-reply="onCancelReply"
+            @cancel-edit="onCancelEdit"
           >
             <template #content="{ message }">
               <div
@@ -152,6 +155,7 @@ const {
   isSessionExpanded,
   appContentVisible,
   showAppPanel,
+  chatScrollElRef,
   openAddParticipant,
   openPanel,
   listViewTab,
@@ -200,8 +204,10 @@ const {
   chatUserName,
   chatUserAvatar,
   replyTarget,
+  editingMessageId,
   onReplyToMessage,
   onCancelReply,
+  onCancelEdit,
   send,
   stopStream,
   scrollToLastMessage,

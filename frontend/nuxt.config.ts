@@ -106,6 +106,18 @@ export default defineNuxtConfig({
             const url = req.url ?? ''
             if (url.includes('_nuxt_icon')) return url.replace(/^\/api/, '')
           },
+          // 开发时：重写后端 Set-Cookie，使 cookie 落在前端 host，后续 DELETE/PATCH 等请求会带上
+          configure(proxy) {
+            proxy.on('proxyRes', (proxyRes, req, res) => {
+              const setCookie = proxyRes.headers['set-cookie']
+              if (!setCookie || !Array.isArray(setCookie)) return
+              proxyRes.headers['set-cookie'] = setCookie.map((c: string) =>
+                c
+                  .replace(/;\s*Secure/gi, '')
+                  .replace(/;\s*Domain=[^;]+/gi, '')
+              )
+            })
+          },
         },
       },
     },

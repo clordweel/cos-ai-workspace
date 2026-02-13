@@ -27,6 +27,8 @@ export function useSpaceChatPane(options: {
   setConversationId: (id: string, conversationId: string | undefined) => void
   /** 重命名会话回调（会话列表右键或顶栏菜单触发） */
   onRenameSession?: (sessionId: string) => void
+  /** 获取聊天消息滚动容器 DOM，用于截屏（当前屏/长屏截图） */
+  getChatScrollElement?: () => HTMLElement | null
 }) {
   const {
     chatId,
@@ -40,10 +42,12 @@ export function useSpaceChatPane(options: {
     getConversationId,
     setConversationId,
     onRenameSession,
+    getChatScrollElement,
   } = options
 
   const config = useRuntimeConfig()
   const router = useRouter()
+  const apiBase = useApiBase()
   const input = ref('')
   const streaming = ref(false)
   const streamAbortRef = ref<AbortController | null>(null)
@@ -147,6 +151,8 @@ export function useSpaceChatPane(options: {
   function scrollToLastMessage(_behavior?: ScrollBehavior) {}
 
   const replyTarget = ref<{ id: string; role: string; content: string } | null>(null)
+  /** 正在编辑的消息 id（有则提交时为保存编辑，否则为发送新消息） */
+  const editingMessageId = ref<string | null>(null)
 
   async function streamReply(
     id: string,
@@ -290,7 +296,37 @@ export function useSpaceChatPane(options: {
     const text = input.value.trim()
     if (!id || !text || streaming.value) return
     const roomId = getConversationId(id) ?? id
-    sendTyping(roomId, false)
+    const editId = editingMessageId.value
+    if (editId) {
+      // 保存编辑：调用 PATCH 后更新本地消息
+      editingMessageId.value = null
+      input.value = ''
+      sendTyping(roomId, false)
+      const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+      try {
+        await $fetch(`${base}/api/sessions/${encodeURIComponent(id)}/messages/${encodeURIComponent(editId)}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          body: { content: text },
+        })
+        const list = getMessages(id)
+        const idx = list.findIndex((m) => m.id === editId)
+        if (idx >= 0) {
+          const next = [...list]
+          next[idx] = { ...next[idx]!, content: text }
+          setMessages(id, next)
+        }
+      } catch {
+        const list = getMessages(id)
+        const idx = list.findIndex((m) => m.id === editId)
+        if (idx >= 0) {
+          const next = [...list]
+          next[idx] = { ...next[idx]!, content: text }
+          setMessages(id, next)
+        }
+      }
+      return
+    }
     const target = replyTarget.value
     input.value = ''
     replyTarget.value = null
@@ -302,7 +338,6 @@ export function useSpaceChatPane(options: {
       inReplyTo: target ? { id: target.id, role: target.role as 'user' | 'assistant', content: target.content } : undefined,
     })
     nextTick(() => scrollToLastMessage())
-    // 始终请求后端（普通消息也要写入 Matrix）；仅 @ 机器人时才创建助手占位并展示流
     await streamReply(id, text, getMentionedBotIdsFromText(text), target?.id)
   }
 
@@ -351,9 +386,9 @@ export function useSpaceChatPane(options: {
     const list = chatId.value ? getMessages(chatId.value) : []
     const title = chatTitle.value || '会话'
     const filename = `${title.replace(/[/\\?%*:|"<>]/g, '-')}-${Date.now()}.md`
-    const apiBase = (config.public.apiBase as string) || ''
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
     try {
-      const { markdown } = await $fetch<{ markdown: string }>(`${apiBase}/api/chat/export-markdown`, {
+      const { markdown } = await $fetch<{ markdown: string }>(`${base}/api/chat/export-markdown`, {
         method: 'POST',
         body: { messages: list },
       })
@@ -363,8 +398,58 @@ export function useSpaceChatPane(options: {
     }
   }
 
-  function onExportCurrentScreen() { /* TODO */ }
-  function onExportLongScreenshot() { /* TODO */ }
+  async function onExportCurrentScreen() {
+    const el = getChatScrollElement?.()
+    if (!el || typeof window === 'undefined') return
+    const { default: html2canvas } = await import('html2canvas')
+    const canvas = await html2canvas(el, {
+      useCORS: true,
+      allowTaint: true,
+      scale: window.devicePixelRatio || 1,
+      logging: false,
+    })
+    const w = el.clientWidth
+    const h = el.clientHeight
+    const sx = 0
+    const sy = Math.max(0, el.scrollTop)
+    const cropped = document.createElement('canvas')
+    cropped.width = w
+    cropped.height = h
+    const ctx = cropped.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(canvas, sx, sy, w, h, 0, 0, w, h)
+    triggerImageDownload(cropped, exportFilename('当前屏'))
+  }
+
+  async function onExportLongScreenshot() {
+    const scrollEl = getChatScrollElement?.()
+    if (!scrollEl || typeof window === 'undefined') return
+    const listEl = scrollEl.querySelector<HTMLElement>('.chat-messages-list')
+    const targetEl = listEl ?? scrollEl
+    const { default: html2canvas } = await import('html2canvas')
+    const canvas = await html2canvas(targetEl, {
+      useCORS: true,
+      allowTaint: true,
+      scale: Math.min(2, window.devicePixelRatio || 1),
+      logging: false,
+      height: targetEl.scrollHeight,
+      windowHeight: targetEl.scrollHeight,
+    })
+    triggerImageDownload(canvas, exportFilename('长屏截图'))
+  }
+
+  function exportFilename(suffix: string): string {
+    const title = chatTitle.value ? `${chatTitle.value.replace(/[/\\?*:|"]/g, '_')}_` : ''
+    const date = new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')
+    return `${title}${date}_${suffix}.png`
+  }
+
+  function triggerImageDownload(canvas: HTMLCanvasElement, filename: string) {
+    const link = document.createElement('a')
+    link.download = filename
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
   function onShareConversation() { /* TODO */ }
   function onCopySessionLink() {
     if (!chatId.value) return
@@ -380,25 +465,78 @@ export function useSpaceChatPane(options: {
 
   function onEditMessage(_index: number) { /* TODO */ }
   function onViewEditHistory(_index: number) { /* TODO */ }
-  function onEditUserMessage(_index: number) { /* TODO */ }
+
+  function onEditUserMessage(index: number) {
+    const id = chatId.value
+    if (!id) return
+    const list = getMessages(id)
+    const msg = list[index]
+    if (!msg || msg.role !== 'user') return
+    editingMessageId.value = msg.id ?? null
+    if (editingMessageId.value) {
+      input.value = msg.content ?? ''
+      replyTarget.value = null
+    }
+  }
+
+  function onCancelEdit() {
+    editingMessageId.value = null
+  }
+
   function onRetryUserMessage(_index: number) { /* TODO */ }
   function onFavoriteMessage(_index: number) { /* TODO */ }
   function onListenReply(_index: number) { /* TODO */ }
 
-  function onRecallMessage(index: number) {
+  async function onRecallMessage(index: number) {
     const id = chatId.value
     if (!id) return
     const list = getMessages(id)
     if (index < 0 || index >= list.length) return
+    const msg = list[index]
+    const messageId = msg?.id
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (messageId && base) {
+      try {
+        const res = await fetch(
+          `${base}/api/sessions/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}`,
+          { method: 'DELETE', credentials: 'include' }
+        )
+        if (res.status === 401) {
+          useAuth().requireAuth()
+          return
+        }
+        if (!res.ok) return
+      } catch {
+        return
+      }
+    }
     const next = list.filter((_, i) => i !== index)
     setMessages(id, next)
   }
 
-  function onDeleteMessage(index: number) {
+  async function onDeleteMessage(index: number) {
     const id = chatId.value
     if (!id) return
     const list = getMessages(id)
     if (index < 0 || index >= list.length) return
+    const msg = list[index]
+    const messageId = msg?.id
+    if (messageId) {
+      const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+      try {
+        const res = await fetch(
+          `${base}/api/sessions/${encodeURIComponent(id)}/messages/${encodeURIComponent(messageId)}`,
+          { method: 'DELETE', credentials: 'include' }
+        )
+        if (res.status === 401) {
+          useAuth().requireAuth()
+          return
+        }
+        if (!res.ok) return
+      } catch {
+        return
+      }
+    }
     const next = list.filter((_, i) => i !== index)
     setMessages(id, next)
   }
@@ -434,8 +572,10 @@ export function useSpaceChatPane(options: {
     chatUserName,
     chatUserAvatar,
     replyTarget,
+    editingMessageId,
     onReplyToMessage,
     onCancelReply,
+    onCancelEdit,
     send,
     stopStream,
     scrollToLastMessage,

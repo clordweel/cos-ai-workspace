@@ -339,6 +339,69 @@ export async function sendRoomMessage(
 }
 
 /**
+ * 撤回（redact）房间内一条消息：服务端移除内容，需当前用户 token
+ * @see https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3roomsroomidredacteventidtxnid
+ */
+export async function redactRoomMessage(
+  roomId: string,
+  eventId: string,
+  userToken: string
+): Promise<{ event_id: string }> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('redactRoomMessage 必须使用当前用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const eventIdEnc = encodeURIComponent(eventId);
+  const txnId = `redact-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/redact/${eventIdEnc}/${txnId}`,
+    { method: 'PUT', body: JSON.stringify({}) },
+    userToken
+  );
+  const data = (await res.json()) as { event_id?: string; error?: string };
+  if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  return { event_id: data.event_id ?? eventId };
+}
+
+/**
+ * 编辑房间内一条消息（发送 m.replace 关系事件），需当前用户 token
+ * @see MSC2676 / m.replace, m.new_content
+ */
+export async function editRoomMessage(
+  roomId: string,
+  eventId: string,
+  newBody: string,
+  userToken: string,
+  formattedBody?: string
+): Promise<{ event_id: string }> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('editRoomMessage 必须使用当前用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const content: Record<string, unknown> = {
+    msgtype: 'm.text',
+    body: ` * ${newBody}`,
+    'm.relates_to': { rel_type: 'm.replace', event_id: eventId },
+    'm.new_content': {
+      msgtype: 'm.text',
+      body: newBody,
+    },
+  };
+  if (formattedBody?.trim()) {
+    (content['m.new_content'] as Record<string, unknown>).format = 'org.matrix.custom.html';
+    (content['m.new_content'] as Record<string, unknown>).formatted_body = formattedBody.trim();
+  }
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/send/m.room.message`,
+    { method: 'POST', body: JSON.stringify(content) },
+    userToken
+  );
+  const data = (await res.json()) as { event_id?: string; error?: string };
+  if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  return { event_id: data.event_id! };
+}
+
+/**
  * 创建房间（可选名称，私聊预设）
  * userToken 必填：必须以当前用户 token 创建，否则房间归属到 admin
  */
@@ -415,6 +478,52 @@ export async function leaveRoom(roomId: string, userToken?: string): Promise<voi
     { method: 'POST', body: '{}' },
     userToken
   );
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  }
+}
+
+/**
+ * 获取当前用户的 account_data（必须使用用户 token，禁止 admin token）
+ * @see https://spec.matrix.org/latest/client-server-api/#get_matrixclientv3useruseridaccount_datatype
+ */
+export async function getAccountData(
+  userToken: string,
+  type: string
+): Promise<Record<string, unknown>> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('getAccountData 需要用户 token', 0);
+  }
+  const userId = await getMatrixUserIdFromToken(userToken);
+  if (!userId) throw new MatrixApiError('无法解析用户身份', 0);
+  const path = `/user/${encodeURIComponent(userId)}/account_data/${encodeURIComponent(type)}`;
+  const res = await matrixFetchWithToken(path, {}, userToken);
+  if (res.status === 404) return {};
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown> & { error?: string };
+  if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  return data;
+}
+
+/**
+ * 设置当前用户的 account_data（必须使用用户 token；整份覆盖该 type）
+ * @see https://spec.matrix.org/latest/client-server-api/#put_matrixclientv3useruseridaccount_datatype
+ */
+export async function setAccountData(
+  userToken: string,
+  type: string,
+  content: Record<string, unknown>
+): Promise<void> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('setAccountData 需要用户 token', 0);
+  }
+  const userId = await getMatrixUserIdFromToken(userToken);
+  if (!userId) throw new MatrixApiError('无法解析用户身份', 0);
+  const path = `/user/${encodeURIComponent(userId)}/account_data/${encodeURIComponent(type)}`;
+  const res = await matrixFetchWithToken(path, {
+    method: 'PUT',
+    body: JSON.stringify(content),
+  }, userToken);
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new MatrixApiError(data.error || res.statusText, res.status, data);

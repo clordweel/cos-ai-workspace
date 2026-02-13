@@ -9,6 +9,8 @@ import {
   getRoomName,
   getRoomMessages,
   sendRoomMessage,
+  editRoomMessage,
+  redactRoomMessage,
   createRoom,
   inviteToRoom,
   joinRoom,
@@ -31,6 +33,8 @@ import type {
   InviteToSessionParams,
   DeleteSessionParams,
   RenameSessionParams,
+  EditMessageParams,
+  RedactMessageParams,
 } from './types.js';
 
 function isMatrixConfigured(): boolean {
@@ -98,24 +102,41 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       );
       const currentUserId = currentUserMxid ?? userId;
       const eventMap = new Map<string, { role: 'user' | 'assistant'; content: string }>();
+      /** 编辑事件（m.replace）对原 event_id 的替换内容，供 listMessages 合并为一条展示 */
+      const replacementByEventId = new Map<string, { body: string; formattedBody?: string }>();
       for (const ev of events) {
-        if (ev.type === 'm.room.message' && ev.content?.body != null) {
-          const r = ev.sender === currentUserId ? 'user' : 'assistant';
-          eventMap.set(ev.event_id, { role: r, content: ev.content.body });
+        if (ev.type !== 'm.room.message' || ev.content?.body == null) continue;
+        const rel = (ev.content as { 'm.relates_to'?: { rel_type?: string; event_id?: string } })['m.relates_to'];
+        const newContent = (ev.content as { 'm.new_content'?: { body?: string; formatted_body?: string } })['m.new_content'];
+        if (rel?.rel_type === 'm.replace' && rel.event_id && newContent) {
+          replacementByEventId.set(rel.event_id, {
+            body: typeof newContent.body === 'string' ? newContent.body : (ev.content.body as string).replace(/^\s*\*\s*/, ''),
+            formattedBody: typeof newContent.formatted_body === 'string' ? newContent.formatted_body : undefined,
+          });
+          continue;
         }
+        const r = ev.sender === currentUserId ? 'user' : 'assistant';
+        eventMap.set(ev.event_id, { role: r, content: ev.content.body as string });
       }
       const out: NormalizedMessage[] = [];
       for (const ev of events) {
-        // 与 Cinny 一致：不把状态事件（m.room.member、m.room.name）当作聊天消息展示
         if (ev.type === 'm.room.member' || ev.type === 'm.room.name') continue;
+        if (ev.type !== 'm.room.message' || ev.content?.body == null) continue;
+        const rel = (ev.content as { 'm.relates_to'?: { rel_type?: string } })['m.relates_to'];
+        if (rel?.rel_type === 'm.replace') continue;
 
         const r = ev.sender === currentUserId ? 'user' : 'assistant';
-        const body = typeof ev.content?.body === 'string' ? ev.content.body : '';
-        const formattedBody = typeof (ev.content as { formatted_body?: string })?.formatted_body === 'string'
+        let body = typeof ev.content?.body === 'string' ? ev.content.body : '';
+        let formattedBody = typeof (ev.content as { formatted_body?: string })?.formatted_body === 'string'
           ? (ev.content as { formatted_body: string }).formatted_body
           : undefined;
+        const replacement = replacementByEventId.get(ev.event_id);
+        if (replacement) {
+          body = replacement.body;
+          if (replacement.formattedBody != null) formattedBody = replacement.formattedBody;
+        }
         eventMap.set(ev.event_id, { role: r, content: body });
-        const replyEventId = ev.content?.['m.relates_to']?.['m.in_reply_to']?.event_id;
+        const replyEventId = (ev.content as { 'm.relates_to'?: { 'm.in_reply_to'?: { event_id?: string } } })['m.relates_to']?.['m.in_reply_to']?.event_id;
         const inReplyTo =
           replyEventId
             ? (() => {
@@ -255,6 +276,29 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       const roomId = backendSessionId || sessionId;
       if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
       await setRoomName(roomId, title.trim(), userToken);
+    },
+
+    async editMessage(params: EditMessageParams): Promise<void> {
+      const { backendSessionId, sessionId, messageId, content, formattedBody, matrixAccessToken: userToken, currentUserMxid } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      if (currentUserMxid) {
+        const valid = await verifyMatrixTokenUserId(userToken, currentUserMxid);
+        if (!valid) throw new Error(`token 不属于当前用户 (${currentUserMxid})`);
+      }
+      const roomId = backendSessionId || sessionId;
+      const { body: msgBody, formattedBody: msgFormattedBody } = processMessageText(content);
+      await editRoomMessage(roomId, messageId, msgBody, userToken, msgFormattedBody ?? formattedBody);
+    },
+
+    async redactMessage(params: RedactMessageParams): Promise<void> {
+      const { backendSessionId, sessionId, messageId, matrixAccessToken: userToken, currentUserMxid } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      if (currentUserMxid) {
+        const valid = await verifyMatrixTokenUserId(userToken, currentUserMxid);
+        if (!valid) throw new Error(`token 不属于当前用户 (${currentUserMxid})`);
+      }
+      const roomId = backendSessionId || sessionId;
+      await redactRoomMessage(roomId, messageId, userToken);
     },
   };
 }

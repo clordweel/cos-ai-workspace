@@ -120,8 +120,47 @@ export function useMatrixSyncClient() {
           const content = event.getContent?.() ?? {}
           const body = (content.body ?? (content as { msgtype?: string; body?: string }).body) as string | undefined
           if (body == null) return
+          const relatesTo = (content as { 'm.relates_to'?: { rel_type?: string; event_id?: string } })['m.relates_to']
+          // 编辑事件（m.replace）：在原消息上更新内容，不追加新消息
+          if (relatesTo?.rel_type === 'm.replace' && relatesTo.event_id) {
+            const newContent = (content as { 'm.new_content'?: { body?: string; formatted_body?: string } })['m.new_content']
+            const newBody = typeof newContent?.body === 'string' ? newContent.body : body.replace(/^\s*\*\s*/, '')
+            const newFormattedBody = typeof newContent?.formatted_body === 'string' ? newContent.formatted_body : undefined
+            const list = getMessages(roomId)
+            const idx = list.findIndex((m) => m.id === relatesTo.event_id)
+            if (idx >= 0) {
+              nextTick(() => {
+                const next = [...list]
+                next[idx] = {
+                  ...next[idx]!,
+                  content: newBody,
+                  ...(newFormattedBody != null ? { formattedBody: newFormattedBody } : {}),
+                }
+                setMessages(roomId, next)
+              })
+              return
+            }
+          }
           const formattedBody = (content as { formatted_body?: string }).formatted_body
           const role = event.getSender?.() === userId ? 'user' : 'assistant'
+          // 解析回复引用，便于刷新后从 sync 恢复时仍能展示引用内容（与中间层 getMessages 逻辑一致）
+          const replyToId = (content as { 'm.relates_to'?: { 'm.in_reply_to'?: { event_id?: string } } })['m.relates_to']?.['m.in_reply_to']?.event_id
+          let inReplyTo: { id: string; role: 'user' | 'assistant'; content?: string } | undefined
+          if (replyToId) {
+            const list = getMessages(roomId)
+            const parentMsg = list.find((m) => m.id === replyToId)
+            if (parentMsg) {
+              inReplyTo = { id: replyToId, role: parentMsg.role, content: parentMsg.content }
+            } else {
+              const room = c.getRoom?.(roomId)
+              const parentEv = room?.findEventById?.(replyToId) as { getContent?: () => { body?: string }; getSender?: () => string } | undefined
+              const parentContent = parentEv?.getContent?.()
+              const parentBody = typeof parentContent?.body === 'string' ? parentContent.body : ''
+              const parentSender = parentEv?.getSender?.()
+              const parentRole = parentSender === userId ? ('user' as const) : ('assistant' as const)
+              inReplyTo = { id: replyToId, role: parentRole, content: parentBody || undefined }
+            }
+          }
           // 己方消息：后端可能改写 body/formatted_body，用「替换最后一条无 id 的 user 占位」避免新旧两条并存
           if (role === 'user' && eventId) {
             const list = getMessages(roomId)
@@ -146,7 +185,7 @@ export function useMatrixSyncClient() {
                 id: eventId,
                 createdAt,
                 receiptStatus: 'sent' as const,
-                inReplyTo: existing?.inReplyTo,
+                inReplyTo: existing?.inReplyTo ?? inReplyTo,
               }
               nextTick(() => {
                 const room = c.getRoom?.(roomId)
@@ -165,6 +204,7 @@ export function useMatrixSyncClient() {
             ...(typeof formattedBody === 'string' && formattedBody ? { formattedBody } : {}),
             id: eventId ?? undefined,
             createdAt,
+            ...(inReplyTo ? { inReplyTo } : {}),
           }
           nextTick(() => {
             const room = c.getRoom?.(roomId)

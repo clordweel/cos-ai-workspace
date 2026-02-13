@@ -30,6 +30,9 @@ const APP_DRAWER_HEIGHT_REM = 24
 /** 会话列表顶栏高度 (h-12)，与 SessionListHeader 一致 */
 const SESSION_LIST_HEADER_HEIGHT_REM = 3
 
+/** 置顶 ID 列表：模块级单例，避免点击会话导致页面/composable 重跑时被重新初始化为 [] */
+const pinnedIds = ref<string[]>([])
+
 export function useSpaceSessionList(options: {
   chatId: Ref<string | undefined>
   chats: Ref<Array<{ id: string; title?: string; updatedAt?: number }>>
@@ -65,7 +68,6 @@ export function useSpaceSessionList(options: {
   const showSearchBar = ref(false)
   const listViewTab = ref<ListViewTab>('active')
   const pinnedCollapsed = ref(false)
-  const pinnedIds = ref<string[]>(['mock-private-zhangsan', 'mock-group-product'])
   const mockCollapsed = ref(true)
   const mockTitleOverrides = ref<Record<string, string>>({})
   const mockHiddenIds = ref<string[]>([])
@@ -74,7 +76,7 @@ export function useSpaceSessionList(options: {
   const { isAuthenticated } = useAuth()
   const { favoriteIds } = useAppFavorites()
   const mockSessionListEnabled = useMockSessionListEnabled()
-  const { deleteSession, renameSession } = useChatSessionsApi()
+  const { deleteSession, renameSession, fetchPinnedSessions, setPinnedSessions } = useChatSessionsApi()
 
   const drawerCommonApps = computed<DrawerAppItem[]>(() => [
     { id: 'home', title: '导航', view: 'home', icon: Home },
@@ -207,6 +209,15 @@ export function useSpaceSessionList(options: {
     } else {
       pinnedIds.value = [...pinnedIds.value, id]
     }
+    setPinnedSessions(pinnedIds.value).catch(() => {})
+  }
+
+  async function loadPinnedFromBackend() {
+    const ids = await fetchPinnedSessions()
+    const cur = pinnedIds.value
+    if (ids.length !== cur.length || ids.some((id, i) => id !== cur[i])) {
+      pinnedIds.value = ids
+    }
   }
 
   function onDrawerAppClick(app: DrawerAppItem) {
@@ -292,6 +303,7 @@ export function useSpaceSessionList(options: {
     togglePin,
     onSessionRename,
     onSessionDelete,
+    loadPinnedFromBackend,
     onDrawerAppClick,
     onDrawerMore,
     drawerAppActive,

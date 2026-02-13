@@ -102,9 +102,12 @@ export function useChatSessions() {
     chats.value = [updated, ...list.slice(0, idx), ...list.slice(idx + 1)]
   }
 
-  /** 设置某会话的 updatedAt（用于从 API 拉取会话列表后保持正确排序） */
+  /** 设置某会话的 updatedAt（用于从 API 拉取会话列表后保持正确排序）；无变化时不替换数组，减少列表闪动 */
   const setChatUpdatedAt = (id: string, updatedAt: number) => {
-    chats.value = chats.value.map((c) => (c.id === id ? { ...c, updatedAt } : c))
+    const list = chats.value
+    const idx = list.findIndex((c) => c.id === id)
+    if (idx < 0 || list[idx].updatedAt === updatedAt) return
+    chats.value = list.map((c) => (c.id === id ? { ...c, updatedAt } : c))
   }
 
   const getConversationId = (chatId: string) => conversationIds.value[chatId]

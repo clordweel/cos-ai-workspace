@@ -98,6 +98,8 @@ export function useSpacePage() {
     router.push(`/space/${id}`)
   }
 
+  const chatScrollElRef = ref<HTMLElement | null>(null)
+
   const listApi = useSpaceSessionList({
     chatId,
     chats,
@@ -125,6 +127,7 @@ export function useSpacePage() {
     getConversationId,
     setConversationId,
     onRenameSession: listApi.onSessionRename,
+    getChatScrollElement: () => chatScrollElRef.value,
   })
 
   const isSessionExpanded = inject<Ref<boolean>>('isSessionExpanded', ref(false))
@@ -175,7 +178,9 @@ export function useSpacePage() {
     if (mockSessionListEnabled.value) seedMockMessages(getMessages, setMessages)
 
     function whenAuthReady() {
-      loadSessions().catch(() => {})
+      loadSessions().then((result) => {
+        if (result?.fetched) listApi.loadPinnedFromBackend()
+      }).catch(() => {})
     }
     if (!authLoading.value) {
       whenAuthReady()
@@ -206,6 +211,7 @@ export function useSpacePage() {
     isSessionExpanded,
     appContentVisible,
     showAppPanel,
+    chatScrollElRef,
     openAddParticipant,
     openPanel,
     startNewChat,

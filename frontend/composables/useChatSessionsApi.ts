@@ -38,6 +38,12 @@ function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
   }
 }
 
+/** 按用户维度仅拉取一次会话列表，避免点击切换会话时重复请求导致列表闪动 */
+let lastLoadedUserId: string | null = null
+/** 置顶列表同用户仅拉取一次，避免重复请求 /api/sessions/pinned 导致列表闪动 */
+let lastPinnedLoadedUserId: string | null = null
+let lastPinnedIdsCache: string[] | null = null
+
 export function useChatSessionsApi() {
   const apiBase = useApiBase()
   const {
@@ -49,22 +55,23 @@ export function useChatSessionsApi() {
   } = useChatSessions()
 
   /**
-   * 拉取会话列表并合并到当前会话状态
+   * 拉取会话列表并合并到当前会话状态（同用户同会话周期内仅拉取一次，避免重复请求与列表闪动）
    * @param userId - 与中间层 user_id 一致；不传时用当前登录用户 id（多用户隔离），未登录为 'default'
-   * @returns 是否成功（501/502 时为 false，不抛错）
+   * @returns { ok, fetched }：ok 表示是否成功；fetched 表示本次是否真的发过请求（未命中 guard 时才为 true，用于决定是否顺带拉取置顶）
    */
-  async function loadSessions(userId?: string): Promise<boolean> {
+  async function loadSessions(userId?: string): Promise<{ ok: boolean; fetched: boolean }> {
     const uid = (userId ?? (useAuth().userId as { value?: string })?.value) || 'default'
+    if (lastLoadedUserId === uid) return { ok: true, fetched: false }
     const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
-    if (!base) return false
+    if (!base) return { ok: false, fetched: false }
     try {
       const res = await fetch(
         `${base}/api/sessions?user_id=${encodeURIComponent(uid)}`,
         { credentials: 'include' },
       )
-      if (res.status === 401) return false
-      if (res.status === 501 || res.status === 502) return false
-      if (!res.ok) return false
+      if (res.status === 401) return { ok: false, fetched: false }
+      if (res.status === 501 || res.status === 502) return { ok: false, fetched: false }
+      if (!res.ok) return { ok: false, fetched: false }
       const json = (await res.json()) as { sessions?: ApiSession[] }
       const sessions = json.sessions ?? []
       const isMatrixRoomId = (id: string) => id.startsWith('!') && id.includes(':')
@@ -78,10 +85,19 @@ export function useChatSessionsApi() {
         setChatUpdatedAt(s.id, s.updatedAt)
         setConversationId(s.id, s.backendSessionId ?? s.id)
       }
-      return true
+      lastLoadedUserId = uid
+      return { ok: true, fetched: true }
     } catch {
-      return false
+      return { ok: false, fetched: false }
     }
+  }
+
+  /** 强制重新拉取会话列表（如用户主动刷新）；会清除「仅拉取一次」标记（含会话与置顶） */
+  async function refreshSessions(userId?: string): Promise<{ ok: boolean; fetched: boolean }> {
+    lastLoadedUserId = null
+    lastPinnedLoadedUserId = null
+    lastPinnedIdsCache = null
+    return loadSessions(userId)
   }
 
   /**
@@ -203,11 +219,62 @@ export function useChatSessionsApi() {
     }
   }
 
+  /**
+   * 拉取置顶会话 ID 列表（Matrix 时来自 account_data，否则返回 []）；同用户仅请求一次，避免点击会话时重复拉取导致闪动
+   */
+  async function fetchPinnedSessions(): Promise<string[]> {
+    const uid = (useAuth().userId as { value?: string })?.value ?? 'default'
+    if (lastPinnedLoadedUserId === uid && lastPinnedIdsCache !== null) return lastPinnedIdsCache
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return []
+    try {
+      const res = await fetch(`${base}/api/sessions/pinned`, { credentials: 'include' })
+      if (res.status === 401 || res.status === 501 || res.status === 502 || !res.ok) return []
+      const json = (await res.json()) as { pinnedRoomIds?: string[] }
+      const list = json.pinnedRoomIds ?? []
+      const ids = Array.isArray(list) ? list.filter((id): id is string => typeof id === 'string') : []
+      lastPinnedLoadedUserId = uid
+      lastPinnedIdsCache = ids
+      return ids
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * 保存置顶会话 ID 列表（仅 Matrix 时写入 account_data）；先乐观更新本地缓存，避免 PUT 完成前 fetch 用旧缓存覆盖前端
+   */
+  async function setPinnedSessions(pinnedRoomIds: string[]): Promise<void> {
+    const uid = (useAuth().userId as { value?: string })?.value ?? 'default'
+    lastPinnedLoadedUserId = uid
+    lastPinnedIdsCache = pinnedRoomIds
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return
+    try {
+      const res = await fetch(`${base}/api/sessions/pinned`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pinnedRoomIds }),
+      })
+      if (res.status === 401 || res.status === 501 || res.status === 502 || !res.ok) {
+        lastPinnedIdsCache = null
+        lastPinnedLoadedUserId = null
+      }
+    } catch {
+      lastPinnedIdsCache = null
+      lastPinnedLoadedUserId = null
+    }
+  }
+
   return {
     loadSessions,
+    refreshSessions,
     loadSessionMessages,
     createSession,
     renameSession,
     deleteSession,
+    fetchPinnedSessions,
+    setPinnedSessions,
   }
 }
