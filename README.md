@@ -14,7 +14,7 @@
 | **docs** | 架构与 API 文档 | — |
 | **logs** | 开发变更记录 | [CHANGELOG.md](./logs/CHANGELOG.md) |
 
-详细架构见 [PROJECT.md](./PROJECT.md) 与 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)。多维度状态总结见 [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)。
+架构与状态见 [PROJECT.md](./PROJECT.md)、[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)、[docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md)。
 
 ---
 

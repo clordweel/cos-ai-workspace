@@ -21,10 +21,9 @@
 - **nuxt.config**：显式设置 `srcDir: '.'`、`dir: { app: '.' }` 以保留当前目录结构（不采用 Nuxt 4 默认的 `app/` 作为 srcDir）；保留 `experimental.appManifest: false`。
 - **说明**：升级后可使用 @nuxt/ui v4（含 ChatMessages）等依赖 Nuxt 4 的生态。
 
-### 方案 A：禁用 MAS 回退纯 Synapse
+### Matrix 部署可选：Synapse 单机与 MAS 扩展
 
-- **deploy/matrix**：新增 `nginx-no-mas.conf`、`docker-compose.no-mas.yml`、`disable-mas.sh`。执行 `./disable-mas.sh` 并切换 compose 后，login/logout/refresh 直接转 Synapse，实现原生密码认证。
-- **文档**：`README.md` 方案 A 步骤更新；`.env.example` 注明 MAS 禁用时勿配置 `MAS_ADMIN_*`。
+- **deploy/matrix**：新增 `nginx-no-mas.conf`、`docker-compose.no-mas.yml`、`disable-mas.sh`，支持纯 Synapse 原生认证；MAS 为可选扩展，见 `docs/archive/mas/`。
 
 ### Matrix 密码持久化到 Logto
 

@@ -65,9 +65,9 @@ Synapse Admin 中新建会话（房间）的创建者显示为 `@admin:10.1.1.15
 - 在 `ensureMatrixTokenForSession`、`createPersonalSession`、`loginAsUser` 的返回路径打日志，记录 `user_id`（来自 `/account/whoami`）
 - 写入 session 前可做一次 `verifyMatrixTokenUserId`，确保绝非 admin
 
-### 5.3 MAS Personal Session 说明
+### 5.3 可选 MAS 路径
 
-`createPersonalSession(actorUserUlid, humanName)` 的 `actor_user_id` 必须是**对应用户的 MAS ULID**，返回的 `access_token` 为该用户的 Matrix token。若 MAS 实现有误，理论上可能返回错误 token，需结合 MAS 文档与日志核查。
+若配置 MAS，`createPersonalSession` 的 `actor_user_id` 须为对应用户的 MAS ULID，返回 token 须为该用户；异常时见 `docs/archive/mas/`。
 
 ## 六、验证步骤
 

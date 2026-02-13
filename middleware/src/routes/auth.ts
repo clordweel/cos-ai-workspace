@@ -69,6 +69,7 @@ const COOKIE_OPTS = {
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const cookieName = getCookieName();
 
+  /** 遗留：Frappe 用户名密码登录，前端已不调用，认证入口为 Logto */
   app.post('/api/auth/login', async (req, reply) => {
     const body = (req.body as { usr?: string; pwd?: string }) || {};
     const usr = body.usr?.trim();
@@ -85,6 +86,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       .send({ ok: true, user: result.user });
   });
 
+  /** 遗留：Frappe Token 登录，前端已不调用 */
   app.post('/api/auth/token', async (req, reply) => {
     const body = (req.body as { token?: string }) || {};
     const token = body.token?.trim();

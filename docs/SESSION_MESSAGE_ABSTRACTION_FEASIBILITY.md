@@ -149,7 +149,7 @@ interface ChatBackendAdapter {
 
 - **Dify**：与现有实现最接近，适配器主要是把 `runStream` 抽成 `streamMessage`，并可选增加 listSessions/listMessages（调 Dify API），输出统一转为 `NormalizedSession` / `NormalizedMessage`。**可行性高，改动量小。**
 - **Zulip**：无原生流式，需在中间层用 `sendMessage` 拿完整回复后，再按块或按句通过 SSE 推给前端以模拟打字机；会话/历史用 Zulip REST API 映射到统一模型。**可行，需接受「模拟流式」或放弃流式。**
-- **Matrix**：同上，发送与历史用 Client SDK；若需流式需在中间层模拟。**可行，集成与运维成本相对高（见 SESSION_BACKEND_AND_IM_OPTIONS.md）。**
+- **Matrix**：同上，发送与历史用 Client SDK；若需流式需在中间层模拟。可行，集成与运维成本见 `docs/archive/research/`。
 
 ---
 

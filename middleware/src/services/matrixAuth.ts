@@ -47,7 +47,7 @@ function buildLoginIdentifier(
 /**
  * 使用用户名 / 邮箱 / 手机号 + 密码登录 Matrix
  * identifier 自动推断：含 @ 为邮箱，纯数字（或 + 开头）为手机号，否则为用户名（localpart）
- * MAS 下邮箱登录可能不被支持，首次用邮箱失败时会回退为用邮箱前缀作为用户名重试
+ * 邮箱登录可能不被支持（如部分 Synapse/MAS 配置），失败时回退为用邮箱前缀作为用户名
  */
 export async function matrixLoginWithIdentifier(
   identifier: string,
@@ -78,7 +78,7 @@ export async function matrixLoginWithIdentifier(
     error?: string;
     errcode?: string;
   };
-  // MAS 下邮箱登录可能返回 "does not support login using email address"，用邮箱前缀作为用户名回退
+  // 邮箱登录不支持时用邮箱前缀作为用户名回退
   const raw = String(identifier).trim();
   const emailNotSupported =
     raw.includes('@') &&

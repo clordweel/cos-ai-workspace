@@ -1,6 +1,6 @@
 # 会话部分功能需求梳理
 
-> 会话/聊天相关的能力边界、已实现项、未实现项与扩展方向。与前端 API 需求（FRONTEND_API_REQUIREMENTS）、后端方案（SESSION_BACKEND_AND_IM_OPTIONS、SESSION_MESSAGE_ABSTRACTION_FEASIBILITY）配合使用。
+> 会话/聊天相关的能力边界、已实现项、未实现项与扩展方向。与 FRONTEND_API_REQUIREMENTS、SESSION_MESSAGE_ABSTRACTION_FEASIBILITY 配合；选型类见 `docs/archive/research/`。
 
 ---
 
@@ -45,7 +45,7 @@
 | 能力 | 说明 | 可行方向 |
 |------|------|----------|
 | **会话与消息持久化（前端侧）** | 刷新后列表与历史依赖后端 API 再次拉取；若后端不支持（501）则仅本地内存 | 已通过 Dify 适配器 listSessions/listMessages 支持；其他后端需适配器实现 |
-| **认证会话持久化** | 中间层重启后登录态丢失 | Redis/DB 存 auth_session，见 SESSION_BACKEND_AND_IM_OPTIONS |
+| **认证会话持久化** | 中间层重启后登录态丢失 | Redis/DB 存 auth_session，见 docs/archive/research/ |
 | **组织内用户与用户沟通** | 用户 A 与用户 B 互相发消息、看到对方消息 | 见下文第四节 |
 | **多端同步** | 同一用户多设备会话列表与已读一致 | 需后端支持多端 + 已读同步（如 Zulip/Matrix） |
 | **创建会话 API** | 显式「创建会话」再发消息 | 可选 POST /api/sessions，由适配器实现；Dify 为隐式创建 |
@@ -113,9 +113,9 @@
 ## 八、文档索引
 
 - **前端对中间层 API 的总体需求**：`FRONTEND_API_REQUIREMENTS.md`（流式对话、物料确认、导出 Markdown）。
-- **会话后端现状与 IM 选型**：`SESSION_BACKEND_AND_IM_OPTIONS.md`（Dify/Zulip/Matrix 等对比、组织内用户沟通结论）。
+- **会话后端选型**：`docs/archive/research/SESSION_BACKEND_AND_IM_OPTIONS.md`。
 - **标准化与多后端适配器设计**：`SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md`（领域模型、适配器接口、能力矩阵、实施顺序）。
 - **Dify 适配器验收**：`DIFY_ADAPTER_ACCEPTANCE.md`（验收步骤与通过标准）。
-- **会话部分后端服务选择调研**：`SESSION_BACKEND_SERVICE_SELECTION.md`（现状、会话/请求级选择的后端需求与可选方案）。
+- **会话后端服务选择**：`docs/archive/research/SESSION_BACKEND_SERVICE_SELECTION.md`。
 - **会话适配器选型：Matrix 优先**：`SESSION_ADAPTER_MATRIX.md`（核心流程与 Matrix 映射、适配器契约与实现要点）。
 - **会话设计与 Matrix 对比分析**：`SESSION_MATRIX_ANALYSIS.md`（身份冲突、未实现 Matrix 能力、可选方案）。

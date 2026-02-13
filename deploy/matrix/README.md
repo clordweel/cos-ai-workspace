@@ -31,7 +31,7 @@
 
 ## 可选：MAS 扩展
 
-若需 Matrix Authentication Service（OAuth2/OIDC、Personal Session），可执行 `./bootstrap-mas.sh`，并配合 `docker-compose.mas.yml`、`nginx-mas.conf`。MAS 相关脚本与说明保留在本目录；调研文档已归档至 `docs/archive/mas/`，主流程以 Synapse 单机为准。
+若需 MAS（OAuth2/OIDC），执行 `./bootstrap-mas.sh` 并配合 `docker-compose.mas.yml`、`nginx-mas.conf`。主流程以 Synapse 单机为准；调研文档见 `docs/archive/mas/`。
 
 ## 配置说明
 
@@ -79,7 +79,7 @@ chmod +x create-dify-bot.sh
 ./create-dify-bot.sh
 ```
 
-脚本会创建用户 `ai-assistant`（MXID 如 `@ai-assistant:10.1.1.15`）、输出 **MATRIX_BOT_USER_ID** 与 **MATRIX_BOT_ACCESS_TOKEN**，请将二者写入**工作区**（中间层）的 `.env`。若已启用 MAS，且脚本无法获取 token，请按脚本内提示改用 Admin API 签发或临时禁用 MAS 后重试。
+脚本会创建用户 `ai-assistant`、输出 **MATRIX_BOT_USER_ID** 与 **MATRIX_BOT_ACCESS_TOKEN**，请写入工作区 `.env`。若脚本无法获取 token（如部署走 MAS 且登录被转发），按脚本内提示处理。
 
 **注意**：若 bot 用户已存在，请先用 Synapse Admin API 重置该用户密码或删除用户后再运行脚本。
 

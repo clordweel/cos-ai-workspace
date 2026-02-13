@@ -141,7 +141,7 @@ export async function ensureMatrixUser(
     if (isNew) (body as Record<string, unknown>).password = generateInitialPassword();
     if (isReactivating) {
       (body as Record<string, unknown>).deactivated = false;
-      // MAS 启用时 Synapse 禁止 Admin API 设密，仅通过 MAS set-password；此处不传 password 避免 403
+      // 可选 MAS：Synapse Admin 设密被禁用时由 MAS set-password 处理，此处不传 password 避免 403
       if (!config.mas?.clientId) {
         (body as Record<string, unknown>).password = generateInitialPassword();
       }
@@ -165,7 +165,7 @@ export async function ensureMatrixUser(
   let masHasUser = masUser !== null && typeof masUser === 'string';
   let isReactivating = false;
 
-  // Logto 重新授权后激活已停用的 Matrix 账号（MAS reactivate + 设密 + Synapse deactivated: false），仅 MAS 启用时
+  // 可选 MAS：Logto 重新授权后激活已停用账号（MAS reactivate + 设密 + Synapse deactivated: false）
   if (isMasConfigured && masUser && typeof masUser === 'object' && masUser.deactivated && masUser.ulid) {
     const actResult = await activateMasUser(masUser.ulid);
     if (!actResult.ok) {
@@ -193,7 +193,7 @@ export async function ensureMatrixUser(
   if (synapseDeactivated && !isReactivating) {
     isReactivating = true;
     console.info(`[matrixUserSync] Synapse 用户已停用，将恢复 (localpart=${localpart})`);
-    // 仅 Synapse 停用时，需通过 MAS 设密（Synapse 已抹掉密码；MAS 启用时 Admin API 禁止设密）
+    // 可选 MAS：Synapse 停用或禁止设密时通过 MAS 设密
     if (config.mas?.clientId && masUser && typeof masUser === 'string') {
       const newPass = generateInitialPassword();
       const pwdResult = await setMasUserPassword(localpart, newPass, masUser);
@@ -378,7 +378,7 @@ export async function setMatrixPasswordByAdmin(
   const data = (await res.json().catch(() => ({}))) as { error?: string };
   if (!res.ok) {
     const errMsg = data.error || res.statusText || '设置密码失败';
-    // MAS 启用时 Synapse Admin API 会返回 "Password change disabled"，回退到 MAS Admin API
+    // 可选 MAS：Synapse 返回 "Password change disabled" 时回退 MAS Admin API
     if (res.status === 403 && errMsg.toLowerCase().includes('password change disabled')) {
       const localpart = matrixUserId.includes(':')
         ? matrixUserId.slice(1).split(':')[0]

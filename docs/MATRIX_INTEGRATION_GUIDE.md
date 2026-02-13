@@ -1,5 +1,7 @@
 # Matrix 整合实施与验证指南
 
+> 部署步骤以 `deploy/matrix/README.md` 为准；本文为补充与验证顺序。
+
 按顺序完成以下步骤，实现并验证工作台与 Matrix（Synapse）的整合。
 
 ---

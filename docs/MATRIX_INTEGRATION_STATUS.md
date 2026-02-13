@@ -1,6 +1,6 @@
 # Matrix 整合现状与问题梳理
 
-> 梳理当前 Matrix（Synapse）与 Logto 整合的状态，并列出已发现的问题与改进建议。最后更新：2026-02-13。
+> Matrix（Synapse）与 Logto 整合现状与已知问题。最后更新：2026-02-13。
 
 **部署**：推荐 **Synapse 单机**（`deploy/matrix/bootstrap.sh`）。MAS 为可选扩展，实现与脚本见 `deploy/matrix/` 与 `docs/archive/mas/`，此处不展开。
 
@@ -42,7 +42,7 @@
 |--------|------|------|------|
 | 1 | 缓存密码登录 | `matrixPasswordStore` 有该用户的密码 | 用户曾「设置 Matrix 密码」，缓存命中 |
 | 2 | Admin 设密 + 登录 | 默认回退 | `setMatrixPasswordByAdmin` + `loginAsUser`，用户不存在时先 `ensureMatrixUser` 创建 |
-| （可选） | MAS Personal Session | 配置 `MAS_ADMIN_CLIENT_ID` / `MAS_ADMIN_CLIENT_SECRET` | 通过 MAS Admin API 签发 token，见 `masAdminApi.ts` |
+| （可选） | MAS | 配置 `MAS_ADMIN_CLIENT_ID` / `MAS_ADMIN_CLIENT_SECRET` | 见 `masAdminApi.ts`、`docs/archive/mas/` |
 
 ### 2.3 Token 使用入口
 

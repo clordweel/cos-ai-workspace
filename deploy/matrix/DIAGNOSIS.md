@@ -28,7 +28,7 @@ curl -s http://localhost:8008/health                   # 应返回 OK
 MAS 部署下，admin.etke.cc 会检测到 `delegated_oidc_compatibility` 而**不显示用户名/密码输入框**。请用 **Access Token** 登录：
 
 1. 打开 https://admin.etke.cc/
-2. 选择 **「Access Token」** 标签（MAS 下「凭证」可能无用户名密码输入框）
+2. 选择 **「Access Token」** 标签，粘贴部署机 `./issue-admin-token-synapse.sh` 输出的 token
 3. 服务器 URL：`http://10.1.1.15:8008`
 4. 在部署机执行签发 token：
    ```bash

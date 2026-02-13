@@ -144,7 +144,7 @@ export async function debugRoutes(app: FastifyInstance): Promise<void> {
 
   /**
    * 需 Cookie：逐步跟踪 MAS/Admin 路径，定位 token 获取失败环节
-   * 参考 Element/Cinny：MAS 启用时 login 转发到 MAS，用户需先存在于 MAS
+   * 可选 MAS：login 转发到 MAS 时用户须先存在
    */
   app.get('/api/debug/matrix-trace', async (req, reply) => {
     const session = await getSessionFromCookie(req.headers.cookie);
@@ -252,7 +252,7 @@ export async function debugRoutes(app: FastifyInstance): Promise<void> {
         : trace.some((t) => t.step === '5.createPersonalSession' && !t.ok)
           ? 'Personal Session 失败，检查 MAS personal-sessions 权限'
           : needsFallback
-            ? 'createPersonalSession 返回 admin token，将回退到 MAS 设密+login（参考 Element/Cinny），调用 POST /api/debug/matrix-force-refresh 测试'
+            ? 'createPersonalSession 返回 admin token，将回退到设密+login，可调用 POST /api/debug/matrix-force-refresh 测试'
             : '按 trace 逐步排查';
 
     return reply.send({

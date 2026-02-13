@@ -15,7 +15,7 @@
 | **跨端** | Tauri (Desktop) + Capacitor (Mobile/PWA) | 桌面与移动端封装 |
 | **AI/聊天** | 适配器（mock / matrix，可扩展 Dify） | 会话与流式消息经中间层适配器；Dify 可选由适配器或编排调用 |
 | **ERP 后端** | ERPNext v16 | Headless 模式，仅通过 REST API + 自定义 App **cos** |
-| **中间层** | Node.js (Fastify) + TypeScript | SSE 流式、适配器、Logto 鉴权、cos/物料/诊断编排 |
+| **中间层** | Node.js (Fastify) + TypeScript | SSE 流式、适配器、Logto 鉴权、cos/物料编排 |
 
 ---
 
@@ -49,11 +49,9 @@ workspace/
 ├── .gitignore
 ├── docs/
 │   ├── ARCHITECTURE.md        # 架构与数据流
-│   ├── API_SPEC.md            # cos App RESTful API 规范
-│   ├── FRONTEND_SPEC.md       # 前端规范
-│   ├── STREAM_AND_SAFETY.md   # 流式与安全规范
-│   ├── CONFIG_AND_AUTH_RESEARCH.md  # 配置与认证方案研究
-│   └── …                      # 其它设计/会话/认证文档
+│   ├── PROJECT_STATUS.md      # 多维度当前状态（推荐先读）
+│   ├── API_SPEC.md、FRONTEND_SPEC.md、STREAM_AND_SAFETY.md 等
+│   └── archive/               # 研究/选型与 MAS 归档
 ├── frontend/                  # Nuxt 3 + Tailwind + Shadcn-vue，对话流 + 任务卡片
 │   ├── app.vue, nuxt.config.ts, layouts/, pages/
 │   ├── pages/logto.vue, logto-callback.vue  # Logto 登录与回调（前端承载时）
@@ -75,7 +73,6 @@ workspace/
 
 ## 下一步
 
-1. 阅读 `docs/PROJECT_STATUS.md` 了解多维度当前状态；阅读 `docs/ARCHITECTURE.md` 了解整体数据流。
-2. 按 `docs/API_SPEC.md` 在 **cos** App 中实现并暴露接口。
-3. 在 **middleware** 中维护/扩展聊天适配器与 SSE、Logto 与 cos 编排。
-4. 在 **frontend** 中实现对话流 + 任务卡片 UI，消费 SSE；认证仅 Logto。
+1. 先读 `docs/PROJECT_STATUS.md`、`docs/ARCHITECTURE.md`；Agent 见 `AGENTS.md`。
+2. 中间层：适配器（mock/matrix）、Logto 与 cos 编排；前端：对话流 + 任务卡片，认证仅 Logto。
+3. cos 按 `docs/API_SPEC.md` 暴露接口。

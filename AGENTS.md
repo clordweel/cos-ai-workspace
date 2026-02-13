@@ -6,20 +6,17 @@
 
 | 目的 | 文件 |
 |------|------|
-| 整体架构与数据流 | `docs/ARCHITECTURE.md` |
-| 当前状态与各模块说明 | `docs/PROJECT_STATUS.md` |
-| 认证与用户配置（Logto、Matrix、偏好） | `docs/AUTH_AND_USER_CONFIG.md` |
-| 会话持久化（重启保持认证） | `docs/SESSION_PERSISTENCE.md` |
-| 前端布局与约定 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
-| Matrix 实现/审查 | `docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MIDDLEWARE_MATRIX_REVIEW.md` |
-| 聊天栏滚动（Element/Cinny 参考） | `docs/CHAT_SCROLL_IMPROVEMENTS.md` |
-| 提交规范 | `.cursor/rules/git-commit.mdc` |
+| 架构与状态 | `docs/ARCHITECTURE.md`、`docs/PROJECT_STATUS.md` |
+| 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
+| 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
+| Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md` |
+| 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc` |
 
 ## 目录与职责
 
 - **frontend/** — Nuxt 3 + Vue 3，对话流与任务卡片；不直连 Frappe/Dify，经中间层。
 - **middleware/** — Fastify，SSE 流式、鉴权、聊天适配器（mock/matrix）、cos/物料 API。
-- **docs/** — 架构、API、认证、前端规范等；新需求先查 `PROJECT_STATUS.md` 与 `ARCHITECTURE.md`。
+- **docs/** — 架构、API、认证、前端规范等；先查 `PROJECT_STATUS.md`、`ARCHITECTURE.md`。研究/选型已归档至 `docs/archive/research/`、`docs/archive/mas/`。
 - **.cursor/rules/** — 团队约定与 Agent 规则（全局、前端、提交、Agent 工作流等）。
 - **.cursor/plans/** — 可保存的实现计划，供 Plan Mode 产出与复用。
 - **.cursor/agents/** — 专用 Agent 能力（如 commit）。

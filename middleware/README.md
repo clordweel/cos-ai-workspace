@@ -23,7 +23,7 @@
 | 变量 | 说明 |
 |------|------|
 | `PORT` | 服务端口，默认 3000 |
-| `CHAT_PROVIDER` | 聊天后端适配器：**mock**（默认，功能调试）\| dify \| zulip \| matrix |
+| `CHAT_PROVIDER` | **mock**（默认）\| **matrix**（当前仅此二者已注册） |
 | `SHUTDOWN_TIMEOUT_MS` | 优雅退出最大等待时间（毫秒），默认 15000 |
 | `DIFY_API_BASE` | Dify API 根地址（接入 Dify 适配器时使用） |
 | `DIFY_API_KEY` | Dify 应用 API Key（接入 Dify 适配器时使用） |
@@ -49,18 +49,12 @@ pnpm run dev   # 使用 tsx watch 直接运行 src/index.ts，无需先 build
 
 ## 调试
 
-- **日志**：开发环境下默认 `logger.level = 'debug'`，可在 `.env` 中设置 `LOG_LEVEL=trace|debug|info|warn|error` 调节。路由内使用 `req.log.debug()` / `req.log.info()` 等打点。
-- **Chrome/Edge 断点**：执行 `pnpm run dev:debug` 启动（带 `--inspect`），浏览器打开 `chrome://inspect` → 配置 target 为 `localhost:9229`，或 Cursor/VS Code 用下方「附加」配置。
-- **Cursor / VS Code 断点**：根目录 `.vscode/launch.json` 已配置：
+- **日志**：开发时默认 `logger.level = 'debug'`；可设 `LOG_LEVEL` 调节。路由内 `req.log.debug()` 等。
+- **断点**：`pnpm run dev:debug`（`--inspect`）；浏览器 `chrome://inspect` 或 Cursor/VS Code 附加。根目录 `.vscode/launch.json` 已配置：
   - **Middleware: 启动并断点调试** — F5 直接启动中间层并命中断点；
   - **Middleware: 启动并等待调试器** — 启动后暂停在首行，再 F5 继续；
   - **Middleware: 附加到已运行进程** — 先执行 `pnpm run dev:debug`，再选此配置 Attach，对已运行进程下断点。
-- **直接调 API**：不依赖前端，用 curl 或 REST 客户端测接口，例如：
-  ```bash
-  curl -s http://localhost:3000/health
-  curl -s -X POST http://localhost:3000/api/chat/stream -H "Content-Type: application/json" -d '{"message":"hi","user_id":"test"}'  # SSE 流
-  curl -s http://localhost:3000/api/diagnostics
-  ```
+- **直接调 API**：curl 示例：`curl -s http://localhost:3000/health`；`POST /api/chat/stream` 见接口节。
 
 ## 接口
 

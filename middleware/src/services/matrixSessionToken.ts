@@ -157,7 +157,7 @@ export async function ensureMatrixTokenForSession(
   }
 
   // 3. 回退：Admin 设随机密码 + login；用户不存在则 ensureMatrixUser 创建
-  // MAS 启用时 login 转发到 MAS，需确保用户在 MAS 中存在（参考 Element/Cinny：认证提供方先有用户）
+  // 可选 MAS：login 被转发到 MAS 时需确保用户已存在于 MAS
   if (isMasPreferred()) {
     const masCheck = await getMasUserByUsername(localpart);
     if (masCheck === null) {

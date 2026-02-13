@@ -1,7 +1,4 @@
-/**
- * MAS Admin API 客户端：client_credentials 换取 admin token，创建 Personal Session 签发 Matrix access_token
- * 需配置 MAS_ADMIN_CLIENT_ID、MAS_ADMIN_CLIENT_SECRET，且 MAS 已启用 adminapi 并加入 admin_clients
- */
+/** 可选 MAS：Admin API 客户端，配置 MAS_ADMIN_* 时用于签发用户 token 与设密回退。 */
 import { config } from '../config.js';
 
 const LOG_TAG = '[masAdminApi]';

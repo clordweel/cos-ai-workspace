@@ -175,7 +175,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       const session = await getSessionFromCookie(req.headers.cookie);
       if (await requireMatrixToken(req, session, reply)) return;
 
-      // 校验 token 属于当前用户；admin token 需清除刷新，MAS 等签发的用户 token 则采纳
+      // 校验 token 属于当前用户；admin token 需清除刷新，否则采纳
       let expectedMxid = getMatrixUserIdForSession(
         session!.logtoSub,
         session!.userProfile?.username,
@@ -446,7 +446,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         return reply.code(401).send({ error: '需要 Matrix 会话，请刷新后重试' });
       }
 
-      // 校验 token 属于当前用户；若不匹配则区分：admin token 需清除刷新，MAS 等签发的用户 token（MXID 可能不同）则采纳
+      // 校验 token 属于当前用户；admin token 需清除刷新，否则采纳（MXID 可能不同）
       let currentUserMxid: string | undefined =
         session?.logtoSub
           ? getMatrixUserIdForSession(

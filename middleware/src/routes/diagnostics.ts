@@ -1,5 +1,5 @@
 /**
- * 系统诊断：供设置页调用，返回通过 Frappe SDK 获取的只读诊断数据；需认证
+ * 系统诊断 API：返回 Frappe/cos 只读诊断数据，需认证；设置页已无入口，仅供 curl 等调用
  */
 import type { FastifyInstance } from 'fastify';
 import { getSessionFromCookie } from '../services/auth.js';

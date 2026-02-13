@@ -20,7 +20,7 @@
 
 - 当 `GET /api/auth/me` 或会话相关 API 被调用且会话有 `logtoSub` 但无 `matrixAccessToken` 时，中间层调用 `ensureMatrixTokenForSession(session)`。
 - **默认**：Admin 设随机密码 + Matrix 登录。密码优先从缓存读取；配置 `MATRIX_PASSWORD_ENCRYPTION_KEY` + M2M 时加密持久化到 Logto customData。
-- 可选：配置 `MAS_ADMIN_CLIENT_ID` / `MAS_ADMIN_CLIENT_SECRET` 时，中间层会尝试 MAS Personal Session 等路径（见 `masAdminApi.ts`）。
+- 可选：配置 `MAS_ADMIN_CLIENT_ID` / `MAS_ADMIN_CLIENT_SECRET` 时走 MAS 路径（见 `masAdminApi.ts`）。
 - 用户无需在前端进行任何 Matrix 登录或设置密码操作。
 
 ### 3. 不存在 / 已停用用户处理

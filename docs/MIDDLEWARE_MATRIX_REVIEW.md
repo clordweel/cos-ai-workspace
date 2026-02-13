@@ -103,7 +103,7 @@
 - 会话操作一律使用用户 token，避免消息/房间归属错误。
 - 修改密码流程：先登录取 token，再调 `/account/password`，auth 对象格式正确。
 - 房间消息 `dir: 'b'` 与前端 `reverse()` 的配合正确。
-- 可选 MAS 路径（Personal Session、设密回退）见 `masAdminApi.ts`，回退路径清晰。
+- 可选 MAS 路径见 `masAdminApi.ts`。
 
 ---
 
