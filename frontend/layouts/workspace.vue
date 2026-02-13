@@ -126,8 +126,13 @@ watch(authLoading, (loading) => {
       logoCycleDone.value = true
       logoCycleTimer = null
     }, LOGO_CYCLE_MS)
+  } else {
+    // 鉴权已结束或初始即为 false（如从其他页进入、水合后已就绪）：若从未启动过 timer，
+    // 则直接允许隐藏遮罩，避免 showLoadingOverlay 恒为 true 导致遮罩常驻、整页无法点击
+    if (!logoCycleTimer && !logoCycleDone.value) {
+      logoCycleDone.value = true
+    }
   }
-  // 鉴权提前结束时不清除 timer，保证至少播完一轮 3.2s 后再隐藏
 }, { immediate: true })
 onBeforeUnmount(() => {
   if (logoCycleTimer) clearTimeout(logoCycleTimer)
@@ -277,10 +282,13 @@ watch(() => route.query?.auth_error, (authError) => {
   transform: translateX(0.5rem);
 }
 
-/* 首屏加载遮罩：短淡入避免“先只有图标、后出文字”的两段感 */
+/* 首屏加载遮罩：短淡入避免“先只有图标、后出文字”的两段感；离开阶段不拦截点击，避免过渡期间误触阻塞 */
 .app-loading-fade-enter-active,
 .app-loading-fade-leave-active {
   transition: opacity 0.12s ease;
+}
+.app-loading-fade-leave-active {
+  pointer-events: none;
 }
 .app-loading-fade-enter-from,
 .app-loading-fade-leave-to {

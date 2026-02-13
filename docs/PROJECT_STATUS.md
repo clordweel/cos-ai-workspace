@@ -71,6 +71,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **认证与配置** | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` | Logto、用户偏好、Matrix 同步与密码 |
 | **Matrix** | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MIDDLEWARE_MATRIX_REVIEW.md` | 整合现状、最佳实践、中间层审查 |
 | **前端** | `docs/FRONTEND_SPEC.md`、`docs/FRONTEND_AUTH_AND_PERMISSIONS.md`、`docs/APP_EXTENSIONS.md` | 布局与鉴权、扩展 |
+| **前端视觉/UI** | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` | 统一按钮/输入/圆角/颜色，Agent 与开发按同一风格开发组件 |
 | **业务/安全** | `docs/API_SPEC.md`、`docs/STREAM_AND_SAFETY.md` | cos API、SSE 与写入安全 |
 | **变更与规则** | `logs/CHANGELOG.md`、`.cursor/rules/*.mdc` | 变更记录、提交与前端规则 |
 | **研究/选型归档** | `docs/archive/research/`、`docs/archive/mas/` | 配置与认证研究、会话选型、MAS 调研等 |

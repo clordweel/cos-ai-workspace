@@ -34,7 +34,15 @@ export function useSpacePage() {
   const config = useRuntimeConfig()
   const chatProvider = (config.public?.chatProvider as string) || ''
 
-  const { loadSessions, loadSessionMessages, createSession, inviteToSession } = useChatSessionsApi()
+  const {
+    loadSessions,
+    loadSessionMessages,
+    createSession,
+    inviteToSession,
+    fetchInvitedSessions,
+    joinSession,
+    deleteSession: deleteSessionApi,
+  } = useChatSessionsApi()
   const { getWithTitle, contacts } = useContactsAndBots()
   const { openPanel, openNavPage, addTab, currentView, activeTab } = useAppView()
 
@@ -140,6 +148,25 @@ export function useSpacePage() {
 
   const chatScrollElRef = ref<HTMLElement | null>(null)
 
+  const invitedSessions = ref<{ id: string; title: string }[]>([])
+  async function loadInvitedSessions() {
+    const list = await fetchInvitedSessions()
+    invitedSessions.value = list
+  }
+  async function onAcceptInvite(id: string, title: string) {
+    const ok = await joinSession(id)
+    if (!ok) return
+    ensureChat(id, title)
+    setConversationId(id, id)
+    await loadSessions()
+    await loadInvitedSessions()
+    goToChat(id)
+  }
+  async function onDeclineInvite(id: string) {
+    await deleteSessionApi(id)
+    await loadInvitedSessions()
+  }
+
   const listApi = useSpaceSessionList({
     chatId,
     chats,
@@ -153,6 +180,9 @@ export function useSpacePage() {
     addTab: (view: string, appId?: string) => addTab(view as any, appId),
     currentView,
     activeTab,
+    invitedSessions,
+    onAcceptInvite,
+    onDeclineInvite,
   })
 
   const paneApi = useSpaceChatPane({
@@ -220,6 +250,7 @@ export function useSpacePage() {
     function whenAuthReady() {
       loadSessions().then((result) => {
         if (result?.fetched) listApi.loadPinnedFromBackend()
+        if (chatProvider === 'matrix') loadInvitedSessions().catch(() => {})
       }).catch(() => {})
     }
     if (!authLoading.value) {

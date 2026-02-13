@@ -136,7 +136,48 @@
       </div>
     </template>
     <template v-else-if="listViewTab === 'pending'">
-      <div class="flex-1 min-h-0 flex flex-col">
+      <div class="flex-1 min-h-0 flex flex-col overflow-y-auto">
+        <!-- 待接受邀请（邀请等信息安排在此） -->
+        <section
+          v-if="invitedSessions.length > 0"
+          class="shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-emerald-50/60 dark:bg-emerald-950/20 border-l-2 border-l-emerald-400/70 dark:border-l-emerald-500/50 rounded-r-md mx-1"
+        >
+          <div class="flex w-full items-center gap-2 px-3 py-2.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+            <UserPlus class="h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span class="flex-1">待接受邀请</span>
+            <span
+              class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-emerald-200/80 dark:bg-emerald-700/50 text-emerald-800 dark:text-emerald-200 text-[11px] font-semibold tabular-nums"
+            >
+              {{ invitedSessions.length }}
+            </span>
+          </div>
+          <ul class="divide-y divide-emerald-100 dark:divide-emerald-900/40">
+            <li
+              v-for="inv in invitedSessions"
+              :key="inv.id"
+              class="flex items-center gap-2 px-3 py-2.5"
+            >
+              <span class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">{{ inv.title }}</span>
+              <div class="shrink-0 flex items-center gap-1">
+                <button
+                  type="button"
+                  class="rounded px-2 py-1 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
+                  @click="onAcceptInvite?.(inv.id, inv.title)"
+                >
+                  接受
+                </button>
+                <button
+                  type="button"
+                  class="rounded px-2 py-1 text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                  @click="onDeclineInvite?.(inv.id)"
+                >
+                  拒绝
+                </button>
+              </div>
+            </li>
+          </ul>
+        </section>
+        <!-- 未读、发送中、已送达等 -->
         <section class="border-b border-zinc-100 dark:border-zinc-700/80 px-3 py-2">
           <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">未读、发送中、已送达等（非已读）</p>
         </section>
@@ -166,13 +207,22 @@
             </li>
           </ul>
         </section>
-        <div v-else class="flex-1 flex flex-col items-center justify-center">
+        <div
+          v-else-if="invitedSessions.length === 0"
+          class="flex-1 flex flex-col items-center justify-center"
+        >
           <Empty
             compact
             title="暂无待处理消息"
-            description="已读以外的消息会出现在这里"
+            description="邀请与已读以外的消息会出现在这里"
             :icon="Inbox"
           />
+        </div>
+        <div
+          v-else
+          class="flex-1 flex flex-col items-center justify-center py-6"
+        >
+          <p class="text-xs text-zinc-500 dark:text-zinc-400">暂无未读等消息</p>
         </div>
       </div>
     </template>
@@ -185,7 +235,7 @@
 
 <script setup lang="ts">
 import { useVirtualizer } from '@tanstack/vue-virtual'
-import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search } from 'lucide-vue-next'
+import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search, UserPlus } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Empty } from '~/components/ui/empty'
 import SessionListItem from '~/components/SessionListItem.vue'
@@ -218,6 +268,9 @@ const props = defineProps<{
   getChatDateLabel: (id: string) => string
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
+  invitedSessions?: { id: string; title: string }[]
+  onAcceptInvite?: (id: string, title: string) => void
+  onDeclineInvite?: (id: string) => void
 }>()
 
 const activeListScrollRef = ref<HTMLElement | null>(null)

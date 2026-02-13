@@ -250,6 +250,46 @@ export function useChatSessionsApi() {
   }
 
   /**
+   * 拉取待接受邀请列表（仅 Matrix 有效，否则返回 []）
+   */
+  async function fetchInvitedSessions(): Promise<{ id: string; title: string }[]> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return []
+    try {
+      const res = await fetch(`${base}/api/sessions/invited`, { credentials: 'include' })
+      if (res.status === 401 || res.status === 501 || !res.ok) return []
+      const json = (await res.json()) as { invited?: Array<{ id?: string; title?: string }> }
+      const list = json.invited ?? []
+      return list
+        .filter((x): x is { id: string; title: string } => typeof x.id === 'string')
+        .map((x) => ({ id: x.id, title: typeof x.title === 'string' ? x.title : x.id }))
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * 接受邀请（仅 Matrix：join 房间）
+   */
+  async function joinSession(roomId: string): Promise<boolean> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base || !roomId?.trim()) return false
+    try {
+      const res = await fetch(`${base}/api/sessions/${encodeURIComponent(roomId)}/join`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * 拉取置顶会话 ID 列表（Matrix 时来自 account_data，否则返回 []）；同用户仅请求一次，避免点击会话时重复拉取导致闪动
    */
   async function fetchPinnedSessions(): Promise<string[]> {
@@ -303,8 +343,10 @@ export function useChatSessionsApi() {
     loadSessionMessages,
     createSession,
     inviteToSession,
+    joinSession,
     renameSession,
     deleteSession,
+    fetchInvitedSessions,
     fetchPinnedSessions,
     setPinnedSessions,
   }

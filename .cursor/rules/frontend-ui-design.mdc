@@ -1,0 +1,28 @@
+---
+description: 前端统一视觉与 UI 组件使用规范，供 Agent 与开发者按同一套风格开发组件和样式
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# 前端统一视觉与 UI 规范
+
+## 规范文档（必读）
+
+编辑 **frontend/** 下组件、样式或新增 UI 时，**必须先遵循**：
+
+- **`docs/UI_DESIGN_SYSTEM.md`** — 设计令牌（颜色、圆角、阴影）、原子组件使用约定、排版与迁移建议。
+
+## 核心约定摘要
+
+- **按钮**：一律使用 `~/components/ui/button` 的 **Button**，通过 **variant**（default / outline / ghost / secondary / destructive / link）和 **size** 控制样式；禁止手写一整套按钮 class 实现普通/次要按钮。仅强语义区块（如置顶区 amber 标题按钮）可保留原生 button，并保证 focus/disabled 可访问性。
+- **单行输入**：表单单行文本使用 `~/components/ui/input` 的 **Input**，禁止业务里手写完整 input 样式。
+- **对话框**：使用 `~/components/ui/dialog`，结构为标题区（可 border-b）→ 正文（统一 padding）→ Footer（border-t + Button 组件）。
+- **圆角**：按钮/小控件 `rounded-md`，输入/芯片 `rounded-lg`，卡片/对话框 `rounded-xl`，大容器 `rounded-2xl`；同一层级不混用多种圆角。
+- **颜色**：中性用 zinc；主操作用 primary；置顶/高亮用 amber；当前选中用 emerald；危险用 red。见 UI_DESIGN_SYSTEM.md 表 1.1。
+- **新增 UI 组件**：仅通过 shadcn-vue CLI 安装到 `components/ui`，禁止从文档或其它项目复制到 `components/ui`（见 `shadcn-vue-cli.mdc`）。
+
+## 与其它规则的关系
+
+- 布局与状态：`frontend-spec.mdc`、`docs/FRONTEND_SPEC.md`。
+- 组件安装方式：`shadcn-vue-cli.mdc`。
+- 本规则侧重**视觉统一与组件选用**，与 frontend-spec 互补。

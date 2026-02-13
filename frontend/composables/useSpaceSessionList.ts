@@ -46,6 +46,10 @@ export function useSpaceSessionList(options: {
   addTab: (view: string, appId?: string) => string
   currentView: Ref<string>
   activeTab: Ref<{ view: string; appId?: string } | null>
+  /** Matrix 待接受邀请列表 */
+  invitedSessions?: Ref<{ id: string; title: string }[]>
+  onAcceptInvite?: (id: string, title: string) => void | Promise<void>
+  onDeclineInvite?: (id: string) => void | Promise<void>
 }) {
   const router = useRouter()
   const {
@@ -61,6 +65,9 @@ export function useSpaceSessionList(options: {
     addTab,
     currentView,
     activeTab,
+    invitedSessions = ref([]),
+    onAcceptInvite,
+    onDeclineInvite,
   } = options
 
   const searchQuery = ref('')
@@ -240,17 +247,36 @@ export function useSpaceSessionList(options: {
     showAppList.value = false
   }
 
-  async function onSessionRename(id: string) {
+  const renameDialogOpen = ref(false)
+  const renameSessionId = ref<string>('')
+  const renameCurrentTitle = ref('')
+
+  function onSessionRename(id: string) {
     const c = displayChats.value.find((x) => x.id === id)
-    const currentTitle = c?.title ?? ''
-    const next = window.prompt('重命名会话', currentTitle)
-    if (next == null || next.trim() === '') return
-    const title = next.trim()
-    if (isMockSession(id)) {
-      mockTitleOverrides.value = { ...mockTitleOverrides.value, [id]: title }
+    renameSessionId.value = id
+    renameCurrentTitle.value = c?.title ?? ''
+    renameDialogOpen.value = true
+  }
+
+  function closeRenameDialog() {
+    renameDialogOpen.value = false
+    renameSessionId.value = ''
+    renameCurrentTitle.value = ''
+  }
+
+  async function confirmRename(title: string) {
+    const id = renameSessionId.value
+    const t = title.trim()
+    if (!id || !t) {
+      closeRenameDialog()
       return
     }
-    await renameSession(id, title)
+    if (isMockSession(id)) {
+      mockTitleOverrides.value = { ...mockTitleOverrides.value, [id]: t }
+    } else {
+      await renameSession(id, t)
+    }
+    closeRenameDialog()
   }
 
   async function onSessionDelete(id: string) {
@@ -303,9 +329,17 @@ export function useSpaceSessionList(options: {
     togglePin,
     onSessionRename,
     onSessionDelete,
+    renameDialogOpen,
+    renameSessionId,
+    renameCurrentTitle,
+    closeRenameDialog,
+    confirmRename,
     loadPinnedFromBackend,
     onDrawerAppClick,
     onDrawerMore,
     drawerAppActive,
+    invitedSessions,
+    onAcceptInvite,
+    onDeclineInvite,
   }
 }

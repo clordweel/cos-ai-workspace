@@ -39,6 +39,9 @@
         :get-non-read-count="getNonReadCount"
         :is-mock="isMockSession"
         :drawer-app-active="drawerAppActive"
+        :invited-sessions="invitedSessions"
+        :on-accept-invite="onAcceptInvite"
+        :on-decline-invite="onDeclineInvite"
         @update:pinned-collapsed="pinnedCollapsed = $event"
         @update:mock-collapsed="mockCollapsed = $event"
         @update:search-query="setSearchQuery"
@@ -149,6 +152,12 @@
       @select-solo="onCreateSessionSelectSolo"
       @select-contact="startNewChatWithContact"
     />
+    <SpaceRenameSessionDialog
+      :open="renameDialogOpen"
+      :current-title="renameCurrentTitle"
+      @close="closeRenameDialog"
+      @confirm="confirmRename"
+    />
   </div>
 </template>
 
@@ -193,12 +202,19 @@ const {
   togglePin,
   onSessionRename,
   onSessionDelete,
+  renameDialogOpen,
+  renameCurrentTitle,
+  closeRenameDialog,
+  confirmRename,
   startNewChat,
   toggleSearchBar,
   toggleAppList,
   onDrawerMore,
   onDrawerAppClick,
   drawerAppActive,
+  invitedSessions,
+  onAcceptInvite,
+  onDeclineInvite,
   showCreateSessionDialog,
   openCreateSessionDialog,
   onCreateSessionSelectSolo,

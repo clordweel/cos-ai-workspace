@@ -9,6 +9,7 @@
 | 架构与状态 | `docs/ARCHITECTURE.md`、`docs/PROJECT_STATUS.md` |
 | 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
+| 前端视觉/UI 组件 | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` |
 | Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md` |
 | 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc` |
 

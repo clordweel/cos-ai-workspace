@@ -13,6 +13,8 @@ import {
   getMatrixAdminUserId,
   getAccountData,
   setAccountData,
+  getInvitedRooms,
+  joinRoom,
 } from '../adapters/matrixClient.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import { config } from '../config.js';
@@ -589,6 +591,48 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       }
     }
   );
+
+  /** 待接受邀请列表（仅 Matrix：通过 sync 解析 rooms.invite） */
+  app.get('/api/sessions/invited', async (req, reply) => {
+    if (config.chat?.provider !== 'matrix') {
+      return reply.send({ invited: [] });
+    }
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (await requireMatrixToken(req, session, reply)) return;
+    try {
+      const list = await getInvitedRooms(session!.matrixAccessToken!);
+      const invited = list.map((r) => ({ id: r.roomId, title: r.name || r.roomId }));
+      return reply.send({ invited });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '拉取邀请列表失败',
+        message: e instanceof Error ? e.message : String(e),
+        invited: [],
+      });
+    }
+  });
+
+  /** 接受邀请（仅 Matrix：join 房间） */
+  app.post<{ Params: { id?: string } }>('/api/sessions/:id/join', async (req, reply) => {
+    if (config.chat?.provider !== 'matrix') {
+      return reply.code(501).send({ error: '当前后端不支持接受邀请' });
+    }
+    const roomId = req.params?.id;
+    if (!roomId) return reply.code(400).send({ error: 'session id is required' });
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (await requireMatrixToken(req, session, reply)) return;
+    try {
+      await joinRoom(roomId, session!.matrixAccessToken!);
+      return reply.send({ ok: true });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '接受邀请失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
 
   app.patch<{ Params: { id?: string }; Body: { title?: string } }>(
     '/api/sessions/:id',

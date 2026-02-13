@@ -212,6 +212,40 @@ export async function getJoinedRooms(userToken?: string): Promise<string[]> {
   return data.joined_rooms || [];
 }
 
+/** 邀请项：房间 id 与可选名称（来自 invite_state） */
+export interface InvitedRoom {
+  roomId: string;
+  name?: string;
+}
+
+/**
+ * 获取当前用户被邀请、尚未加入的房间列表（通过 /sync 解析 rooms.invite）
+ * @param userToken 必填，当前用户 token
+ */
+export async function getInvitedRooms(userToken: string): Promise<InvitedRoom[]> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('getInvitedRooms 需要用户 token', 0);
+  }
+  const res = await matrixFetchWithToken('/sync?timeout=0', {}, userToken);
+  const data = (await res.json()) as {
+    rooms?: {
+      invite?: Record<string, { invite_state?: { events?: Array<{ type?: string; content?: { name?: string } }> } }>;
+    };
+    error?: string;
+  };
+  if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  const invite = data.rooms?.invite ?? {};
+  const out: InvitedRoom[] = [];
+  for (const roomId of Object.keys(invite)) {
+    let name: string | undefined;
+    const events = invite[roomId]?.invite_state?.events ?? [];
+    const nameEv = events.find((e) => e.type === 'm.room.name');
+    if (nameEv?.content?.name != null) name = String(nameEv.content.name).trim() || undefined;
+    out.push({ roomId, name });
+  }
+  return out;
+}
+
 /**
  * 获取房间名称（state m.room.name）
  */

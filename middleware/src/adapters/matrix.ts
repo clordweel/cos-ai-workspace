@@ -13,12 +13,10 @@ import {
   redactRoomMessage,
   createRoom,
   inviteToRoom,
-  adminJoinUserToRoom,
   joinRoom,
   leaveRoom,
   setRoomName,
   verifyMatrixTokenUserId,
-  getMatrixAccessToken,
 } from './matrixClient.js';
 import { config } from '../config.js';
 import { runStreamWithParams } from '../services/difyStream.js';
@@ -262,24 +260,9 @@ export function createMatrixAdapter(): ChatBackendAdapter {
     async inviteToSession(params: InviteToSessionParams): Promise<void> {
       const { backendSessionId, sessionId, inviteeMxid, matrixAccessToken: userToken } = params;
       const roomId = backendSessionId || sessionId;
-      if (config.matrix.useAdminJoinForInvite) {
-        // Admin API 要求管理员本人已在房间内；房间由当前用户创建，管理员不在内，故先让管理员加入再拉人，最后管理员退房
-        const adminToken = await getMatrixAccessToken();
-        try {
-          await joinRoom(roomId, adminToken);
-        } catch {
-          // 可能已在房间（如重试）
-        }
-        try {
-          await adminJoinUserToRoom(roomId, inviteeMxid);
-        } finally {
-          await leaveRoom(roomId, adminToken);
-        }
-      } else {
-        // Client API 发送邀请，对方需接受后才在房间内
-        if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token（邀请模式）');
-        await inviteToRoom(roomId, inviteeMxid, userToken);
-      }
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      // 仅邀请制：Client API 发送邀请，对方需接受后才在房间内
+      await inviteToRoom(roomId, inviteeMxid, userToken);
     },
 
     async deleteSession(params: DeleteSessionParams): Promise<void> {

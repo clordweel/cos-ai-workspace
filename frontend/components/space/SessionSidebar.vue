@@ -59,6 +59,9 @@
             :get-chat-date-label="getChatDateLabel"
             :get-non-read-count="getNonReadCount"
             :is-mock="isMock"
+            :invited-sessions="invitedSessions ?? []"
+            :on-accept-invite="onAcceptInvite"
+            :on-decline-invite="onDeclineInvite"
             @update:pinned-collapsed="emit('update:pinnedCollapsed', $event)"
             @update:mock-collapsed="emit('update:mockCollapsed', $event)"
             @session-click="emit('session-click', $event)"
@@ -115,6 +118,9 @@ defineProps<{
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
   drawerAppActive: (app: DrawerAppItem) => boolean
+  invitedSessions?: { id: string; title: string }[]
+  onAcceptInvite?: (id: string, title: string) => void
+  onDeclineInvite?: (id: string) => void
 }>()
 
 function onNewChat() {

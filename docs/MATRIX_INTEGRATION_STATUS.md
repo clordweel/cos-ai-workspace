@@ -68,7 +68,6 @@
 | `MATRIX_SERVER_NAME` | MXID 域名（如 `10.1.1.15`） |
 | `MATRIX_USER_ID` + `MATRIX_PASSWORD` \| `MATRIX_ACCESS_TOKEN` | 仅 Admin API（ensureMatrixUser、setMatrixPasswordByAdmin、可选邀请直接加入），不参与会话 |
 | `MATRIX_BOT_USER_ID` + `MATRIX_BOT_ACCESS_TOKEN` | 可选：助手回复写入房间时以该 bot 身份发送，不配则仅经 SSE 推前端 |
-| `MATRIX_INVITE_USE_ADMIN_JOIN` | 不设或 `true` = 邀请时用 Admin API 直接将会员加入房间（免邀请）；`false` = 用 Client API 发送邀请，对方需接受 |
 
 ### 3.2 deploy/matrix 部署
 
@@ -79,10 +78,9 @@
 
 ## 四、邀请与发消息流程（已修复）
 
-### 4.0.1 邀请方式开关
+### 4.0.1 邀请制
 
-- **MATRIX_INVITE_USE_ADMIN_JOIN**（默认 true）：使用 Synapse Admin API `POST /_synapse/admin/v1/join/:room_id` 直接将会员加入房间，对方无需接受邀请即可在房间内收消息。
-- 设为 **false**：使用 Client API 邀请（`/rooms/:id/invite`），对方会收到邀请事件，需接受后才在房间内。
+- 仅使用 **Client API 邀请**（`/rooms/:id/invite`）：创建会话后邀请对方，对方会收到邀请事件，需在「待接受邀请」中**接受**后才加入房间并收消息。前端提供待接受邀请列表与接受/拒绝操作。
 
 ### 4.0.2 「邀请后发消息对方收不到」的修复
 
