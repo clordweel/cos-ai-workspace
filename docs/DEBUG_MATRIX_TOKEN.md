@@ -79,7 +79,7 @@ curl -s -X POST -b "auth_session=YOUR_SESSION_ID" \
   "hasTokenAfterRefresh": true,
   "tokenUserId": "@admin:10.1.1.15",
   "isAdminToken": true,
-  "hint": "刷新后仍为 admin token，请检查 MAS/Synapse 配置或用户是否即 admin"
+  "hint": "刷新后仍为 admin token，请检查 Synapse/Admin 配置或用户是否即 admin"
 }
 ```
 
@@ -93,21 +93,14 @@ curl -s -X POST -b "auth_session=YOUR_SESSION_ID" \
 
 ## 5. Trace 逐步排查（matrix-trace）
 
-需 Cookie，逐步跟踪 MAS/Admin 路径：
+需 Cookie，逐步跟踪 token 获取路径（含可选的 MAS 步骤）：
 
 ```bash
 curl -s -b "auth_session=YOUR_SESSION_ID" \
   http://127.0.0.1:3000/api/debug/matrix-trace | jq
 ```
 
-返回各步骤状态，包括：
-- `1.getMasUserByUsername`：MAS 中是否有用户
-- `2.ensureMatrixUser`：若 MAS 无用户则创建 Synapse 用户
-- `3.getMasUserByUsername_retry`：ensure 后重查 MAS
-- `4.createMasUser_fallback`：若 MAS 仍无则补建
-- `5.createPersonalSession`：创建 Personal Session，含 `tokenUserId`、`isAdminToken`、`needsFallback`
-
-若 `needsFallback: true` 表示 MAS 返回了 admin token，会回退到「MAS 设密 + login」路径（参考 Element/Cinny）。可调用 `POST /api/debug/matrix-force-refresh` 测试完整流程。
+返回各步骤状态；若 `needsFallback: true` 表示会回退到设密 + login 路径。可再调用 `POST /api/debug/matrix-force-refresh` 测试完整流程。
 
 ## 6. 获取 Cookie
 

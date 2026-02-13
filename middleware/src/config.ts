@@ -26,9 +26,8 @@ export interface Config {
     /** 可选：bot 的 access token，配置后助手回复会以 bot 身份发到 Matrix 房间 */
     botAccessToken: string;
   };
-  /** MAS Personal Session：配置后优先用 MAS Admin API 签发 token，不再依赖密码/Admin 设密 */
+  /** 可选 MAS：配置后用于 Personal Session 与 set-password 回退，见 masAdminApi.ts */
   mas: {
-    /** MAS 根 URL，与 MATRIX_BASE_URL 同源（nginx 已将 /api、/oauth2 转 MAS） */
     baseUrl: string;
     clientId: string;
     clientSecret: string;

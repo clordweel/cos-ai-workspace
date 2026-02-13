@@ -29,58 +29,9 @@
    docker compose up -d
    ```
 
-## MAS（Matrix Authentication Service）部署（可选）
+## 可选：MAS 扩展
 
-MAS 将 Matrix 认证委托到独立服务，支持 OAuth2/OIDC、Personal Session 等，便于中间层无密码获取 token。详见 `docs/MAS_AND_AS_RESEARCH.md`。
-
-### 前置条件
-
-- 已完成 `./bootstrap.sh`，存在 `data/homeserver.yaml`
-- `.env` 中已设置 `SYNAPSE_SERVER_NAME`、`POSTGRES_PASSWORD`
-
-### 部署步骤
-
-```bash
-chmod +x bootstrap-mas.sh
-./bootstrap-mas.sh
-```
-
-脚本会：
-
-1. 生成 MAS 配置（`mas-config/config.yaml`、`override.yaml`）
-2. 配置 passwords 支持 bcrypt（兼容 Synapse 迁移）
-3. 停止 Synapse/MAS 后临时暴露数据库端口，执行 `syn2mas` 将现有用户迁移到 MAS
-4. 写入 Synapse `matrix_authentication_service`，启动 nginx、Synapse、MAS
-
-### 部署后
-
-- Matrix 端口仍为 8008，经 nginx 转发：`/login`、`/logout`、`/refresh` 由 MAS 处理
-- **Element 自动发现**：bootstrap 会生成 `well-known/matrix/client`，解决「Failed to get autodiscovery configuration」。存量部署可执行 `./generate-well-known.sh` 后 `docker compose ... restart nginx`
-- 迁移后用户可用原 Synapse 密码登录
-- 保存 `.env` 中的 `MAS_SECRET`，中间层接入 Personal Session 时需用
-- **Admin API（如 set-password）**：bootstrap 已加入 `policy.data.admin_users: ["admin"]` 并设置 `can_request_admin`。若仍报 "You are not a server admin"，可在工作区 `.env` 配置 `MATRIX_ACCESS_TOKEN`。签发方式：在 Matrix 部署机执行 `./issue-admin-token.sh`，将输出的 token 写入 `.env`。详见 `docs/LOGTO_MATRIX_USERNAME_MAPPING.md`
-- **密码修改功能**：bootstrap 已写入 `account.password_change_allowed: true`。若 Synapse 返回「Password change disabled」（MAS 下常见），中间层会自动回退到 MAS Admin API 设密，需配置 `MAS_ADMIN_CLIENT_ID`、`MAS_ADMIN_CLIENT_SECRET`。存量部署且仍失败时，在 `mas-config/override.yaml` 增加：
-  ```yaml
-  account:
-    password_change_allowed: true
-  ```
-  然后执行 `docker compose -f docker-compose.yml -f docker-compose.mas.yml restart mas`
-
-### 已知限制
-
-- `syn2mas` 需 host 网络访问数据库，bootstrap 会临时暴露 postgres:5433、mas-postgres:5434，迁移后自动移除
-- 若 Synapse 有 Logto 等 OIDC 用户，迁移时会加 `--ignore-missing-auth-providers`，需后续在 MAS 中配置对应 upstream
-
-### 方案 A：禁用 MAS 回退纯 Synapse
-
-若 MAS 存在实现问题，可回退到 Synapse 原生认证。详见 `docs/MAS_ALTERNATIVES_RESEARCH.md`。
-
-**步骤**：
-1. 在 deploy/matrix 目录执行：`chmod +x disable-mas.sh && ./disable-mas.sh`
-2. 切换 compose：`docker compose -f docker-compose.yml -f docker-compose.no-mas.yml up -d`（替代 docker-compose.mas.yml）
-3. 工作区 `.env`：不配置或注释 `MAS_ADMIN_CLIENT_ID`、`MAS_ADMIN_CLIENT_SECRET`
-
-可选：配置 `MATRIX_PASSWORD_ENCRYPTION_KEY`（32+ 字符）与 `LOGTO_M2M_*`，将 Matrix 密码加密持久化到 Logto customData
+若需 Matrix Authentication Service（OAuth2/OIDC、Personal Session），可执行 `./bootstrap-mas.sh`，并配合 `docker-compose.mas.yml`、`nginx-mas.conf`。MAS 相关脚本与说明保留在本目录；调研文档已归档至 `docs/archive/mas/`，主流程以 Synapse 单机为准。
 
 ## 配置说明
 
@@ -116,6 +67,21 @@ registration_shared_secret: "<随机长字符串>"
 docker compose exec synapse register_new_matrix_user -c /data/homeserver.yaml http://localhost:8008
 # 按提示创建用户，之后可删除 registration_shared_secret 并重启
 ```
+
+## 创建 Dify AI 助手 Bot 账号（可选）
+
+当需要将助手回复以 **bot 身份**写入 Matrix 房间时，需在 Synapse 上创建专用 bot 用户，并在中间层配置 `MATRIX_BOT_USER_ID` 与 `MATRIX_BOT_ACCESS_TOKEN`（见 `docs/MATRIX_INTEGRATION_STATUS.md`）。
+
+**步骤**：以 root 用户 SSH 登录 Matrix 部署服务器，进入本目录（若部署在 `/root/matrix` 则 `cd /root/matrix`），执行：
+
+```bash
+chmod +x create-dify-bot.sh
+./create-dify-bot.sh
+```
+
+脚本会创建用户 `ai-assistant`（MXID 如 `@ai-assistant:10.1.1.15`）、输出 **MATRIX_BOT_USER_ID** 与 **MATRIX_BOT_ACCESS_TOKEN**，请将二者写入**工作区**（中间层）的 `.env`。若已启用 MAS，且脚本无法获取 token，请按脚本内提示改用 Admin API 签发或临时禁用 MAS 后重试。
+
+**注意**：若 bot 用户已存在，请先用 Synapse Admin API 重置该用户密码或删除用户后再运行脚本。
 
 ## Logto OIDC 登录（可选）
 
@@ -164,7 +130,7 @@ Synapse 本身无官方 Web 管理界面，可使用第三方 **Synapse Admin** 
 
 - **项目**：[etkecc/synapse-admin](https://github.com/etkecc/synapse-admin)（维护中的 Synapse 管理台）
 - **使用方式**：
-  - **CDN 版**：打开 <https://admin.etke.cc>。MAS 下「凭证」可能不显示用户名/密码输入框，请用**「Access Token」**标签，在部署机执行 `./issue-admin-token.sh admin` 获取 token 后粘贴登录
+  - **CDN 版**：打开 <https://admin.etke.cc>。登录时用**「Access Token」**标签：在部署机执行 `./issue-admin-token-synapse.sh <admin密码>`，将输出 token 粘贴
   - **自建**：将 Synapse Admin 部署到自有域名（如 `https://matrix.你的域名/admin`），详见项目 README
 - **功能**：用户列表与权限、房间查看/删除、媒体管理；部分版本支持服务器状态与定时任务
 

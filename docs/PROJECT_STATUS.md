@@ -71,9 +71,6 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **架构** | `docs/ARCHITECTURE.md` | 数据流、约束、适配器与认证 |
 | **认证与用户配置** | `docs/AUTH_AND_USER_CONFIG.md` | Logto 统一认证、用户偏好 customData、API、Matrix 同步配置 |
 | **Logto + Matrix 流程** | `docs/LOGTO_MATRIX_AUTH_FLOW.md` | Matrix 密码设置/修改、与 Logto 的关系 |
-| **MAS 与 AS 调研** | `docs/MAS_AND_AS_RESEARCH.md` | MAS/Appservice 对改进 Matrix token 获取的可行性 |
-| **MAS 替代方案调研** | `docs/MAS_ALTERNATIVES_RESEARCH.md` | MAS 硬伤分析、禁用回退、AS/直连等替代方案 |
-| **MAS 与 Logto 整合根因** | `docs/MAS_LOGTO_ROOT_CAUSE_ANALYSIS.md` | MAS 无法实现 Logto 一次授权的根本原因分析 |
 | **Matrix 整合现状** | `docs/MATRIX_INTEGRATION_STATUS.md` | 整合架构、Token 流程、已发现问题与改进建议 |
 | **Matrix 最佳实践** | `docs/MATRIX_CLIENT_BEST_PRACTICES.md` | 限流、token、分页、3PID、登录 identifier 等（来自 matrix-js-sdk、Element、规范） |
 | **Matrix 中间层审查** | `docs/MIDDLEWARE_MATRIX_REVIEW.md` | 中间层 Matrix 实现审查与改进建议 |

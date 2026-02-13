@@ -19,16 +19,16 @@
 ### 2. 会话用 token 的自动获取
 
 - 当 `GET /api/auth/me` 或会话相关 API 被调用且会话有 `logtoSub` 但无 `matrixAccessToken` 时，中间层调用 `ensureMatrixTokenForSession(session)`。
-- **方案 A**（禁用 MAS，推荐）：Admin 设随机密码 + Matrix 登录。密码优先从缓存读取；配置 `MATRIX_PASSWORD_ENCRYPTION_KEY` + M2M 时加密持久化到 Logto customData。
-- **MAS 方案**（已配置 MAS_ADMIN_CLIENT_ID/SECRET，当前存在实现问题）：Personal Session 或 Admin 设密回退。
+- **默认**：Admin 设随机密码 + Matrix 登录。密码优先从缓存读取；配置 `MATRIX_PASSWORD_ENCRYPTION_KEY` + M2M 时加密持久化到 Logto customData。
+- 可选：配置 `MAS_ADMIN_CLIENT_ID` / `MAS_ADMIN_CLIENT_SECRET` 时，中间层会尝试 MAS Personal Session 等路径（见 `masAdminApi.ts`）。
 - 用户无需在前端进行任何 Matrix 登录或设置密码操作。
 
 ### 3. 不存在 / 已停用用户处理
 
 | 情况 | 行为 | 401 提示 |
 |------|------|----------|
-| **MAS 中不存在** | 回退到 Admin 设密；若 Synapse 404 则 `ensureMatrixUser` 创建 | — |
-| **MAS 中已停用** | 首次请求时回退到 Admin 失败 → `Matrix 用户已停用`；**Logto 重新授权后**，`ensureMatrixUser` 会调用 MAS reactivate + 设密并继续同步，账号自动恢复 | — |
+| 用户不存在 | 回退到 Admin 设密；若 Synapse 404 则 `ensureMatrixUser` 创建 | — |
+| 用户已停用 | 首次请求时回退失败 → `Matrix 用户已停用`；Logto 重新授权后 `ensureMatrixUser` 会尝试恢复并同步 | — |
 | **ensureMatrixUser 失败** | 无法创建用户，返回 401 | `用户未同步到 Matrix，请联系管理员` |
 | **其他失败**（登录错误等） | 返回 401 | `无法使用会话，请稍后重试` |
 
@@ -39,7 +39,7 @@
 | 能力 | 接口 | 说明 |
 |------|------|------|
 | 修改 Logto 密码 | `POST /api/auth/logto/change-password` | 需 Logto 登录；body: `{ new_password }`；无需当前密码，使用 Management API。 |
-| 设置 Matrix 密码（可选） | `POST /api/auth/matrix/set-password` | 需 Logto 登录；body: `{ new_password }`。若需在 Element 等客户端用同一 Matrix 账号，可调此接口设可知密码；本应用内会话不依赖此项。启用 MAS 时需 admin 具 Synapse admin scope（见 `docs/LOGTO_MATRIX_USERNAME_MAPPING.md`）。 |
+| 设置 Matrix 密码（可选） | `POST /api/auth/matrix/set-password` | 需 Logto 登录；body: `{ new_password }`。若需在 Element 等客户端用同一 Matrix 账号，可调此接口设可知密码；本应用内会话不依赖此项。 |
 | Matrix 登录（可选） | `POST /api/auth/matrix/login` | 无需 Logto；body: `{ identifier, password }`。前端已移除该入口；本应用仅用 Logto 登录。 |
 
 前端入口：

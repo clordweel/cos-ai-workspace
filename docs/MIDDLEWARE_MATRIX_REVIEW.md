@@ -63,7 +63,7 @@
 
 **问题**：未设置 `AbortSignal` 或超时，网络异常时请求可能长时间挂起。
 
-**建议**：为 Matrix/Synapse/MAS 请求增加合理超时（如 15–30 秒），使用 `AbortController`。
+**建议**：为 Matrix/Synapse 请求增加合理超时（如 15–30 秒），使用 `AbortController`。
 
 ### 7. m.id.phone 登录格式可能不当
 
@@ -103,7 +103,7 @@
 - 会话操作一律使用用户 token，避免消息/房间归属错误。
 - 修改密码流程：先登录取 token，再调 `/account/password`，auth 对象格式正确。
 - 房间消息 `dir: 'b'` 与前端 `reverse()` 的配合正确。
-- MAS 与 Synapse 的配合逻辑（创建、停用、激活、设密）清晰，回退路径合理。
+- 可选 MAS 路径（Personal Session、设密回退）见 `masAdminApi.ts`，回退路径清晰。
 
 ---
 
