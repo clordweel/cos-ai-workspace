@@ -80,16 +80,15 @@ withDefaults(
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-dasharray: 1;
+  stroke-dashoffset: 1; /* 与 keyframes 0% 一致，避免首帧前出现“整条描边”定格 */
   fill-opacity: 0;
 }
 
 .logo-animated .logo-path--curve {
-  stroke-dashoffset: 1;
   animation: logo-path-draw-curve 3.2s ease-in-out infinite;
 }
 
 .logo-animated .logo-path--line {
-  stroke-dashoffset: 1;
   animation: logo-path-draw-line 3.2s ease-in-out 0.45s infinite;
 }
 

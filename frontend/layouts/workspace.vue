@@ -4,18 +4,26 @@
     <Transition name="app-loading-fade">
       <div
         v-if="showLoadingOverlay"
-        class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-zinc-50/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 backdrop-blur-sm"
+        class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 bg-zinc-50/80 dark:bg-zinc-900/80 text-zinc-600 dark:text-zinc-400 backdrop-blur-sm"
         aria-live="polite"
         aria-busy="true"
         role="status"
       >
-        <Logo
-          :size="100"
-          color="currentColor"
-          class="text-zinc-700 dark:text-zinc-200"
-          :animated="true"
-          :loading="false"
-        />
+        <!-- Logo 与字标同一块出现，避免“先只有图标、后出文字”的两段感 -->
+        <div class="flex flex-col items-center justify-center gap-5 w-[140px] opacity-100">
+          <Logo
+            :size="100"
+            color="currentColor"
+            class="text-zinc-700 dark:text-zinc-200 shrink-0"
+            :animated="true"
+            :loading="false"
+          />
+          <CosAiWordmark
+            :width="120"
+            :height="28"
+            class="text-zinc-800 dark:text-zinc-100 shrink-0"
+          />
+        </div>
       </div>
     </Transition>
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -269,10 +277,10 @@ watch(() => route.query?.auth_error, (authError) => {
   transform: translateX(0.5rem);
 }
 
-/* 首屏加载遮罩：淡入淡出 */
+/* 首屏加载遮罩：短淡入避免“先只有图标、后出文字”的两段感 */
 .app-loading-fade-enter-active,
 .app-loading-fade-leave-active {
-  transition: opacity 0.2s ease;
+  transition: opacity 0.12s ease;
 }
 .app-loading-fade-enter-from,
 .app-loading-fade-leave-to {

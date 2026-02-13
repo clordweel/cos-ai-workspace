@@ -310,7 +310,7 @@
               </div>
               <template v-else>
                 <p class="text-[11px] text-zinc-500 dark:text-zinc-400 text-center">
-                  使用单点登录进入工作台，认证由中间层与 Logto 保持。
+                  使用单点登录进入工作空间，认证由中间层与 Logto 保持。
                 </p>
                 <p v-if="logtoQueryError" class="text-xs text-red-600 dark:text-red-400 text-center">{{ logtoQueryError }}</p>
                 <button
@@ -355,9 +355,9 @@
               <section class="space-y-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">关于</h3>
                 <div class="rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-3">
-                  <h4 class="text-base font-semibold text-zinc-800 dark:text-zinc-100">AI COS 工作台</h4>
+                  <h4 class="text-base font-semibold text-zinc-800 dark:text-zinc-100">COS&AI 工作空间</h4>
                   <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    基于对话流的智能协作工作台，支持物料、订单、BOM 等业务查询与操作，并与 Dify 等 AI 能力打通。
+                    基于对话流的智能协作工作空间，支持物料、订单、BOM 等业务查询与操作，并与 Dify 等 AI 能力打通。
                   </p>
                   <dl class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
                     <dt class="text-zinc-500 dark:text-zinc-400">版本</dt>

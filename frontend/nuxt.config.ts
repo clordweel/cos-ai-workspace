@@ -34,7 +34,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'AI COS 工作台',
+      title: 'COS&AI 工作空间',
       meta: [{ name: 'theme-color', content: '#0a0a0a' }],
     },
   },
