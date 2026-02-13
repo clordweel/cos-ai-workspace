@@ -37,6 +37,7 @@
 | `MATRIX_USER_ID` | Matrix 用户 ID（如 `@workbench:10.1.1.15`） |
 | `MATRIX_PASSWORD` | 登录密码（与 MATRIX_ACCESS_TOKEN 二选一） |
 | `MATRIX_ACCESS_TOKEN` | 已有 access token 时可直接填，免登录 |
+| `MATRIX_INVITE_USE_ADMIN_JOIN` | 邀请方式：不设或 `true` = Admin API 直接将会员加入房间（免邀请）；`false` = Client API 发送邀请，对方需接受 |
 
 ## 开发
 

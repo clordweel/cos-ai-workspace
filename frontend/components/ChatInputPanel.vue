@@ -408,7 +408,7 @@ const mentionMenuAppendTo = () => (typeof document !== 'undefined' ? document.bo
 
 /** UEditor Mention 菜单项：联系人 + 机器人，格式为 Nuxt UI EditorMentionMenuItem */
 const mentionMenuItems = computed(() => {
-  const fromContacts = contacts.map((c) => ({ label: c.name, id: c.id }))
+  const fromContacts = contacts.value.map((c) => ({ label: c.name, id: c.id }))
   const fromBots = bots.map((b) => ({ label: b.name, id: b.id }))
   return [...fromContacts, ...fromBots]
 })

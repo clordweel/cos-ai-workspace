@@ -48,6 +48,7 @@ export function useSpaceChatPane(options: {
   const config = useRuntimeConfig()
   const router = useRouter()
   const apiBase = useApiBase()
+  const { deleteSession } = useChatSessionsApi()
   const input = ref('')
   const streaming = ref(false)
   const streamAbortRef = ref<AbortController | null>(null)
@@ -226,7 +227,7 @@ export function useSpaceChatPane(options: {
         (delta) => { streamContentBuffer.value += delta },
         {
           signal: streamAbortRef.value?.signal,
-          conversationId: getConversationId(currentId),
+          conversationId: getConversationId(currentId) ?? currentId,
           replyToMessageId,
           botIds: botIds.length ? botIds : undefined,
           onSessionCreated: (payload) => {
@@ -461,7 +462,12 @@ export function useSpaceChatPane(options: {
     if (chatId.value && onRenameSession) onRenameSession(chatId.value)
   }
   function onArchiveChat() { /* TODO */ }
-  function onDeleteChat() { /* TODO */ }
+  async function onDeleteChat() {
+    const id = chatId.value
+    if (!id) return
+    const ok = await deleteSession(id)
+    if (ok) router.replace('/space')
+  }
 
   function onEditMessage(_index: number) { /* TODO */ }
   function onViewEditHistory(_index: number) { /* TODO */ }

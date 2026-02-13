@@ -34,8 +34,8 @@ export function useSpacePage() {
   const config = useRuntimeConfig()
   const chatProvider = (config.public?.chatProvider as string) || ''
 
-  const { loadSessions, loadSessionMessages, createSession } = useChatSessionsApi()
-  const { getWithTitle } = useContactsAndBots()
+  const { loadSessions, loadSessionMessages, createSession, inviteToSession } = useChatSessionsApi()
+  const { getWithTitle, contacts } = useContactsAndBots()
   const { openPanel, openNavPage, addTab, currentView, activeTab } = useAppView()
 
   const mockSessionListEnabled = useMockSessionListEnabled()
@@ -73,6 +73,7 @@ export function useSpacePage() {
 
   const creatingSession = ref(false)
   const createSessionError = ref<string | null>(null)
+  const showCreateSessionDialog = ref(false)
 
   async function startNewChat() {
     createSessionError.value = null
@@ -98,6 +99,45 @@ export function useSpacePage() {
     router.push(`/space/${id}`)
   }
 
+  /** 点击「新会话」时打开弹窗选择 Solo 或对话人（Matrix 时）；mock 时直接创建 */
+  function openCreateSessionDialog() {
+    createSessionError.value = null
+    if (chatProvider !== 'matrix') {
+      startNewChat()
+      return
+    }
+    showCreateSessionDialog.value = true
+  }
+
+  async function startNewChatWithContact(contact: { id: string; name: string }) {
+    createSessionError.value = null
+    creatingSession.value = true
+    try {
+      const id = await createSession(contact.name)
+      if (!id) {
+        createSessionError.value = '创建会话失败，请刷新后重试'
+        return
+      }
+      const invited = await inviteToSession(id, contact.id)
+      ensureChat(id, contact.name)
+      setConversationId(id, id)
+      router.push(`/space/${id}`)
+      showCreateSessionDialog.value = false
+      if (!invited) {
+        createSessionError.value = '会话已创建，邀请对方失败，可在会话中重试'
+      }
+    } catch (e) {
+      createSessionError.value = e instanceof Error ? e.message : '创建会话失败，请刷新后重试'
+    } finally {
+      creatingSession.value = false
+    }
+  }
+
+  function onCreateSessionSelectSolo() {
+    startNewChat()
+    showCreateSessionDialog.value = false
+  }
+
   const chatScrollElRef = ref<HTMLElement | null>(null)
 
   const listApi = useSpaceSessionList({
@@ -107,7 +147,7 @@ export function useSpacePage() {
     getNonReadCount,
     ensureChat,
     goToChat,
-    startNewChat,
+    startNewChat: openCreateSessionDialog,
     openPanel: (view?: string) => openPanel(view as any),
     openNavPage,
     addTab: (view: string, appId?: string) => addTab(view as any, appId),
@@ -215,6 +255,11 @@ export function useSpacePage() {
     openAddParticipant,
     openPanel,
     startNewChat,
+    openCreateSessionDialog,
+    showCreateSessionDialog,
+    onCreateSessionSelectSolo,
+    startNewChatWithContact,
+    contacts,
     creatingSession,
     createSessionError,
     ...listApi,

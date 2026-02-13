@@ -24,6 +24,7 @@ import {
   setMatrixPasswordByAdmin,
   ensureMatrixUser,
   deactivateMatrixUser,
+  listSynapseUsers,
 } from '../services/matrixUserSync.js';
 import {
   setStoredMatrixPassword,
@@ -307,6 +308,23 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     const session = await getSessionFromCookie(req.headers.cookie);
     if (session) await logoutSession(session.sessionId);
     reply.clearCookie(cookieName, { path: '/' }).send({ ok: true });
+  });
+
+  /** 联系人列表：CHAT_PROVIDER=matrix 时返回 Synapse 用户，否则返回空数组；需登录 */
+  app.get('/api/contacts', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session) {
+      return reply.code(401).send({ error: '请先登录' });
+    }
+    if (config.chat?.provider !== 'matrix') {
+      return reply.send({ contacts: [] });
+    }
+    const result = await listSynapseUsers();
+    if (!result.ok) {
+      req.log.warn({ err: result.error, statusCode: result.statusCode }, 'listSynapseUsers 失败');
+      return reply.send({ contacts: [] });
+    }
+    return reply.send({ contacts: result.contacts });
   });
 
   app.post('/api/auth/matrix/login', async (req, reply) => {

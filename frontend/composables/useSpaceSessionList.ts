@@ -261,7 +261,7 @@ export function useSpaceSessionList(options: {
     }
     await deleteSession(id)
     if (chatId.value === id) {
-      router.push('/space')
+      router.replace('/space')
     }
   }
 

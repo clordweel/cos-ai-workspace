@@ -66,8 +66,9 @@
 | `CHAT_PROVIDER` | `mock`（默认）\| `matrix` |
 | `MATRIX_BASE_URL` | Synapse 根 URL（如 `http://10.1.1.15:8008`） |
 | `MATRIX_SERVER_NAME` | MXID 域名（如 `10.1.1.15`） |
-| `MATRIX_USER_ID` + `MATRIX_PASSWORD` \| `MATRIX_ACCESS_TOKEN` | 仅 Admin API（ensureMatrixUser、setMatrixPasswordByAdmin），不参与会话 |
+| `MATRIX_USER_ID` + `MATRIX_PASSWORD` \| `MATRIX_ACCESS_TOKEN` | 仅 Admin API（ensureMatrixUser、setMatrixPasswordByAdmin、可选邀请直接加入），不参与会话 |
 | `MATRIX_BOT_USER_ID` + `MATRIX_BOT_ACCESS_TOKEN` | 可选：助手回复写入房间时以该 bot 身份发送，不配则仅经 SSE 推前端 |
+| `MATRIX_INVITE_USE_ADMIN_JOIN` | 不设或 `true` = 邀请时用 Admin API 直接将会员加入房间（免邀请）；`false` = 用 Client API 发送邀请，对方需接受 |
 
 ### 3.2 deploy/matrix 部署
 
@@ -76,9 +77,23 @@
 
 ---
 
-## 四、发现的问题
+## 四、邀请与发消息流程（已修复）
 
-### 4.1 【高】Matrix Token 过期未校验
+### 4.0.1 邀请方式开关
+
+- **MATRIX_INVITE_USE_ADMIN_JOIN**（默认 true）：使用 Synapse Admin API `POST /_synapse/admin/v1/join/:room_id` 直接将会员加入房间，对方无需接受邀请即可在房间内收消息。
+- 设为 **false**：使用 Client API 邀请（`/rooms/:id/invite`），对方会收到邀请事件，需接受后才在房间内。
+
+### 4.0.2 「邀请后发消息对方收不到」的修复
+
+- **原因**：前端发流式消息时若未带 `conversation_id`（或映射未就绪），中间层会认为无当前会话而新建房间并发消息到新房间，导致对方仍在原房间收不到消息。
+- **修复**：前端在调用 `POST /api/chat/stream` 时使用 `conversationId: getConversationId(currentId) ?? currentId`，确保有会话时始终带上房间 id，避免误建新会话。
+
+---
+
+## 五、发现的问题
+
+### 5.1 【高】Matrix Token 过期未校验
 
 **现象**：`requireMatrixToken` 和 `ensureMatrixTokenForSession` 仅检查 `session.matrixAccessToken` 是否存在，不检查 `matrixTokenExpiresAt`。
 
@@ -88,7 +103,7 @@
 
 ---
 
-### 4.2 【中】用户名映射与历史用户不一致
+### 5.2 【中】用户名映射与历史用户不一致
 
 **现象**：Logto 用户曾用 `logtoSub` 创建 Matrix 用户（如 `@usr_xyz:server`），现改用 `username`（如 `mahaibo`），MXID 变为 `@mahaibo:server`，与既有用户不一致。
 
@@ -96,7 +111,7 @@
 
 ---
 
-### 4.3 【低】invite 时 inviteeUserId 的 MXID 解析
+### 5.3 【低】invite 时 inviteeUserId 的 MXID 解析
 
 **代码**：`chat.ts` 中 `inviteeMxid = inviteeUserId.includes(':') ? inviteeUserId : getMatrixUserId(inviteeUserId)`。
 
@@ -106,19 +121,19 @@
 
 ---
 
-### 4.4 【低】会话列表 updatedAt 非真实最后活动时间
+### 5.4 【低】会话列表 updatedAt 非真实最后活动时间
 
 **现象**：Matrix 适配器对所有房间使用 `updatedAt: Date.now()`，列表顺序不是按房间最后活动时间。需额外请求（如 `/sync` 或每房间最新事件）才能得到真实时间，见 `docs/SESSION_MATRIX_ANALYSIS.md` §2.2。
 
 ---
 
-### 4.5 【低】Logto 未返回 username 时的 MXID
+### 5.5 【低】Logto 未返回 username 时的 MXID
 
 **现象**：`userProfile.username` 为空时回退到 `logtoSub`，得到类似 `@usr_abc123:server` 的 MXID。需在 Logto 管理台或 `claims_imports` 中配置 `username`。
 
 ---
 
-## 五、相关文件速查
+## 六、相关文件速查
 
 | 职责 | 文件 |
 |------|------|

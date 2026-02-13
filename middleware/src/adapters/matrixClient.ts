@@ -449,6 +449,33 @@ export async function inviteToRoom(
   }
 }
 
+const ADMIN_JOIN_PATH = '/_synapse/admin/v1/join';
+
+/**
+ * 使用 Synapse Admin API 将用户直接加入房间（免邀请，无需对方接受）
+ * 管理员需已在房间内且具备邀请权限；仅支持本服用户。
+ * @param roomId 房间 ID（如 !xxx:server）
+ * @param userId 被加入用户的 MXID
+ */
+export async function adminJoinUserToRoom(roomId: string, userId: string): Promise<void> {
+  const token = await getMatrixAccessToken();
+  const { matrix } = config;
+  const encoded = encodeURIComponent(roomId);
+  const url = `${matrix.baseUrl}${ADMIN_JOIN_PATH}/${encoded}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const data = (await res.json().catch(() => ({}))) as { error?: string; errcode?: string };
+  if (!res.ok) {
+    throw new MatrixApiError(data.error || data.errcode || res.statusText, res.status, data);
+  }
+}
+
 /**
  * 加入房间（如接受邀请后 join）
  * @param token 不传则用管理员 token（bot 加入）

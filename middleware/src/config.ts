@@ -25,6 +25,11 @@ export interface Config {
     botUserId: string;
     /** 可选：bot 的 access token，配置后助手回复会以 bot 身份发到 Matrix 房间 */
     botAccessToken: string;
+    /**
+     * 邀请方式：true（默认）= 使用 Admin API 直接将会员加入房间（免邀请）；
+     * false = 使用 Client API 发送邀请，对方需接受后才在房间内。
+     */
+    useAdminJoinForInvite: boolean;
   };
   /** 可选 MAS：配置后用于 Personal Session 与 set-password 回退，见 masAdminApi.ts */
   mas: {
@@ -79,6 +84,7 @@ export const config: Config = {
     password: process.env.MATRIX_PASSWORD || '',
     botUserId: (process.env.MATRIX_BOT_USER_ID || '').trim(),
     botAccessToken: (process.env.MATRIX_BOT_ACCESS_TOKEN || '').trim(),
+    useAdminJoinForInvite: process.env.MATRIX_INVITE_USE_ADMIN_JOIN !== 'false',
   },
   mas: {
     baseUrl: (process.env.MATRIX_BASE_URL || 'http://10.1.1.15:8008').replace(/\/$/, ''),

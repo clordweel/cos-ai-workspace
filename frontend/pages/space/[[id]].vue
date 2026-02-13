@@ -47,7 +47,7 @@
         @toggle-pin="togglePin"
         @rename="onSessionRename"
         @delete="onSessionDelete"
-        @new-chat="startNewChat"
+        @new-chat="openCreateSessionDialog"
         @search="toggleSearchBar"
         @app="toggleAppList"
         @more="onDrawerMore"
@@ -136,10 +136,19 @@
           v-if="!chatId || showChatPlaceholderOnFirstLoad"
           :creating-session="creatingSession"
           :create-session-error="createSessionError"
-          @new-chat="startNewChat"
+          @new-chat="openCreateSessionDialog"
         />
       </main>
     </div>
+    <SpaceCreateSessionDialog
+      :open="showCreateSessionDialog"
+      :contacts="contacts"
+      :creating-session="creatingSession"
+      :create-session-error="createSessionError"
+      @close="showCreateSessionDialog = false"
+      @select-solo="onCreateSessionSelectSolo"
+      @select-contact="startNewChatWithContact"
+    />
   </div>
 </template>
 
@@ -190,6 +199,11 @@ const {
   onDrawerMore,
   onDrawerAppClick,
   drawerAppActive,
+  showCreateSessionDialog,
+  openCreateSessionDialog,
+  onCreateSessionSelectSolo,
+  startNewChatWithContact,
+  contacts,
   creatingSession,
   createSessionError,
   displayChats,

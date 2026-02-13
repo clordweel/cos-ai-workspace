@@ -1,12 +1,6 @@
 export type Contact = { id: string; name: string; avatar?: string }
 export type Bot = { id: string; name: string; description?: string; avatar?: string }
 
-const contacts: Contact[] = [
-  { id: '1', name: '张三' },
-  { id: '2', name: '李四' },
-  { id: '3', name: '王五' },
-]
-
 const bots: Bot[] = [
   { id: 'assistant', name: 'AI 助手', description: '通用对话与任务' },
 ]
@@ -48,7 +42,29 @@ export function getMentionedBotIdsFromText(text: string): string[] {
 }
 
 export function useContactsAndBots() {
-  const getContact = (id: string) => contacts.find((c) => c.id === id)
+  const apiBase = useApiBase()
+  const { userId } = useAuth()
+  const { data: contactsData, refresh: refreshContacts } = useAsyncData(
+    'contacts',
+    async () => {
+      try {
+        return await $fetch<{ contacts: Contact[] }>(`${apiBase || ''}/api/contacts`, {
+          credentials: 'include',
+        })
+      } catch {
+        // 未登录(401)或网络错误时返回空，避免换账号后仍显示上一账号的缓存
+        return { contacts: [] as Contact[] }
+      }
+    },
+    { default: () => ({ contacts: [] as Contact[] }) }
+  )
+  // 换账号后刷新联系人列表，避免沿用上一账号的缓存
+  watch(userId, () => {
+    refreshContacts()
+  })
+  const contacts = computed(() => contactsData.value?.contacts ?? [])
+
+  const getContact = (id: string) => contacts.value.find((c) => c.id === id)
   const getBot = (id: string) => bots.find((b) => b.id === id)
   const getWithTitle = (withId: string): string | null => {
     if (withId.startsWith('contact-')) {

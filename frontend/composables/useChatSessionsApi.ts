@@ -195,6 +195,36 @@ export function useChatSessionsApi() {
   }
 
   /**
+   * 邀请用户加入会话（仅 Matrix 等支持 inviteToSession 的后端有效）
+   * @param sessionId - 会话 id
+   * @param inviteeUserId - 被邀请者 MXID（如 @user:server）
+   * @returns 是否成功
+   */
+  async function inviteToSession(sessionId: string, inviteeUserId: string): Promise<boolean> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base || !inviteeUserId?.trim()) return false
+    try {
+      const res = await fetch(
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/invite`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ inviteeUserId: inviteeUserId.trim() }),
+        }
+      )
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      if (res.status === 501 || res.status === 502 || !res.ok) return false
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * 删除会话（Matrix 为 leave 房间，mock 为移除）
    * @param sessionId - 会话 id
    * @returns 是否成功
@@ -272,6 +302,7 @@ export function useChatSessionsApi() {
     refreshSessions,
     loadSessionMessages,
     createSession,
+    inviteToSession,
     renameSession,
     deleteSession,
     fetchPinnedSessions,
