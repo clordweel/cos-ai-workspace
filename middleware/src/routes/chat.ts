@@ -239,6 +239,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
 
   /** Matrix 置顶会话：读写 account_data com.workspace.pinned_rooms，仅 provider=matrix 时有效 */
   const PINNED_ACCOUNT_DATA_TYPE = 'com.workspace.pinned_rooms';
+  /** Matrix 消息收藏：account_data com.workspace.favorite_messages */
+  const FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE = 'com.workspace.favorite_messages';
 
   app.get('/api/sessions/pinned', async (req, reply) => {
     if (config.chat?.provider !== 'matrix') {
@@ -283,6 +285,114 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       });
     }
   });
+
+  /** 消息收藏：GET 列表 */
+  app.get('/api/sessions/favorite-messages', async (req, reply) => {
+    if (config.chat?.provider !== 'matrix') {
+      return reply.code(501).send({ error: '当前后端不支持消息收藏', entries: [] });
+    }
+    try {
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const data = await getAccountData(session!.matrixAccessToken!, FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE);
+      const raw = data.entries;
+      const entries = Array.isArray(raw)
+        ? (raw as Array<{ roomId?: string; eventId?: string; createdAt?: number; snippet?: string }>)
+            .filter((e) => typeof e?.roomId === 'string' && typeof e?.eventId === 'string')
+            .map((e) => ({
+              roomId: e.roomId as string,
+              eventId: e.eventId as string,
+              createdAt: typeof e.createdAt === 'number' ? e.createdAt : Date.now(),
+              snippet: typeof e.snippet === 'string' ? e.snippet : undefined,
+            }))
+        : [];
+      return reply.send({ entries });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '拉取收藏列表失败',
+        entries: [],
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
+  /** 消息收藏：POST 添加一条 */
+  app.post<{ Body: { roomId?: string; eventId?: string; snippet?: string } }>(
+    '/api/sessions/favorite-messages',
+    async (req, reply) => {
+      if (config.chat?.provider !== 'matrix') {
+        return reply.code(501).send({ error: '当前后端不支持消息收藏' });
+      }
+      try {
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (await requireMatrixToken(req, session, reply)) return;
+        const body = req.body ?? {};
+        const roomId = typeof body.roomId === 'string' ? body.roomId.trim() : '';
+        const eventId = typeof body.eventId === 'string' ? body.eventId.trim() : '';
+        if (!roomId || !eventId) {
+          return reply.code(400).send({ error: 'roomId and eventId are required' });
+        }
+        const data = await getAccountData(session!.matrixAccessToken!, FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE);
+        const raw = data.entries;
+        const existing = Array.isArray(raw)
+          ? (raw as Array<{ roomId?: string; eventId?: string }>).filter(
+              (e) => typeof e?.roomId === 'string' && typeof e?.eventId === 'string'
+            )
+          : [];
+        if (existing.some((e) => e.roomId === roomId && e.eventId === eventId)) {
+          return reply.send({ entries: existing, added: false });
+        }
+        const snippet = typeof body.snippet === 'string' ? body.snippet.slice(0, 200) : undefined;
+        const entry = { roomId, eventId, createdAt: Date.now(), snippet };
+        const next = [...existing, entry];
+        await setAccountData(session!.matrixAccessToken!, FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE, { entries: next });
+        return reply.send({ entries: next, added: true });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '添加收藏失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
+  /** 消息收藏：DELETE 移除一条 */
+  app.delete<{ Body: { roomId?: string; eventId?: string } }>(
+    '/api/sessions/favorite-messages',
+    async (req, reply) => {
+      if (config.chat?.provider !== 'matrix') {
+        return reply.code(501).send({ error: '当前后端不支持消息收藏' });
+      }
+      try {
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (await requireMatrixToken(req, session, reply)) return;
+        const body = (req.body as { roomId?: string; eventId?: string }) ?? {};
+        const roomId = typeof body.roomId === 'string' ? body.roomId.trim() : '';
+        const eventId = typeof body.eventId === 'string' ? body.eventId.trim() : '';
+        if (!roomId || !eventId) {
+          return reply.code(400).send({ error: 'roomId and eventId are required' });
+        }
+        const data = await getAccountData(session!.matrixAccessToken!, FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE);
+        const raw = data.entries;
+        const existing = Array.isArray(raw)
+          ? (raw as Array<{ roomId?: string; eventId?: string; createdAt?: number; snippet?: string }>).filter(
+              (e) => typeof e?.roomId === 'string' && typeof e?.eventId === 'string'
+            )
+          : [];
+        const next = existing.filter((e) => !(e.roomId === roomId && e.eventId === eventId));
+        await setAccountData(session!.matrixAccessToken!, FAVORITE_MESSAGES_ACCOUNT_DATA_TYPE, { entries: next });
+        return reply.send({ entries: next });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '移除收藏失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
 
   app.get<{ Params: { id?: string }; Querystring: { user_id?: string; user?: string; limit?: string; before_id?: string } }>(
     '/api/sessions/:id/messages',

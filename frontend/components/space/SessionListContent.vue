@@ -88,13 +88,14 @@
         </div>
       </template>
       <template v-else-if="listViewTab === 'favorites'">
-      <div class="flex-1 min-h-0 flex flex-col items-center justify-center">
-        <Empty
-          compact
-          title="收藏与归档"
-          description="暂无收藏或归档会话"
-          :icon="Archive"
-        />
+      <div class="flex-1 min-h-0 flex flex-col overflow-y-auto">
+        <section class="shrink-0 px-3 pt-4 pb-2 border-b border-zinc-100 dark:border-zinc-700/80">
+          <h2 class="text-sm font-medium text-zinc-800 dark:text-zinc-200">收藏的消息</h2>
+          <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">在此查看并跳转到已收藏的消息</p>
+        </section>
+        <div class="flex-1 min-h-0 overflow-y-auto px-3 py-4">
+          <FavoriteMessagesList :chats="allChatsForTitles" />
+        </div>
       </div>
     </template>
     <template v-else-if="listViewTab === 'pending'">
@@ -198,6 +199,7 @@
 import { Archive, Inbox, Search, UserPlus } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Empty } from '~/components/ui/empty'
+import FavoriteMessagesList from '~/components/FavoriteMessagesList.vue'
 import SessionListItem from '~/components/SessionListItem.vue'
 import SessionListThumb from '~/components/SessionListThumb.vue'
 import SessionCategory from '~/components/space/SessionCategory.vue'
@@ -272,6 +274,19 @@ async function handleDeclineInvite(id: string) {
     invitationBusy.value = false
   }
 }
+
+/** 用于收藏消息列表的会话标题解析（去重） */
+const allChatsForTitles = computed(() => {
+  const seen = new Set<string>()
+  const out: DisplayChatItem[] = []
+  for (const c of [...props.pinnedChats, ...props.activeChats, ...props.pendingChats]) {
+    if (!seen.has(c.id)) {
+      seen.add(c.id)
+      out.push(c)
+    }
+  }
+  return out
+})
 
 /** 水合前使用固定值，避免服务端与客户端图标/列表显隐不一致导致 hydration mismatch */
 const mounted = ref(false)

@@ -539,7 +539,38 @@ export function useSpaceChatPane(options: {
       // streamReply 的 catch 已将 sending 置为 failed
     }
   }
-  function onFavoriteMessage(_index: number) { /* TODO */ }
+  async function onFavoriteMessage(index: number) {
+    const id = chatId.value
+    if (!id) return
+    const list = getMessages(id)
+    const msg = list[index]
+    const messageId = msg?.id ?? (msg as { backendMessageId?: string })?.backendMessageId
+    if (!messageId) return
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base) return
+    try {
+      const res = await fetch(`${base}/api/sessions/favorite-messages`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roomId: id,
+          eventId: messageId,
+          snippet: typeof msg?.content === 'string' ? msg.content.slice(0, 120) : undefined,
+        }),
+      })
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return
+      }
+      if (res.status === 501) return
+      if (res.ok) {
+        // 收藏成功；列表在「收藏与归档」页进入时按需拉取
+      }
+    } catch {
+      // ignore
+    }
+  }
   function onListenReply(_index: number) { /* TODO */ }
 
   async function onRecallMessage(index: number) {
