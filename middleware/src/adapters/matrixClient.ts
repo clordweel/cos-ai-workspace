@@ -355,6 +355,50 @@ export async function getRoomMessages(
   return { events, nextToken: data.end };
 }
 
+/** Matrix v1 relations API base（编辑关系等） */
+const basePathV1 = '/_matrix/client/v1';
+
+/**
+ * 获取房间内单条事件（用于编辑历史：取原始消息内容）
+ */
+export async function getRoomEvent(
+  roomId: string,
+  eventId: string,
+  userToken: string
+): Promise<MatrixMessageEvent | null> {
+  const encRoom = encodeURIComponent(roomId);
+  const encEvent = encodeURIComponent(eventId);
+  const res = await matrixFetchWithToken(`/rooms/${encRoom}/event/${encEvent}`, {}, userToken);
+  if (!res.ok) return null;
+  const data = (await res.json()) as MatrixMessageEvent & { error?: string };
+  return data.event_id ? data : null;
+}
+
+/**
+ * 获取指向某事件的关系列表（如 m.replace 编辑）
+ * Synapse 实现：GET /_matrix/client/v1/rooms/{roomId}/relations/{eventId}?rel_type=m.replace
+ */
+export async function getRoomRelations(
+  roomId: string,
+  eventId: string,
+  relType: string,
+  userToken: string
+): Promise<MatrixMessageEvent[]> {
+  const encRoom = encodeURIComponent(roomId);
+  const encEvent = encodeURIComponent(eventId);
+  const url = `${config.matrix.baseUrl}${basePathV1}/rooms/${encRoom}/relations/${encEvent}?rel_type=${encodeURIComponent(relType)}`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${userToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { chunk?: MatrixMessageEvent[]; error?: string };
+  const chunk = data.chunk ?? [];
+  return Array.isArray(chunk) ? chunk : [];
+}
+
 /**
  * 获取房间最后一条消息的时间戳（ms），用于会话列表按 last_active 排序
  * 仅拉取 1 条最新消息，轻量

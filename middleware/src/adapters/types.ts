@@ -139,6 +139,22 @@ export interface RedactMessageParams {
   currentUserMxid?: string;
 }
 
+/** 单条编辑历史：原始或某次替换的内容与时间 */
+export interface EditHistoryEntry {
+  eventId: string;
+  createdAt: number;
+  body: string;
+  formattedBody?: string;
+  sender?: string;
+}
+
+export interface GetMessageEditHistoryParams {
+  sessionId: string;
+  backendSessionId?: string;
+  messageId: string;
+  matrixAccessToken?: string;
+}
+
 /** 会话成员：join=已在房，invite=待接受邀请 */
 export interface NormalizedRoomMember {
   userId: string;
@@ -191,4 +207,6 @@ export interface ChatBackendAdapter {
   listSessionMembers?(params: ListSessionMembersParams): Promise<NormalizedRoomMember[]>;
   kickFromSession?(params: KickFromSessionParams): Promise<void>;
   banFromSession?(params: BanFromSessionParams): Promise<void>;
+  /** 某条消息的编辑历史（原内容 + 各次 m.replace），仅 Matrix 等支持 */
+  getMessageEditHistory?(params: GetMessageEditHistoryParams): Promise<EditHistoryEntry[]>;
 }

@@ -9,6 +9,8 @@ import {
   getRoomName,
   getRoomMessages,
   getRoomLastActivityTs,
+  getRoomEvent,
+  getRoomRelations,
   sendRoomMessage,
   editRoomMessage,
   redactRoomMessage,
@@ -44,6 +46,8 @@ import type {
   RenameSessionParams,
   EditMessageParams,
   RedactMessageParams,
+  GetMessageEditHistoryParams,
+  EditHistoryEntry,
 } from './types.js';
 
 function isMatrixConfigured(): boolean {
@@ -346,6 +350,46 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
       const roomId = backendSessionId || sessionId;
       await banUserFromRoom(roomId, targetUserId, userToken, reason);
+    },
+
+    async getMessageEditHistory(params: GetMessageEditHistoryParams): Promise<EditHistoryEntry[]> {
+      const { backendSessionId, sessionId, messageId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) return [];
+      const roomId = backendSessionId || sessionId;
+      const [original, relations] = await Promise.all([
+        getRoomEvent(roomId, messageId, userToken),
+        getRoomRelations(roomId, messageId, 'm.replace', userToken),
+      ]);
+      const out: EditHistoryEntry[] = [];
+      if (original && original.type === 'm.room.message' && original.content?.body != null) {
+        const body = typeof original.content.body === 'string' ? original.content.body : '';
+        const formattedBody = typeof (original.content as { formatted_body?: string }).formatted_body === 'string'
+          ? (original.content as { formatted_body: string }).formatted_body
+          : undefined;
+        out.push({
+          eventId: original.event_id,
+          createdAt: original.origin_server_ts,
+          body,
+          formattedBody: formattedBody || undefined,
+          sender: original.sender,
+        });
+      }
+      for (const ev of relations) {
+        if (ev.type !== 'm.room.message' || !ev.content) continue;
+        const newContent = (ev.content as { 'm.new_content'?: { body?: string; formatted_body?: string } })['m.new_content'];
+        if (!newContent || newContent.body == null) continue;
+        const body = typeof newContent.body === 'string' ? newContent.body : '';
+        const formattedBody = typeof newContent.formatted_body === 'string' ? newContent.formatted_body : undefined;
+        out.push({
+          eventId: ev.event_id,
+          createdAt: ev.origin_server_ts,
+          body,
+          formattedBody,
+          sender: ev.sender,
+        });
+      }
+      out.sort((a, b) => a.createdAt - b.createdAt);
+      return out;
     },
   };
 }

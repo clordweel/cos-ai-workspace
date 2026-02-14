@@ -479,7 +479,24 @@ export function useSpaceChatPane(options: {
   }
 
   function onEditMessage(_index: number) { /* TODO */ }
-  function onViewEditHistory(_index: number) { /* TODO */ }
+
+  const editHistoryOpen = ref(false)
+  const editHistoryMessageId = ref<string | undefined>(undefined)
+  function onViewEditHistory(index: number) {
+    const id = chatId.value
+    if (!id) return
+    const list = getMessages(id)
+    const msg = list[index]
+    const messageId = msg?.id ?? (msg as { backendMessageId?: string })?.backendMessageId
+    if (messageId) {
+      editHistoryMessageId.value = messageId
+      editHistoryOpen.value = true
+    }
+  }
+  function closeEditHistory() {
+    editHistoryOpen.value = false
+    editHistoryMessageId.value = undefined
+  }
 
   function onEditUserMessage(index: number) {
     const id = chatId.value
@@ -630,6 +647,9 @@ export function useSpaceChatPane(options: {
     canEditMessage,
     onEditMessage,
     onViewEditHistory,
+    editHistoryOpen,
+    editHistoryMessageId,
+    closeEditHistory,
     onEditUserMessage,
     onRetryUserMessage,
     onRecallMessage,

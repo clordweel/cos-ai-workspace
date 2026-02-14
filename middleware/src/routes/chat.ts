@@ -344,6 +344,41 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
   );
 
+  app.get<{ Params: { id: string; messageId: string } }>(
+    '/api/sessions/:id/messages/:messageId/edit-history',
+    async (req, reply) => {
+      try {
+        const adapter = getChatAdapter();
+        if (!adapter || typeof adapter.getMessageEditHistory !== 'function') {
+          return reply.code(501).send({
+            error: '当前后端不支持编辑历史',
+            message: '请使用支持 getMessageEditHistory 的 CHAT_PROVIDER（如 matrix）',
+          });
+        }
+        const session = await getSessionFromCookie(req.headers.cookie);
+        if (await requireMatrixToken(req, session, reply)) return;
+        const sessionId = decodeURIComponent(req.params.id ?? '');
+        const messageId = decodeURIComponent(req.params.messageId ?? '');
+        if (!sessionId || !messageId) {
+          return reply.code(400).send({ error: 'session id and messageId are required' });
+        }
+        const entries = await adapter.getMessageEditHistory({
+          sessionId,
+          backendSessionId: sessionId,
+          messageId,
+          matrixAccessToken: session?.matrixAccessToken,
+        });
+        return reply.send({ entries });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '拉取编辑历史失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
   app.patch<{
     Params: { id: string; messageId: string };
     Body: { content?: string; formatted_body?: string };

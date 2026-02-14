@@ -177,6 +177,12 @@
       @close="closeDeleteConfirm"
       @confirm="confirmDeleteSession"
     />
+    <MessageEditHistoryDialog
+      :open="editHistoryOpen"
+      :session-id="chatId"
+      :message-id="editHistoryMessageId"
+      @close="closeEditHistory"
+    />
   </div>
 </template>
 
@@ -284,6 +290,9 @@ const {
   canEditMessage,
   onEditMessage,
   onViewEditHistory,
+  editHistoryOpen,
+  editHistoryMessageId,
+  closeEditHistory,
   onEditUserMessage,
   onRetryUserMessage,
   onRecallMessage,
