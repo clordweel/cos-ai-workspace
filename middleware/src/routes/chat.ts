@@ -199,6 +199,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
             await updateSession(session!.sessionId, {
               matrixAccessToken: undefined,
               matrixTokenExpiresAt: undefined,
+              matrixDeviceId: undefined,
             });
             await ensureMatrixTokenForSession(session!);
             const fresh = await getSessionFromCookie(req.headers.cookie);
@@ -328,9 +329,19 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         return reply.send({ messages });
       } catch (e) {
         req.log.error(e);
+        const msg = e instanceof Error ? e.message : String(e);
+        const isNotInRoom =
+          msg.includes('not in room') && msg.includes('room previews are disabled');
+        if (isNotInRoom) {
+          return reply.code(403).send({
+            error: '拉取会话历史失败',
+            message: msg,
+            code: 'USER_NOT_IN_ROOM',
+          });
+        }
         return reply.code(502).send({
           error: '拉取会话历史失败',
-          message: e instanceof Error ? e.message : String(e),
+          message: msg,
         });
       }
     }
@@ -483,6 +494,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
               await updateSession(session.sessionId, {
                 matrixAccessToken: undefined,
                 matrixTokenExpiresAt: undefined,
+                matrixDeviceId: undefined,
               });
               await ensureMatrixTokenForSession(session);
               const fresh = await getSessionFromCookie(req.headers.cookie);
@@ -633,6 +645,109 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       });
     }
   });
+
+  /** 会话成员列表（仅 Matrix：join + invite） */
+  app.get<{ Params: { id?: string } }>('/api/sessions/:id/members', async (req, reply) => {
+    const adapter = getChatAdapter();
+    if (!adapter || typeof adapter.listSessionMembers !== 'function') {
+      return reply.send({ members: [] });
+    }
+    const sessionId = req.params?.id;
+    if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (config.chat?.provider === 'matrix' && (await requireMatrixToken(req, session, reply))) return;
+    try {
+      const members = await adapter.listSessionMembers({
+        sessionId,
+        backendSessionId: sessionId,
+        matrixAccessToken: session?.matrixAccessToken,
+      });
+      return reply.send({ members });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '拉取成员列表失败',
+        message: e instanceof Error ? e.message : String(e),
+        members: [],
+      });
+    }
+  });
+
+  /** 踢出会话 / 取消邀请（仅 Matrix：对目标用户 kick） */
+  app.post<{ Params: { id?: string }; Body: { userId?: string; reason?: string } }>(
+    '/api/sessions/:id/kick',
+    async (req, reply) => {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.kickFromSession !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持踢出/取消邀请',
+          message: '请使用支持 kickFromSession 的 CHAT_PROVIDER（如 matrix）',
+        });
+      }
+      const sessionId = req.params?.id;
+      if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
+      const body = (req.body as { userId?: string; reason?: string }) || {};
+      const targetUserId = body.userId?.trim();
+      if (!targetUserId) return reply.code(400).send({ error: 'userId is required' });
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const targetMxid = targetUserId.includes(':') ? targetUserId : getMatrixUserId(targetUserId);
+      try {
+        await adapter.kickFromSession({
+          sessionId,
+          backendSessionId: sessionId,
+          targetUserId: targetMxid,
+          matrixAccessToken: session!.matrixAccessToken,
+          reason: body.reason,
+        });
+        return reply.send({ ok: true });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '操作失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
+
+  /** 屏蔽用户（仅 Matrix：ban，禁止其再次加入） */
+  app.post<{ Params: { id?: string }; Body: { userId?: string; reason?: string } }>(
+    '/api/sessions/:id/ban',
+    async (req, reply) => {
+      const adapter = getChatAdapter();
+      if (!adapter || typeof adapter.banFromSession !== 'function') {
+        return reply.code(501).send({
+          error: '当前后端不支持屏蔽用户',
+          message: '请使用支持 banFromSession 的 CHAT_PROVIDER（如 matrix）',
+        });
+      }
+      const sessionId = req.params?.id;
+      if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
+      const body = (req.body as { userId?: string; reason?: string }) || {};
+      const targetUserId = body.userId?.trim();
+      if (!targetUserId) return reply.code(400).send({ error: 'userId is required' });
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (await requireMatrixToken(req, session, reply)) return;
+      const targetMxid = targetUserId.includes(':') ? targetUserId : getMatrixUserId(targetUserId);
+      try {
+        await adapter.banFromSession({
+          sessionId,
+          backendSessionId: sessionId,
+          targetUserId: targetMxid,
+          matrixAccessToken: session!.matrixAccessToken,
+          reason: body.reason,
+        });
+        return reply.send({ ok: true });
+      } catch (e) {
+        req.log.error(e);
+        return reply.code(502).send({
+          error: '屏蔽失败',
+          message: e instanceof Error ? e.message : String(e),
+        });
+      }
+    }
+  );
 
   app.patch<{ Params: { id?: string }; Body: { title?: string } }>(
     '/api/sessions/:id',

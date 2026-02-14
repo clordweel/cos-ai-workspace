@@ -23,6 +23,8 @@ const matrixSyncToken = ref<string>('')
 const matrixBaseUrl = ref<string>('')
 /** 当前用户 MXID（与 matrixSyncToken 配套，用于 createClient） */
 const matrixUserId = ref<string>('')
+/** Matrix device_id（与 token 配套，用于 E2EE 解密），来自 /api/auth/me 的 matrix_device_id */
+const matrixDeviceId = ref<string>('')
 
 export function useAuth() {
   const apiBase = useApiBase()
@@ -50,6 +52,9 @@ export function useAuth() {
         matrixUserId.value = typeof (data as { matrix_user_id?: string }).matrix_user_id === 'string'
           ? (data as { matrix_user_id: string }).matrix_user_id
           : ''
+        matrixDeviceId.value = typeof (data as { matrix_device_id?: string }).matrix_device_id === 'string'
+          ? (data as { matrix_device_id: string }).matrix_device_id
+          : ''
         return true
       }
       isAuthenticated.value = false
@@ -60,6 +65,7 @@ export function useAuth() {
       matrixSyncToken.value = ''
       matrixBaseUrl.value = ''
       matrixUserId.value = ''
+      matrixDeviceId.value = ''
       return false
     } catch {
       isAuthenticated.value = false
@@ -70,6 +76,7 @@ export function useAuth() {
       matrixSyncToken.value = ''
       matrixBaseUrl.value = ''
       matrixUserId.value = ''
+      matrixDeviceId.value = ''
       return false
     } finally {
       authLoading.value = false
@@ -95,6 +102,7 @@ export function useAuth() {
       matrixSyncToken.value = ''
       matrixBaseUrl.value = ''
       matrixUserId.value = ''
+      matrixDeviceId.value = ''
     }
   }
 
@@ -124,6 +132,7 @@ export function useAuth() {
     matrixSyncToken: readonly(matrixSyncToken),
     matrixBaseUrl: readonly(matrixBaseUrl),
     matrixUserId: readonly(matrixUserId),
+    matrixDeviceId: readonly(matrixDeviceId),
     fetchUser,
     login,
     logout,

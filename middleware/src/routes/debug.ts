@@ -112,6 +112,7 @@ export async function debugRoutes(app: FastifyInstance): Promise<void> {
     await updateSession(session.sessionId, {
       matrixAccessToken: undefined,
       matrixTokenExpiresAt: undefined,
+      matrixDeviceId: undefined,
     });
     session.matrixAccessToken = undefined;
     session.matrixTokenExpiresAt = undefined;

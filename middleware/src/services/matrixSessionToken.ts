@@ -25,6 +25,7 @@ import {
   loginAsUser,
   getMatrixUserIdFromToken,
   getMatrixAdminUserId,
+  getMatrixWhoami,
 } from '../adapters/matrixClient.js';
 import { updateSession } from './auth/sessionStore.js';
 import { config } from '../config.js';
@@ -120,11 +121,17 @@ export async function ensureMatrixTokenForSession(
           );
         } else {
           const expiresInMs = result.expires_in_ms ?? DEFAULT_EXPIRES_MS;
+          const whoami = await getMatrixWhoami(result.access_token);
           await updateSession(session.sessionId, {
             matrixAccessToken: result.access_token,
             matrixTokenExpiresAt: Date.now() + expiresInMs,
+            ...(whoami.device_id ? { matrixDeviceId: whoami.device_id } : {}),
           });
-          return { access_token: result.access_token, expires_in_ms: expiresInMs };
+          return {
+            access_token: result.access_token,
+            expires_in_ms: expiresInMs,
+            device_id: whoami.device_id ?? undefined,
+          };
         }
       }
       console.warn(`${LOG_TAG} MAS createPersonalSession 失败 (localpart=${localpart})，回退到 Admin 设密`);
@@ -142,11 +149,17 @@ export async function ensureMatrixTokenForSession(
         console.warn(`${LOG_TAG} 缓存密码登录返回 admin token 但当前用户非 admin，跳过`);
       } else {
         const expiresInMs = loginResult.expires_in_ms ?? DEFAULT_EXPIRES_MS;
+        const whoami = await getMatrixWhoami(loginResult.access_token);
         await updateSession(session.sessionId, {
           matrixAccessToken: loginResult.access_token,
           matrixTokenExpiresAt: Date.now() + expiresInMs,
+          ...(whoami.device_id ? { matrixDeviceId: whoami.device_id } : {}),
         });
-        return { access_token: loginResult.access_token, expires_in_ms: expiresInMs };
+        return {
+          access_token: loginResult.access_token,
+          expires_in_ms: expiresInMs,
+          device_id: whoami.device_id ?? undefined,
+        };
       }
     } catch {
       console.warn(
@@ -290,12 +303,18 @@ export async function ensureMatrixTokenForSession(
       return { error: 'token_failed', message: '获取的 token 为 admin，请检查 Matrix 配置' };
     }
     const expiresInMs = loginResult.expires_in_ms ?? DEFAULT_EXPIRES_MS;
+    const whoami = await getMatrixWhoami(loginResult.access_token);
     await updateSession(session.sessionId, {
       matrixAccessToken: loginResult.access_token,
       matrixTokenExpiresAt: Date.now() + expiresInMs,
+      ...(whoami.device_id ? { matrixDeviceId: whoami.device_id } : {}),
     });
     await setStoredMatrixPassword(session.logtoSub, randomPassword);
-    return { access_token: loginResult.access_token, expires_in_ms: expiresInMs };
+    return {
+      access_token: loginResult.access_token,
+      expires_in_ms: expiresInMs,
+      device_id: whoami.device_id ?? undefined,
+    };
   }
 
   return { error: 'token_failed', message: 'loginAsUser 未返回结果' };

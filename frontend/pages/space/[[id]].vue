@@ -38,6 +38,7 @@
         :get-chat-date-label="getChatDateLabel"
         :get-non-read-count="getNonReadCount"
         :is-mock="isMockSession"
+        :is-session-left-room="isSessionLeftRoom"
         :drawer-app-active="drawerAppActive"
         :invited-sessions="invitedSessions"
         :on-accept-invite="onAcceptInvite"
@@ -76,6 +77,15 @@
             :is-session-expanded="isSessionExpanded"
             :session-area-font-scale="sessionAreaFontScale"
             :scroll-target-ref="chatScrollElRef"
+            :session-members="sessionMembers"
+            :session-id="chatId"
+            :is-left-room="chatId ? isSessionLeftRoom(chatId) : false"
+            :fetch-session-members="fetchSessionMembers"
+            :kick-from-session="kickFromSession"
+            :ban-from-session="banFromSession"
+            :invite-to-session="inviteToSession"
+            :leave-session="onLeaveSession"
+            :current-user-mxid="matrixUserId"
             v-model:input="input"
             :streaming="streaming"
             :reply-target="replyTarget"
@@ -89,6 +99,7 @@
             @export-markdown="onExportMarkdown"
             @archive="onArchiveChat"
             @delete="onDeleteChat"
+            @members-closed="refetchSessionMembers"
             @submit="send"
             @stop="stopStream"
             @clear="input = ''"
@@ -196,6 +207,7 @@ const {
   getChatDateLabel,
   getNonReadCount,
   isMockSession,
+  isSessionLeftRoom,
   setSearchQuery,
   setListViewTab,
   onSessionItemClick,
@@ -222,6 +234,10 @@ const {
   contacts,
   creatingSession,
   createSessionError,
+  fetchSessionMembers,
+  kickFromSession,
+  banFromSession,
+  inviteToSession,
   displayChats,
   input,
   streaming,
@@ -250,6 +266,9 @@ const {
   onExportMarkdown,
   onArchiveChat,
   onDeleteChat,
+  onLeaveSession,
+  sessionMembers,
+  refetchSessionMembers,
   canEditMessage,
   onEditMessage,
   onViewEditHistory,
@@ -262,6 +281,8 @@ const {
   onListenReply,
   retryMessage,
 } = useSpacePage()
+
+const { matrixUserId } = useAuth()
 
 /** 日期分隔线与消息交错列表，用于在消息容器外渲染分隔线（与消息同级） */
 const displayItems = computed(() => {

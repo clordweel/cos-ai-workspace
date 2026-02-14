@@ -1,9 +1,9 @@
 <template>
   <header
-    class="absolute top-0 left-0 right-0 z-20 grid h-12 shrink-0 grid-cols-[1fr_1fr_1fr] items-center gap-2 px-3 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
+    class="absolute top-0 left-0 right-0 z-20 flex h-12 shrink-0 items-center justify-between gap-2 px-3 border-b border-zinc-200/60 dark:border-zinc-700/60 backdrop-blur-md bg-white/75 dark:bg-zinc-800/75"
     aria-label="会话标题"
   >
-    <div class="flex min-w-0 items-center gap-2">
+    <div class="flex min-w-0 flex-1 items-center gap-2">
       <NuxtLink
         v-if="!isSessionExpanded"
         to="/space"
@@ -12,16 +12,78 @@
       >
         <ChevronLeft class="h-4 w-4" />
       </NuxtLink>
+      <button
+        type="button"
+        class="flex items-center -space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 rounded-full"
+        :aria-label="participantsLabel"
+        :title="participantsLabel"
+        @click="showMembersDialog = true"
+      >
+        <template v-if="displayParticipants.length > 0">
+          <span
+            v-for="(p, i) in displayParticipants.slice(0, 4)"
+            :key="p.userId"
+            class="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white dark:border-zinc-800 bg-zinc-200 dark:bg-zinc-600 text-zinc-700 dark:text-zinc-300 text-xs font-medium"
+            :class="{ 'ring-2 ring-white dark:ring-zinc-800': i > 0 }"
+          >
+            <img
+              v-if="p.avatarUrl"
+              :src="p.avatarUrl"
+              :alt="p.displayName || p.userId"
+              class="h-full w-full object-cover"
+            />
+            <template v-else>{{ (p.displayName || p.userId).trim().slice(0, 1) || '?' }}</template>
+          </span>
+          <span
+            v-if="displayParticipants.length > 4"
+            class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-white dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-700 text-[10px] font-medium text-zinc-600 dark:text-zinc-400 -ml-2"
+          >
+            +{{ displayParticipants.length - 4 }}
+          </span>
+        </template>
+        <span
+          v-else
+          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-xs font-medium border-2 border-white dark:border-zinc-800"
+          aria-hidden
+        >
+          <img
+            v-if="userAvatar"
+            :src="userAvatar"
+            :alt="userName || '用户'"
+            class="h-full w-full object-cover"
+          />
+          <template v-else-if="userName?.trim()">{{ userName.trim().slice(0, 1) }}</template>
+          <User v-else class="h-3.5 w-3.5" />
+        </span>
+      </button>
     </div>
-    <div class="flex min-w-0 items-center justify-center">
+    <div class="flex min-w-0 shrink-0 items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger
-          class="max-w-[14rem] inline-flex items-center justify-center rounded-lg px-2 py-1.5 text-sm font-medium truncate bg-transparent hover:bg-zinc-100 dark:hover:bg-zinc-700/80 border border-zinc-200 dark:border-zinc-600 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-inset"
-          aria-label="会话菜单"
+          class="flex h-7 shrink-0 items-center gap-0.5 rounded-md bg-transparent py-0.5 pl-0.5 pr-1 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 outline-none focus-visible:ring-2 focus-visible:ring-primary-500/30 focus-visible:ring-inset text-zinc-600 dark:text-zinc-400"
+          :aria-label="`会话菜单：${title}`"
+          :title="userName || '会话菜单'"
         >
-          <span class="min-w-0 max-w-[100px] truncate text-xs">{{ title }}</span>
+          <span
+            class="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-[10px] font-medium"
+            aria-hidden
+          >
+            <img
+              v-if="userAvatar"
+              :src="userAvatar"
+              :alt="userName || '用户'"
+              class="h-full w-full object-cover"
+            />
+            <template v-else-if="userName?.trim()">{{ userName.trim().slice(0, 1) }}</template>
+            <User v-else class="h-3 w-3" />
+          </span>
+          <Menu class="h-3.5 w-3.5 shrink-0" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="center" side="top" :side-offset="4" class="chat-header-dropdown w-max min-w-[10rem] text-xs">
+        <DropdownMenuContent align="end" side="top" :side-offset="4" class="chat-header-dropdown w-max min-w-[10rem] text-xs">
+          <DropdownMenuItem class="!text-xs" text-value="会话成员" @select="onOpenMembers">
+            <Users class="h-3.5 w-3.5 shrink-0 opacity-70" />
+            会话成员
+          </DropdownMenuItem>
           <DropdownMenuItem class="!text-xs" text-value="重命名会话" @select="$emit('rename')">
             <Pencil class="h-3.5 w-3.5 shrink-0 opacity-70" />
             重命名会话
@@ -73,25 +135,17 @@
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
-    <div class="flex min-w-0 items-center justify-end gap-1.5" :title="userName">
-      <span
-        v-if="userName"
-        class="hidden sm:inline shrink-0 text-xs text-zinc-600 dark:text-zinc-400 truncate max-w-[6rem]"
-      >{{ userName }}</span>
-      <span
-        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full overflow-hidden bg-primary-100 dark:bg-primary-900/50 text-black dark:text-white text-xs font-medium"
-        aria-hidden
-      >
-        <img
-          v-if="userAvatar"
-          :src="userAvatar"
-          :alt="userName || '用户'"
-          class="h-full w-full object-cover"
-        />
-        <template v-else-if="userName?.trim()">{{ userName.trim().slice(0, 1) }}</template>
-        <User v-else class="h-3.5 w-3.5" />
-      </span>
-    </div>
+    <SpaceSessionMembersDialog
+      :open="showMembersDialog"
+      :session-id="sessionId"
+      :current-user-mxid="currentUserMxid"
+      :fetch-members="fetchMembersFn"
+      :kick="kickFn"
+      :ban="banFn"
+      :invite="inviteFn"
+      :leave-session="leaveSessionFn"
+      @close="onMembersDialogClose"
+    />
   </header>
 </template>
 
@@ -106,17 +160,37 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
-import { Archive, ChevronLeft, Download, Link, Pencil, Share2, Trash2, User, X } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { Archive, ChevronLeft, Download, Link, Menu, Pencil, Share2, Trash2, User, Users, X } from 'lucide-vue-next'
+import type { ApiSessionMember } from '~/composables/useChatSessionsApi'
 
-defineProps<{
+const props = defineProps<{
   title: string
   userName: string
   /** 用户头像 URL，有则显示头像，无则显示姓名首字 */
   userAvatar?: string
   isSessionExpanded: boolean
+  /** 会话成员（用于右侧堆叠头像；空时显示当前用户头像） */
+  sessionMembers?: ApiSessionMember[]
+  /** 当前会话 ID（用于成员弹窗） */
+  sessionId?: string
+  /** 当前用户 Matrix ID，用于成员列表中不显示踢出/屏蔽自己 */
+  currentUserMxid?: string
+  /** 拉取成员列表（成员弹窗内用） */
+  fetchMembers?: (sessionId: string) => Promise<ApiSessionMember[]>
+  /** 踢出成员 */
+  kick?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 屏蔽成员 */
+  ban?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 邀请成员 */
+  invite?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 当前用户退出会话（非拥有者时在成员弹窗中显示；成功后跳转） */
+  leaveSession?: (sessionId: string) => Promise<boolean>
 }>()
-defineEmits<{
+
+const emit = defineEmits<{
   (e: 'close'): void
+  (e: 'open-members'): void
   (e: 'rename'): void
   (e: 'share'): void
   (e: 'copy-link'): void
@@ -125,5 +199,37 @@ defineEmits<{
   (e: 'export-markdown'): void
   (e: 'archive'): void
   (e: 'delete'): void
+  (e: 'members-closed'): void
 }>()
+
+const showMembersDialog = ref(false)
+
+/** 参与者列表排除当前用户（会话拥有者） */
+const displayParticipants = computed(() =>
+  (props.sessionMembers ?? []).filter(
+    (m) => !props.currentUserMxid || m.userId !== props.currentUserMxid,
+  ),
+)
+
+const participantsLabel = computed(() =>
+  displayParticipants.value.length > 0
+    ? `参与者（${displayParticipants.value.length}）`
+    : '参与者',
+)
+
+function onOpenMembers() {
+  showMembersDialog.value = true
+  emit('open-members')
+}
+
+function onMembersDialogClose() {
+  showMembersDialog.value = false
+  emit('members-closed')
+}
+
+const fetchMembersFn = computed(() => props.fetchMembers ?? (async () => [] as ApiSessionMember[]))
+const kickFn = computed(() => props.kick ?? (async () => false))
+const banFn = computed(() => props.ban ?? (async () => false))
+const leaveSessionFn = computed(() => props.leaveSession)
+const inviteFn = computed(() => props.invite ?? (async () => false))
 </script>

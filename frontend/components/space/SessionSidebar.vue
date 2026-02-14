@@ -38,10 +38,7 @@
           @search="emit('search')"
           @app="emit('app')"
         />
-        <div
-          class="flex-1 min-h-0 relative z-0 min-w-0"
-          :style="{ top: `-${listPaddingTop}`, height: `calc(100% + ${listPaddingTop})` }"
-        >
+        <div class="flex-1 min-h-0 relative z-0 min-w-0 overflow-hidden">
           <SpaceSessionListContent
             :list-view-tab="listViewTab"
             :list-padding-top="listPaddingTop"
@@ -59,6 +56,7 @@
             :get-chat-date-label="getChatDateLabel"
             :get-non-read-count="getNonReadCount"
             :is-mock="isMock"
+            :is-session-left-room="isSessionLeftRoom"
             :invited-sessions="invitedSessions ?? []"
             :on-accept-invite="onAcceptInvite"
             :on-decline-invite="onDeclineInvite"
@@ -117,6 +115,7 @@ defineProps<{
   getChatDateLabel: (id: string) => string
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
+  isSessionLeftRoom?: (id: string) => boolean
   drawerAppActive: (app: DrawerAppItem) => boolean
   invitedSessions?: { id: string; title: string }[]
   onAcceptInvite?: (id: string, title: string) => void

@@ -4,6 +4,7 @@
  */
 import { nextTick } from 'vue'
 import type { ChatMessage } from '~/composables/useChatSessions'
+import { useApiBase } from '~/composables/useApiBase'
 
 /** 中间层返回的标准化会话 */
 export interface ApiSession {
@@ -12,6 +13,16 @@ export interface ApiSession {
   updatedAt: number
   backendSessionId?: string
   provider?: string
+}
+
+/** 会话成员：join=已在房，invite=待接受邀请 */
+export interface ApiSessionMember {
+  userId: string
+  membership: 'join' | 'invite'
+  displayName?: string
+  avatarUrl?: string
+  /** 是否为房间创建者（仅 Matrix 等支持时返回；拥有者不可被踢出/屏蔽） */
+  isOwner?: boolean
 }
 
 /** 中间层返回的标准化消息 */
@@ -52,6 +63,7 @@ export function useChatSessionsApi() {
     setChatUpdatedAt,
     setConversationId,
     setMessages,
+    setSessionLeftRoom,
   } = useChatSessions()
 
   /**
@@ -152,11 +164,22 @@ export function useChatSessionsApi() {
         { credentials: 'include' },
       )
       if (res.status === 401) return false
-      if (res.status === 501 || res.status === 502) return false
+      if (res.status === 501) return false
+      if (res.status === 403 || res.status === 502) {
+        const body = (await res.json().catch(() => ({}))) as { code?: string; message?: string }
+        const isNotInRoom =
+          body.code === 'USER_NOT_IN_ROOM' ||
+          (typeof body.message === 'string' &&
+            body.message.includes('not in room') &&
+            body.message.includes('room previews are disabled'))
+        if (isNotInRoom) setSessionLeftRoom(sessionId, true)
+        return false
+      }
       if (!res.ok) return false
       const json = (await res.json()) as { messages?: ApiMessage[] }
       const messages = (json.messages ?? []).map(apiMessageToChatMessage)
       setMessages(sessionId, messages)
+      setSessionLeftRoom(sessionId, false)
       return true
     } catch {
       return false
@@ -290,6 +313,85 @@ export function useChatSessionsApi() {
   }
 
   /**
+   * 拉取会话成员列表（仅 Matrix 等支持 listSessionMembers 的后端有效，否则返回 []）
+   */
+  async function fetchSessionMembers(sessionId: string): Promise<ApiSessionMember[]> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base || !sessionId?.trim()) return []
+    try {
+      const res = await fetch(
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/members`,
+        { credentials: 'include' },
+      )
+      if (res.status === 401 || res.status === 501 || !res.ok) return []
+      const json = (await res.json()) as { members?: ApiSessionMember[] }
+      const list = json.members ?? []
+      return Array.isArray(list)
+        ? list.filter(
+            (m): m is ApiSessionMember =>
+              typeof m?.userId === 'string' && (m.membership === 'join' || m.membership === 'invite'),
+          ).map((m) => ({ ...m, isOwner: Boolean(m.isOwner) }))
+        : []
+    } catch {
+      return []
+    }
+  }
+
+  /**
+   * 踢出会话 / 取消邀请（仅 Matrix：对目标用户 kick）
+   * @param sessionId 会话 id
+   * @param userId 被踢/被取消邀请的用户 MXID 或 logtoSub
+   */
+  async function kickFromSession(sessionId: string, userId: string, reason?: string): Promise<boolean> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base || !sessionId?.trim() || !userId?.trim()) return false
+    try {
+      const res = await fetch(
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/kick`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: userId.trim(), ...(reason ? { reason } : {}) }),
+        },
+      )
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * 屏蔽用户（仅 Matrix：ban，禁止其再次加入）
+   */
+  async function banFromSession(sessionId: string, userId: string, reason?: string): Promise<boolean> {
+    const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
+    if (!base || !sessionId?.trim() || !userId?.trim()) return false
+    try {
+      const res = await fetch(
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/ban`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ userId: userId.trim(), ...(reason ? { reason } : {}) }),
+        },
+      )
+      if (res.status === 401) {
+        useAuth().requireAuth()
+        return false
+      }
+      return res.ok
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * 拉取置顶会话 ID 列表（Matrix 时来自 account_data，否则返回 []）；同用户仅请求一次，避免点击会话时重复拉取导致闪动
    */
   async function fetchPinnedSessions(): Promise<string[]> {
@@ -347,6 +449,9 @@ export function useChatSessionsApi() {
     renameSession,
     deleteSession,
     fetchInvitedSessions,
+    fetchSessionMembers,
+    kickFromSession,
+    banFromSession,
     fetchPinnedSessions,
     setPinnedSessions,
   }

@@ -27,8 +27,41 @@
       </div>
     </Transition>
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
+      <!-- 顶栏：Logo + 名称（文本）+ 标语 整体居中；点击播放 Logo 动画 -->
+      <header
+        class="workspace-topbar shrink-0 h-14 flex items-center justify-center px-4 w-full"
+        role="banner"
+        aria-label="产品"
+      >
+        <button
+          type="button"
+          class="brand-block flex items-center gap-2 min-w-0 rounded-lg py-1.5 px-2 -mx-2 text-zinc-600 dark:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900"
+          aria-label="播放 Logo 动画"
+          @click="playTopbarLogoAnimation"
+        >
+          <Logo
+            :size="24"
+            color="currentColor"
+            class="shrink-0 ml-1 mr-1"
+            :animated="topbarLogoAnimating"
+            :loading="false"
+          />
+          <span
+            class="text-base font-bold tracking-wide whitespace-nowrap"
+            aria-hidden="true"
+          >
+            COS&AI
+          </span>
+          <span
+            class="hidden sm:inline text-sm font-medium whitespace-nowrap pl-2 border-l border-zinc-400 dark:border-zinc-500"
+            aria-hidden="true"
+          >
+            智能交互工作台
+          </span>
+        </button>
+      </header>
       <div
-        class="workspace-grid flex-1 grid min-h-0 p-3 relative"
+        class="workspace-grid flex-1 grid min-h-0 px-3 pt-0 pb-2 relative"
         :class="showAppPanel ? 'gap-3' : 'gap-0'"
         :style="{ gridTemplateColumns: effectiveGridColumns, gridTemplateRows: 'minmax(0, 1fr)' }"
       >
@@ -99,12 +132,62 @@
           </section>
         </Transition>
       </div>
+      <!-- 底栏：统一 text-xs，版权行拼接产品描述 -->
+      <footer
+        class="workspace-footer shrink-0 flex flex-col items-center justify-center gap-1.5 min-h-28 px-4 py-5 text-xs"
+        role="contentinfo"
+        aria-label="页脚"
+      >
+        <p class="m-0 flex items-center justify-center gap-1.5 min-h-[1.5em] font-medium text-zinc-700 dark:text-zinc-300 text-center">
+          <Copyright class="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden="true" />
+          <span>{{ new Date().getFullYear() }} COS&AI · 智能交互工作台</span>
+        </p>
+        <p class="m-0 flex items-center justify-center min-h-[1.5em] text-zinc-500 dark:text-zinc-400">
+          <a
+            href="https://beian.miit.gov.cn/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+          >
+            京ICP备xxxxxxxx号
+          </a>
+        </p>
+        <p class="m-0 flex items-center justify-center gap-1.5 min-h-[1.5em] text-zinc-500 dark:text-zinc-400">
+          <Mail class="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
+          <span>技术支持：support@example.com</span>
+        </p>
+        <nav class="flex items-center justify-center gap-4 pt-0.5 min-h-[1.5em] text-zinc-400 dark:text-zinc-500" aria-label="底栏链接">
+          <NuxtLink
+            to="/space"
+            class="inline-flex items-center gap-1.5 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+          >
+            <Home class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            首页
+          </NuxtLink>
+          <a
+            href="#"
+            class="inline-flex items-center gap-1.5 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            @click.prevent
+          >
+            <HelpCircle class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            帮助
+          </a>
+          <a
+            href="#"
+            class="inline-flex items-center gap-1.5 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+            @click.prevent
+          >
+            <InfoIcon class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            关于
+          </a>
+        </nav>
+      </footer>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { PanelRightOpen, PanelRightClose, Pin, PinOff } from 'lucide-vue-next'
+import { PanelRightOpen, PanelRightClose, Pin, PinOff, Copyright, Mail, Home, HelpCircle, Info as InfoIcon } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
@@ -117,6 +200,19 @@ const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel,
 const LOGO_CYCLE_MS = 3200
 const logoCycleDone = ref(false)
 let logoCycleTimer: ReturnType<typeof setTimeout> | null = null
+
+/** 顶栏 Logo 点击播放动画：播放一轮后自动停止 */
+const topbarLogoAnimating = ref(false)
+let topbarLogoAnimationTimer: ReturnType<typeof setTimeout> | null = null
+function playTopbarLogoAnimation() {
+  if (topbarLogoAnimating.value) return
+  topbarLogoAnimating.value = true
+  if (topbarLogoAnimationTimer) clearTimeout(topbarLogoAnimationTimer)
+  topbarLogoAnimationTimer = setTimeout(() => {
+    topbarLogoAnimating.value = false
+    topbarLogoAnimationTimer = null
+  }, LOGO_CYCLE_MS)
+}
 const showLoadingOverlay = computed(() => authLoading.value || !logoCycleDone.value)
 watch(authLoading, (loading) => {
   if (loading) {
@@ -136,6 +232,7 @@ watch(authLoading, (loading) => {
 }, { immediate: true })
 onBeforeUnmount(() => {
   if (logoCycleTimer) clearTimeout(logoCycleTimer)
+  if (topbarLogoAnimationTimer) clearTimeout(topbarLogoAnimationTimer)
 })
 
 /** 按实际视口判断 xl：与 SSR 一致初值为 false，仅在 onMounted 后更新，避免水合时 grid-template-columns 不一致 */
@@ -241,6 +338,13 @@ watch(() => route.query?.auth_error, (authError) => {
     max-width: 32rem;
     margin-left: auto;
     margin-right: auto;
+  }
+}
+
+/* 视口高度较小时隐藏底栏，为主内容留出空间 */
+@media (max-height: 860px) {
+  .workspace-footer {
+    display: none !important;
   }
 }
 

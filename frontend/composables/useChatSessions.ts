@@ -56,6 +56,8 @@ export type ChatMessage = {
 const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([])
 const messagesByChatId = ref<Record<string, ChatMessage[]>>({})
 const conversationIds = ref<Record<string, string | undefined>>({})
+/** 用户已离开/被踢出的会话 id（拉取历史报 USER_NOT_IN_ROOM 时设置，用于列表与聊天区标识） */
+const sessionLeftRoomIds = ref<Record<string, boolean>>({})
 
 export function useChatSessions() {
   const getMessages = (chatId: string): ChatMessage[] => {
@@ -115,6 +117,12 @@ export function useChatSessions() {
     conversationIds.value = { ...conversationIds.value, [chatId]: cid }
   }
 
+  const isSessionLeftRoom = (chatId: string) => !!sessionLeftRoomIds.value[chatId]
+  const setSessionLeftRoom = (chatId: string, left: boolean) => {
+    if (sessionLeftRoomIds.value[chatId] === left) return
+    sessionLeftRoomIds.value = { ...sessionLeftRoomIds.value, [chatId]: left }
+  }
+
   const createNewChat = () => {
     const id = `session-${Date.now()}`
     ensureChat(id, '新会话')
@@ -130,6 +138,9 @@ export function useChatSessions() {
     const nextIds = { ...conversationIds.value }
     delete nextIds[chatId]
     conversationIds.value = nextIds
+    const nextLeft = { ...sessionLeftRoomIds.value }
+    delete nextLeft[chatId]
+    sessionLeftRoomIds.value = nextLeft
   }
 
   /** 更新某条消息的接收状态 */
@@ -179,6 +190,8 @@ export function useChatSessions() {
     setChatUpdatedAt,
     getConversationId,
     setConversationId,
+    isSessionLeftRoom,
+    setSessionLeftRoom,
     createNewChat,
     updateMessageReceipt,
     markChatAsRead,

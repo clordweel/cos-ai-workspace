@@ -248,17 +248,6 @@
                             {{ matrixSetPasswordLoading ? '提交中…' : '设置' }}
                           </Button>
                         </form>
-                        <div class="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-600">
-                          <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-2">Synapse Admin 中的删除实为禁用，此处可彻底注销 Matrix 账号</p>
-                          <button
-                            type="button"
-                            class="text-xs text-red-600 dark:text-red-400 hover:underline disabled:opacity-50"
-                            :disabled="matrixDeactivateLoading"
-                            @click="confirmMatrixDeactivate"
-                          >
-                            {{ matrixDeactivateLoading ? '注销中…' : '彻底注销 Matrix 账号' }}
-                          </button>
-                        </div>
                       </div>
                     </div>
                   </div>
@@ -515,7 +504,6 @@ const matrixSetPasswordConfirm = ref('')
 const matrixSetPasswordError = ref('')
 const matrixSetPasswordSuccess = ref(false)
 const matrixSetPasswordLoading = ref(false)
-const matrixDeactivateLoading = ref(false)
 async function submitMatrixSetPassword() {
   matrixSetPasswordError.value = ''
   matrixSetPasswordSuccess.value = false
@@ -550,24 +538,6 @@ async function submitMatrixSetPassword() {
   } finally {
     matrixSetPasswordLoading.value = false
   }
-}
-function confirmMatrixDeactivate() {
-  if (!confirm('确定要彻底注销 Matrix 账号吗？此操作不可恢复，将删除账号及关联数据。')) return
-  matrixDeactivateLoading.value = true
-  fetch(`${apiBase}/api/auth/matrix/deactivate`, {
-    method: 'POST',
-    credentials: 'include',
-  })
-    .then((res) => res.json().catch(() => ({})) as { ok?: boolean; error?: string })
-    .then((data) => {
-      if (data.ok) {
-        fetchUser()
-      } else {
-        alert(data.error || '注销失败')
-      }
-    })
-    .catch(() => alert('网络错误'))
-    .finally(() => { matrixDeactivateLoading.value = false })
 }
 
 /** 修改 Logto 密码（无需当前密码） */

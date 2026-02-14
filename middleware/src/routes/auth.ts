@@ -119,6 +119,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       matrixSyncToken?: string;
       matrix_base_url?: string;
       matrix_user_id?: string;
+      matrix_device_id?: string;
     } = {
       ok: true,
       user,
@@ -194,9 +195,13 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       }
 
       let token = session.matrixAccessToken;
+      let deviceId = session.matrixDeviceId;
       if (!token) {
         const tokenResult = await ensureMatrixTokenForSession(session);
-        if (tokenResult && 'access_token' in tokenResult) token = tokenResult.access_token;
+        if (tokenResult && 'access_token' in tokenResult) {
+          token = tokenResult.access_token;
+          if (tokenResult.device_id) deviceId = tokenResult.device_id;
+        }
       }
       if (token) {
         payload.matrixSyncToken = token;
@@ -206,6 +211,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
           username ?? session.userProfile?.username,
           resolvedMatrixUserId
         );
+        if (deviceId) payload.matrix_device_id = deviceId;
       }
     }
     return reply.send(payload);
@@ -458,6 +464,7 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     await updateSession(session.sessionId, {
       matrixAccessToken: undefined,
       matrixTokenExpiresAt: undefined,
+      matrixDeviceId: undefined,
       matrixUserId: undefined,
     });
     return reply.send({ ok: true });
@@ -482,9 +489,12 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     try {
       const loginResult = await loginAsUser(matrixUserId, password);
       const expiresInMs = loginResult.expires_in_ms ?? 24 * 60 * 60 * 1000;
+      const { getMatrixWhoami } = await import('../adapters/matrixClient.js');
+      const whoami = await getMatrixWhoami(loginResult.access_token);
       await updateSession(session.sessionId, {
         matrixAccessToken: loginResult.access_token,
         matrixTokenExpiresAt: Date.now() + expiresInMs,
+        ...(whoami.device_id ? { matrixDeviceId: whoami.device_id } : {}),
       });
       return reply.send({ ok: true });
     } catch (e) {

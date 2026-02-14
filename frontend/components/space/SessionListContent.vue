@@ -1,11 +1,14 @@
 <template>
   <div
-    class="session-list-scroll-area absolute left-0 right-0 bottom-0 top-0 z-0 flex flex-col overflow-hidden overscroll-contain pb-24"
+    class="session-list-scroll-area absolute left-0 right-0 bottom-0 top-0 z-0 flex flex-col overflow-y-auto overscroll-contain pb-24"
   >
-    <div class="session-list-inner flex-1 min-h-0 flex flex-col" :style="{ paddingTop: listPaddingTop }">
+    <div class="session-list-inner flex flex-col min-h-0 min-w-0">
       <template v-if="listViewTab === 'active'">
         <div class="flex-1 min-h-0 flex flex-col">
-        <section class="session-list-pinned shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md">
+        <section
+          v-if="pinnedChats.length > 0"
+          class="session-list-pinned shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
+        >
           <button
             type="button"
             class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
@@ -15,13 +18,12 @@
             <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
             <span class="flex-1">置顶</span>
             <span
-              v-if="pinnedChats.length > 0"
               class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums"
             >
               {{ pinnedChats.length }}
             </span>
           </button>
-          <ul v-show="!effectivePinnedCollapsed && pinnedChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
+          <ul v-show="!effectivePinnedCollapsed" class="divide-y divide-amber-100 dark:divide-amber-900/40">
             <SessionListItem
               v-for="c in pinnedChats"
               :key="c.id"
@@ -29,6 +31,7 @@
               :is-active="c.id === chatId && isSessionExpanded"
               :is-mock="isMock(c.id)"
               :is-pinned="true"
+              :is-left-room="isSessionLeftRoom?.(c.id)"
               :date-label="getChatDateLabel(c.id)"
               @click="emit('session-click', c.id)"
               @toggle-pin="emit('toggle-pin', c.id)"
@@ -65,6 +68,7 @@
               :is-active="c.id === chatId && isSessionExpanded"
               :is-mock="true"
               :is-pinned="pinnedIds.includes(c.id)"
+              :is-left-room="isSessionLeftRoom?.(c.id)"
               :date-label="getChatDateLabel(c.id)"
               @click="emit('session-click', c.id)"
               @toggle-pin="emit('toggle-pin', c.id)"
@@ -73,47 +77,28 @@
             />
           </ul>
         </section>
-        <section class="flex-1 min-h-0 flex flex-col min-w-0">
+        <section class="flex flex-col min-w-0">
           <template v-if="activeChats.length !== 0">
-            <div
-              ref="activeListScrollRef"
-              class="active-list-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain divide-y divide-zinc-100 dark:divide-zinc-700"
-            >
-              <div
-                :style="{
-                  height: `${activeListVirtualizer.getTotalSize()}px`,
-                  position: 'relative',
-                  width: '100%',
-                }"
-              >
-                <template v-for="virtualRow in activeListVirtualizer.getVirtualItems()" :key="virtualRow.key">
-                  <div
-                    v-if="activeChats[virtualRow.index]"
-                    class="absolute left-0 top-0 w-full"
-                    :style="{
-                      transform: `translateY(${virtualRow.start}px)`,
-                      minHeight: `${virtualRow.size}px`,
-                    }"
-                  >
-                    <SessionListItem
-                      :item="activeChats[virtualRow.index]!"
-                      :is-active="activeChats[virtualRow.index]!.id === chatId && isSessionExpanded"
-                      :is-mock="isMock(activeChats[virtualRow.index]!.id)"
-                      :is-pinned="pinnedIds.includes(activeChats[virtualRow.index]!.id)"
-                      :date-label="getChatDateLabel(activeChats[virtualRow.index]!.id)"
-                      @click="emit('session-click', activeChats[virtualRow.index]!.id)"
-                      @toggle-pin="emit('toggle-pin', activeChats[virtualRow.index]!.id)"
-                      @rename="emit('rename', activeChats[virtualRow.index]!.id)"
-                      @delete="emit('delete', activeChats[virtualRow.index]!.id)"
-                    />
-                  </div>
-                </template>
-              </div>
-            </div>
+            <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
+              <SessionListItem
+                v-for="c in activeChats"
+                :key="c.id"
+                :item="c"
+                :is-active="c.id === chatId && isSessionExpanded"
+                :is-mock="isMock(c.id)"
+                :is-pinned="pinnedIds.includes(c.id)"
+                :is-left-room="isSessionLeftRoom?.(c.id)"
+                :date-label="getChatDateLabel(c.id)"
+                @click="emit('session-click', c.id)"
+                @toggle-pin="emit('toggle-pin', c.id)"
+                @rename="emit('rename', c.id)"
+                @delete="emit('delete', c.id)"
+              />
+            </ul>
           </template>
           <div
             v-else-if="searchQuery"
-            class="flex-1 min-h-0 flex flex-col items-center justify-center"
+            class="flex flex-col items-center justify-center py-8"
           >
             <Empty
               compact
@@ -155,25 +140,16 @@
             <li
               v-for="inv in invitedSessions"
               :key="inv.id"
-              class="flex items-center gap-2 px-3 py-2.5"
+              role="button"
+              tabindex="0"
+              class="flex items-center gap-2 px-3 py-2.5 cursor-pointer hover:bg-emerald-100/60 dark:hover:bg-emerald-900/30 rounded-md transition-colors"
+              @click="openInvitationDialog(inv)"
+              @keydown.enter.prevent="openInvitationDialog(inv)"
             >
+              <UserPlus class="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-800 dark:text-zinc-200">{{ inv.title }}</span>
-              <div class="shrink-0 flex items-center gap-1">
-                <button
-                  type="button"
-                  class="rounded px-2 py-1 text-xs font-medium bg-emerald-600 text-white hover:bg-emerald-700"
-                  @click="onAcceptInvite?.(inv.id, inv.title)"
-                >
-                  接受
-                </button>
-                <button
-                  type="button"
-                  class="rounded px-2 py-1 text-xs font-medium border border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700"
-                  @click="onDeclineInvite?.(inv.id)"
-                >
-                  拒绝
-                </button>
-              </div>
+              <span class="text-zinc-400 dark:text-zinc-500 text-xs">查看</span>
+              <span class="text-zinc-400 dark:text-zinc-500 text-xs">›</span>
             </li>
           </ul>
         </section>
@@ -224,6 +200,14 @@
         >
           <p class="text-xs text-zinc-500 dark:text-zinc-400">暂无未读等消息</p>
         </div>
+        <InvitationDetailDialog
+          :open="invitationDialogOpen"
+          :invitation="selectedInvitation"
+          :busy="invitationBusy"
+          @close="closeInvitationDialog"
+          @accept="handleAcceptInvite"
+          @decline="handleDeclineInvite"
+        />
       </div>
     </template>
       <template v-else-if="listViewTab === 'settings'">
@@ -234,12 +218,12 @@
 </template>
 
 <script setup lang="ts">
-import { useVirtualizer } from '@tanstack/vue-virtual'
 import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search, UserPlus } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Empty } from '~/components/ui/empty'
 import SessionListItem from '~/components/SessionListItem.vue'
 import SessionListThumb from '~/components/SessionListThumb.vue'
+import InvitationDetailDialog from '~/components/space/InvitationDetailDialog.vue'
 import SessionListSettings from '~/components/space/SessionListSettings.vue'
 
 export interface DisplayChatItem {
@@ -268,20 +252,48 @@ const props = defineProps<{
   getChatDateLabel: (id: string) => string
   getNonReadCount: (id: string) => number
   isMock: (id: string) => boolean
+  /** 用户已离开/被踢出该会话（无法查看历史） */
+  isSessionLeftRoom?: (id: string) => boolean
   invitedSessions?: { id: string; title: string }[]
   onAcceptInvite?: (id: string, title: string) => void
   onDeclineInvite?: (id: string) => void
 }>()
 
-const activeListScrollRef = ref<HTMLElement | null>(null)
-const activeListVirtualizer = useVirtualizer(
-  computed(() => ({
-    getScrollElement: () => activeListScrollRef.value,
-    count: props.activeChats.length,
-    estimateSize: () => 56,
-    overscan: 2,
-  })),
-)
+const invitationDialogOpen = ref(false)
+const selectedInvitation = ref<{ id: string; title: string } | null>(null)
+const invitationBusy = ref(false)
+
+function openInvitationDialog(inv: { id: string; title: string }) {
+  selectedInvitation.value = inv
+  invitationDialogOpen.value = true
+}
+
+function closeInvitationDialog() {
+  invitationDialogOpen.value = false
+  selectedInvitation.value = null
+}
+
+async function handleAcceptInvite(id: string, title: string) {
+  if (!props.onAcceptInvite) return
+  invitationBusy.value = true
+  try {
+    await props.onAcceptInvite(id, title)
+    closeInvitationDialog()
+  } finally {
+    invitationBusy.value = false
+  }
+}
+
+async function handleDeclineInvite(id: string) {
+  if (!props.onDeclineInvite) return
+  invitationBusy.value = true
+  try {
+    await props.onDeclineInvite(id)
+    closeInvitationDialog()
+  } finally {
+    invitationBusy.value = false
+  }
+}
 
 /** 水合前使用固定值，避免服务端与客户端图标/列表显隐不一致导致 hydration mismatch */
 const mounted = ref(false)

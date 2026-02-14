@@ -29,6 +29,7 @@ export function useSpacePage() {
     setConversationId,
     getNonReadCount,
     markChatAsRead,
+    isSessionLeftRoom,
   } = useChatSessions()
 
   const config = useRuntimeConfig()
@@ -40,6 +41,9 @@ export function useSpacePage() {
     createSession,
     inviteToSession,
     fetchInvitedSessions,
+    fetchSessionMembers,
+    kickFromSession,
+    banFromSession,
     joinSession,
     deleteSession: deleteSessionApi,
   } = useChatSessionsApi()
@@ -49,7 +53,15 @@ export function useSpacePage() {
   const mockSessionListEnabled = useMockSessionListEnabled()
 
   /** Matrix 实时消息：token 可用时启动 sync（含 auth 晚于 mount 完成的情况）；失败时单次延迟重试 */
-  const { hasSyncToken, startSyncClient } = useMatrixSyncClient()
+  const {
+    hasSyncToken,
+    startSyncClient,
+    setCurrentRoomId,
+    invitedRoomsFromSync,
+    syncReady,
+    syncClient,
+    fillMessagesFromSyncTimeline,
+  } = useMatrixSyncClient()
   let syncRetryTimer: ReturnType<typeof setTimeout> | null = null
   function tryStartSync() {
     if (!hasSyncToken.value) return
@@ -149,22 +161,61 @@ export function useSpacePage() {
   const chatScrollElRef = ref<HTMLElement | null>(null)
 
   const invitedSessions = ref<{ id: string; title: string }[]>([])
+  /** 接受/拒绝后乐观移除，避免列表残留（Sync 源需等下一轮 sync 才从 SDK 消失） */
+  const optimisticRemovedInviteIds = ref<string[]>([])
+
   async function loadInvitedSessions() {
     const list = await fetchInvitedSessions()
     invitedSessions.value = list
   }
+
+  /** 优先使用 Sync 实时邀请列表（Cinny 方案），未就绪时用 API 列表 */
+  const effectiveInvitedSessions = computed(() => {
+    const list =
+      chatProvider === 'matrix' && syncReady.value && syncClient.value
+        ? invitedRoomsFromSync.value
+        : invitedSessions.value
+    const removed = optimisticRemovedInviteIds.value
+    return removed.length ? list.filter((inv) => !removed.includes(inv.id)) : list
+  })
+
+  watch(
+    () =>
+      chatProvider === 'matrix' && syncReady.value && syncClient.value
+        ? invitedRoomsFromSync.value.map((i) => i.id)
+        : invitedSessions.value.map((i) => i.id),
+    (sourceIds) => {
+      const set = new Set(sourceIds)
+      const prev = optimisticRemovedInviteIds.value
+      const next = prev.filter((id) => set.has(id))
+      if (next.length !== prev.length) optimisticRemovedInviteIds.value = next
+    },
+  )
+
   async function onAcceptInvite(id: string, title: string) {
     const ok = await joinSession(id)
     if (!ok) return
     ensureChat(id, title)
     setConversationId(id, id)
+    optimisticRemovedInviteIds.value = [...optimisticRemovedInviteIds.value, id]
+    invitedSessions.value = invitedSessions.value.filter((inv) => inv.id !== id)
     await loadSessions()
-    await loadInvitedSessions()
+    loadInvitedSessions().catch(() => {})
+    let loaded = await loadSessionMessages(id).catch(() => false)
+    if (!loaded && getMessages(id).length === 0) {
+      await new Promise((r) => setTimeout(r, 400))
+      loaded = await loadSessionMessages(id).catch(() => false)
+    }
+    if (getMessages(id).length === 0 && syncReady.value) {
+      tryFillFromSyncWithRetry(id)
+    }
     goToChat(id)
   }
   async function onDeclineInvite(id: string) {
     await deleteSessionApi(id)
-    await loadInvitedSessions()
+    optimisticRemovedInviteIds.value = [...optimisticRemovedInviteIds.value, id]
+    invitedSessions.value = invitedSessions.value.filter((inv) => inv.id !== id)
+    loadInvitedSessions().catch(() => {})
   }
 
   const listApi = useSpaceSessionList({
@@ -180,7 +231,7 @@ export function useSpacePage() {
     addTab: (view: string, appId?: string) => addTab(view as any, appId),
     currentView,
     activeTab,
-    invitedSessions,
+    invitedSessions: effectiveInvitedSessions,
     onAcceptInvite,
     onDeclineInvite,
   })
@@ -208,11 +259,63 @@ export function useSpacePage() {
     if (id) markChatAsRead(id)
   }, { immediate: true })
 
+  /** 同步当前展示房间 id，供 Sync 端 TimelineRefresh（如加密房间解密完成）时仅重填该房间 */
   watch(chatId, (id) => {
-    if (id && isBackendSessionId(id) && getMessages(id).length === 0) {
-      loadSessionMessages(id).catch(() => {})
+    setCurrentRoomId(id ?? undefined)
+  }, { immediate: true })
+
+  /** 从 Sync 填充消息；加密房间解密可能滞后（对方回复的 key 晚到），故多次重试 */
+  const FILL_RETRY_DELAYS_MS = [1500, 3000, 5000, 8000]
+  function tryFillFromSyncWithRetry(roomId: string) {
+    let attempt = 0
+    function tryOnce() {
+      fillMessagesFromSyncTimeline(roomId).then((filled) => {
+        if (filled) return
+        const delay = FILL_RETRY_DELAYS_MS[attempt]
+        if (delay != null && chatId.value === roomId) {
+          attempt += 1
+          setTimeout(() => {
+            if (chatId.value === roomId) tryOnce()
+          }, delay)
+        }
+      })
     }
-  })
+    tryOnce()
+  }
+
+  watch(chatId, async (id) => {
+    if (!id || !isBackendSessionId(id)) return
+    if (getMessages(id).length > 0) return
+    await loadSessionMessages(id).catch(() => {})
+    if (getMessages(id).length === 0 && chatProvider === 'matrix' && syncReady.value) {
+      tryFillFromSyncWithRetry(id)
+    }
+  }, { immediate: true })
+
+  /** Sync 就绪后若当前会话仍无消息（如加密房间 REST 无明文），用 Sync timeline 填充 */
+  watch(syncReady, (ready) => {
+    if (!ready) return
+    const id = chatId.value
+    if (!id || !isBackendSessionId(id) || getMessages(id).length > 0) return
+    tryFillFromSyncWithRetry(id)
+  }, { immediate: true })
+
+  const sessionMembers = ref<import('~/composables/useChatSessionsApi').ApiSessionMember[]>([])
+  watch(chatId, async (id) => {
+    if (!id) {
+      sessionMembers.value = []
+      return
+    }
+    sessionMembers.value = await fetchSessionMembers(id)
+  }, { immediate: true })
+
+  async function refetchSessionMembers() {
+    const id = chatId.value
+    if (!id) return []
+    const list = await fetchSessionMembers(id)
+    sessionMembers.value = list
+    return list
+  }
 
   /** 有消息时立即显示聊天区，避免 placeholder 延迟导致聊天区未挂载 */
   watch(() => (chatId.value ? getMessages(chatId.value).length : 0), (len) => {
@@ -221,6 +324,13 @@ export function useSpacePage() {
 
   watch(() => route.query.app, (app) => {
     if (app === 'contacts' || app === 'bots') openPanel(app as any)
+  })
+
+  /** 切换到「待处理消息」时刷新邀请列表，确保能看到最新邀请提醒 */
+  watch(listApi.listViewTab, (tab) => {
+    if (tab === 'pending' && chatProvider === 'matrix') {
+      loadInvitedSessions().catch(() => {})
+    }
   })
 
   const { authLoading } = useAuth()
@@ -237,7 +347,11 @@ export function useSpacePage() {
           ensureChat(id, title)
         }
         if (isBackendSessionId(id) && getMessages(id).length === 0) {
-          loadSessionMessages(id).catch(() => {})
+          loadSessionMessages(id).catch(() => {}).then(() => {
+            if (getMessages(id).length === 0 && chatProvider === 'matrix' && syncReady.value) {
+              tryFillFromSyncWithRetry(id)
+            }
+          })
         }
       }
     } else {
@@ -258,6 +372,8 @@ export function useSpacePage() {
     } else {
       watch(authLoading, (loading) => { if (loading === false) whenAuthReady() }, { once: true })
     }
+
+    /** 邀请列表：未 Sync 前用 whenAuthReady 拉一次 API；Sync 就绪后仅用 invitedRoomsFromSync（Sync 每轮会触发 setOnSyncDone，故不再在此注册 API 请求避免周期性 /api/sessions/invited） */
   })
 
   onMounted(() => {
@@ -293,6 +409,13 @@ export function useSpacePage() {
     contacts,
     creatingSession,
     createSessionError,
+    fetchSessionMembers,
+    kickFromSession,
+    banFromSession,
+    inviteToSession,
+    sessionMembers,
+    refetchSessionMembers,
+    isSessionLeftRoom,
     ...listApi,
     ...paneApi,
   }

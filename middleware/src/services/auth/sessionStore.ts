@@ -33,6 +33,8 @@ export interface Session {
   matrixAccessToken?: string;
   /** Matrix token 过期时间戳 ms，可选 */
   matrixTokenExpiresAt?: number;
+  /** 与 access_token 关联的 device_id（whoami 返回），前端 E2EE 解密需用 */
+  matrixDeviceId?: string;
   /** 解析后的 Matrix user_id（当 external_id 冲突时，ensureMatrixUser 会更新已有用户并返回其 MXID） */
   matrixUserId?: string;
   expiresAt: number;

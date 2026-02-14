@@ -5,7 +5,16 @@
       :user-name="chatUserName"
       :user-avatar="chatUserAvatar"
       :is-session-expanded="isSessionExpanded"
-      @close="emit('close')"
+      :session-members="sessionMembers"
+      :session-id="sessionId"
+      :current-user-mxid="currentUserMxid"
+      :fetch-members="fetchSessionMembers"
+            :kick="kickFromSession"
+            :ban="banFromSession"
+            :invite="inviteToSession"
+            :leave-session="leaveSession"
+            @close="emit('close')"
+      @open-members="emit('open-members')"
       @rename="emit('rename')"
       @share="emit('share')"
       @copy-link="emit('copy-link')"
@@ -14,22 +23,32 @@
       @export-markdown="emit('export-markdown')"
       @archive="emit('archive')"
       @delete="emit('delete')"
+      @members-closed="emit('members-closed')"
     />
-    <!-- 用 margin-bottom 抬高滚动区底部；默认 8.75rem，随输入框高度上报更新变量。滚动容器外置，顶部固定「回到底部」按钮。 -->
-    <div
-      class="chat-messages-wrap flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col relative"
-      :style="{
-        '--chat-text-scale': sessionAreaFontScale,
-        '--chat-input-area-height': chatInputAreaHeightPx != null ? `${chatInputAreaHeightPx}px` : '8.75rem',
-        marginBottom: 'var(--chat-input-area-height)'
-      }"
-    >
-      <!-- 顶部边距至少超过顶栏 + 回到底部按钮高度，避免首条消息被遮挡 -->
+    <!-- 顶栏为 absolute 不占流，此处 pt-12 与顶栏 h-12 一致，避免通知/首条消息被遮挡 -->
+    <div class="flex-1 min-h-0 min-w-0 flex flex-col overflow-hidden pt-12">
+      <!-- 已离开/被踢出会话时提示无法查看历史 -->
       <div
-        ref="chatScrollRef"
-        class="chat-messages-scroll flex-1 min-h-0 overflow-x-hidden overflow-y-auto pt-24 pb-[35vh]"
-        @scroll="onChatScroll"
+        v-if="isLeftRoom"
+        class="shrink-0 px-4 py-2 flex items-center gap-2 rounded-b-lg bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200/60 dark:border-amber-800/40 text-amber-800 dark:text-amber-200 text-xs"
       >
+        <span>你已离开该会话，无法查看历史消息。</span>
+      </div>
+      <!-- 用 margin-bottom 抬高滚动区底部；默认 8.75rem，随输入框高度上报更新变量。滚动容器外置，顶部固定「回到底部」按钮。 -->
+      <div
+        class="chat-messages-wrap flex-1 min-h-0 min-w-0 overflow-hidden flex flex-col relative"
+        :style="{
+          '--chat-text-scale': sessionAreaFontScale,
+          '--chat-input-area-height': chatInputAreaHeightPx != null ? `${chatInputAreaHeightPx}px` : '8.75rem',
+          marginBottom: 'var(--chat-input-area-height)'
+        }"
+      >
+        <!-- 顶部边距为回到底部按钮留空（顶栏留空已由外层 pt-12 提供），避免首条消息被按钮遮挡 -->
+        <div
+          ref="chatScrollRef"
+          class="chat-messages-scroll flex-1 min-h-0 overflow-x-hidden overflow-y-auto pt-14 pb-[35vh]"
+          @scroll="onChatScroll"
+        >
         <!-- 日期分隔线与消息同级渲染（在消息容器外），便于全宽与居中样式生效 -->
         <div class="chat-messages-list flex min-w-0 flex-col gap-0.5 min-h-full w-full pl-4 pr-2">
           <template v-for="(item, idx) in displayItems" :key="item.type === 'date' ? `date-${idx}-${item.label}` : item.uiMessage.id">
@@ -67,6 +86,7 @@
           <ArrowDown class="h-4 w-4" aria-hidden />
         </button>
       </Transition>
+      </div>
     </div>
     <ChatInputPanel
       :model-value="input"
@@ -189,11 +209,31 @@ const props = defineProps<{
   editingMessageId?: string | null
   /** 父级传入的 ref，用于接收本组件聊天消息滚动容器 DOM（截屏用） */
   scrollTargetRef?: { value: HTMLElement | null } | null
+  /** 会话成员（顶栏右侧堆叠头像） */
+  sessionMembers?: import('~/composables/useChatSessionsApi').ApiSessionMember[]
+  /** 当前会话 ID（成员弹窗用） */
+  sessionId?: string
+  /** 当前用户 Matrix ID（成员列表不显示踢出/屏蔽自己） */
+  currentUserMxid?: string
+  /** 拉取会话成员 */
+  fetchSessionMembers?: (sessionId: string) => Promise<import('~/composables/useChatSessionsApi').ApiSessionMember[]>
+  /** 踢出成员 */
+  kickFromSession?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 屏蔽成员 */
+  banFromSession?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 邀请成员 */
+  inviteToSession?: (sessionId: string, userId: string) => Promise<boolean>
+  /** 当前用户退出会话（非拥有者时在成员弹窗中显示） */
+  leaveSession?: (sessionId: string) => Promise<boolean>
+  /** 用户已离开/被踢出该会话，无法查看历史 */
+  isLeftRoom?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:input': [value: string]
   close: []
+  'open-members': []
+  'members-closed': []
   rename: []
   share: []
   'copy-link': []

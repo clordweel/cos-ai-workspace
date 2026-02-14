@@ -84,6 +84,18 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 - **Dify**：无 Dify 适配器注册；若需可实现并注册，或由编排调用 `difyStream`。
 - **用户/组织持久化**：无工作台独立数据库；若需见 `docs/archive/research/CONFIG_AND_AUTH_RESEARCH.md`。
 
+### 未来待实现：加密会话（E2EE）
+
+当前**仅专注未加密消息下的业务逻辑**，加密相关能力暂不实现、不暴露。
+
+| 项 | 说明 |
+|----|------|
+| 创建会话时可选「端到端加密」 | 创建房间时通过 Matrix `initial_state` 设置 `m.room.encryption`；已从产品中移除，待后续迭代再提供。 |
+| 会话列表加密标识（锁图标） | 根据 Sync 客户端 `room.getEncrypted()` 在列表中标注加密房间；已移除，待 E2EE 功能整体上线时一并提供。 |
+| Key Backup 恢复 | 本设备未持有 Megolm 密钥时，通过输入恢复密码从服务器恢复密钥以解密历史；见 `docs/MATRIX_E2EE_PRINCIPLE_AND_PROJECT_STATUS.md`。 |
+
+实现时可参考：`docs/MATRIX_E2EE_PRINCIPLE_AND_PROJECT_STATUS.md`、`docs/ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE.md`。
+
 ---
 
 ## 7. 快速入口

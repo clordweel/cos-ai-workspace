@@ -16,6 +16,12 @@
         <p class="min-w-0 flex-1 text-xs font-medium text-inherit truncate">
           {{ item.title }}
         </p>
+        <span
+          v-if="isLeftRoom"
+          class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-700/80"
+        >
+          已离开
+        </span>
         <span v-if="dateLabel" class="shrink-0 text-[11px] text-inherit opacity-80">
           {{ dateLabel }}
         </span>
@@ -92,6 +98,8 @@ const props = defineProps<{
   isMock: boolean
   /** 是否已置顶 */
   isPinned?: boolean
+  /** 用户已离开/被踢出该会话，无法查看历史 */
+  isLeftRoom?: boolean
   dateLabel?: string
 }>()
 const emit = defineEmits<{

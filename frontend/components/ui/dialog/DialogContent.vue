@@ -2,6 +2,7 @@
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
+import { computed, useAttrs } from "vue"
 import { Cross2Icon } from '@radix-icons/vue'
 import {
   DialogClose,
@@ -24,6 +25,12 @@ const emits = defineEmits<DialogContentEmits>()
 const delegatedProps = reactiveOmit(props, "class")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
+
+const attrs = useAttrs()
+const forwardedAttrs = computed(() => {
+  const { style: _style, ...rest } = attrs as Record<string, unknown>
+  return { ...rest, ...forwarded }
+})
 </script>
 
 <template>
@@ -31,7 +38,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <DialogOverlay />
     <DialogContent
       data-slot="dialog-content"
-      v-bind="{ ...$attrs, ...forwarded }"
+      v-bind="forwardedAttrs"
       :class="
         cn(
           'bg-white data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border border-zinc-200 p-6 shadow-lg duration-200 sm:max-w-lg dark:bg-zinc-950 dark:border-zinc-800',

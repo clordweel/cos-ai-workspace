@@ -15,6 +15,10 @@ import {
   inviteToRoom,
   joinRoom,
   leaveRoom,
+  kickFromRoom,
+  banUserFromRoom,
+  getRoomMembers,
+  getRoomCreator,
   setRoomName,
   verifyMatrixTokenUserId,
 } from './matrixClient.js';
@@ -25,9 +29,13 @@ import type {
   ChatBackendAdapter,
   NormalizedSession,
   NormalizedMessage,
+  NormalizedRoomMember,
   StreamMessageParams,
   StreamMessageResult,
   ListSessionsParams,
+  ListSessionMembersParams,
+  KickFromSessionParams,
+  BanFromSessionParams,
   ListMessagesParams,
   CreateSessionParams,
   InviteToSessionParams,
@@ -300,6 +308,31 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       }
       const roomId = backendSessionId || sessionId;
       await redactRoomMessage(roomId, messageId, userToken);
+    },
+
+    async listSessionMembers(params: ListSessionMembersParams): Promise<NormalizedRoomMember[]> {
+      const { backendSessionId, sessionId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      const roomId = backendSessionId || sessionId;
+      const [memberList, creator] = await Promise.all([
+        getRoomMembers(roomId, userToken),
+        getRoomCreator(roomId, userToken),
+      ]);
+      return memberList.map((m) => ({ ...m, isOwner: m.userId === creator }));
+    },
+
+    async kickFromSession(params: KickFromSessionParams): Promise<void> {
+      const { backendSessionId, sessionId, targetUserId, matrixAccessToken: userToken, reason } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      const roomId = backendSessionId || sessionId;
+      await kickFromRoom(roomId, targetUserId, userToken, reason);
+    },
+
+    async banFromSession(params: BanFromSessionParams): Promise<void> {
+      const { backendSessionId, sessionId, targetUserId, matrixAccessToken: userToken, reason } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token');
+      const roomId = backendSessionId || sessionId;
+      await banUserFromRoom(roomId, targetUserId, userToken, reason);
     },
   };
 }

@@ -152,15 +152,34 @@ export interface MatrixRoomSummary {
 }
 
 /**
+ * 通过 token 调用 whoami，返回该 token 对应的 user_id 与 device_id（device_id 供前端 E2EE 解密）
+ */
+export async function getMatrixWhoami(
+  userToken: string
+): Promise<{ user_id: string | null; device_id: string | null }> {
+  const res = await matrixFetchWithToken('/account/whoami', {}, userToken);
+  const data = (await res.json().catch(() => ({}))) as {
+    user_id?: string;
+    device_id?: string;
+    error?: string;
+  };
+  if (!res.ok) {
+    return { user_id: null, device_id: null };
+  }
+  return {
+    user_id: data.user_id?.trim() ?? null,
+    device_id: typeof data.device_id === 'string' && data.device_id.trim() ? data.device_id.trim() : null,
+  };
+}
+
+/**
  * 通过 token 调用 whoami，返回该 token 对应的 Matrix user_id
  */
 export async function getMatrixUserIdFromToken(
   userToken: string
 ): Promise<string | null> {
-  const res = await matrixFetchWithToken('/account/whoami', {}, userToken);
-  const data = (await res.json().catch(() => ({}))) as { user_id?: string; error?: string };
-  if (!res.ok) return null;
-  return data.user_id?.trim() ?? null;
+  const { user_id } = await getMatrixWhoami(userToken);
+  return user_id;
 }
 
 /**
@@ -543,6 +562,152 @@ export async function leaveRoom(roomId: string, userToken?: string): Promise<voi
     const data = (await res.json().catch(() => ({}))) as { error?: string };
     throw new MatrixApiError(data.error || res.statusText, res.status, data);
   }
+}
+
+/**
+ * 将用户踢出房间（含「取消邀请」：对尚未接受的邀请者执行 kick 即撤销邀请）
+ * @param userToken 必填：当前用户 token（需有权限）
+ */
+export async function kickFromRoom(
+  roomId: string,
+  targetUserId: string,
+  userToken: string,
+  reason?: string
+): Promise<void> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('kickFromRoom 必须使用当前用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/kick`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ user_id: targetUserId, ...(reason ? { reason } : {}) }),
+    },
+    userToken
+  );
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  }
+}
+
+/**
+ * 屏蔽用户（ban）：移出房间并禁止再次加入
+ * @param userToken 必填：当前用户 token（需有权限）
+ */
+export async function banUserFromRoom(
+  roomId: string,
+  targetUserId: string,
+  userToken: string,
+  reason?: string
+): Promise<void> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('banUserFromRoom 必须使用当前用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/ban`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ user_id: targetUserId, ...(reason ? { reason } : {}) }),
+    },
+    userToken
+  );
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new MatrixApiError(data.error || res.statusText, res.status, data);
+  }
+}
+
+/** 房间成员项：join=已在房，invite=待接受邀请 */
+export interface RoomMemberEntry {
+  userId: string;
+  membership: 'join' | 'invite';
+  displayName?: string;
+  avatarUrl?: string;
+  /** 是否为房间创建者（仅后端填充，用于标注与禁止踢出/屏蔽） */
+  isOwner?: boolean;
+}
+
+/**
+ * 获取房间创建者 MXID（m.room.create 的 content.creator）
+ * 必须使用用户 token；无权限或房间不存在时返回 undefined
+ */
+export async function getRoomCreator(roomId: string, userToken: string): Promise<string | undefined> {
+  if (!userToken?.trim()) return undefined;
+  const encoded = encodeURIComponent(roomId);
+  const res = await matrixFetchWithToken(
+    `/rooms/${encoded}/state/m.room.create/`,
+    {},
+    userToken
+  );
+  if (!res.ok) return undefined;
+  const data = (await res.json().catch(() => ({}))) as { creator?: string };
+  return typeof data.creator === 'string' ? data.creator : undefined;
+}
+
+/**
+ * 获取房间成员列表（含 join 与 invite；必须使用用户 token）
+ * 使用 Matrix GET /rooms/{roomId}/joined_members 与 state 中的 invite 汇总
+ */
+export async function getRoomMembers(roomId: string, userToken: string): Promise<RoomMemberEntry[]> {
+  if (!userToken?.trim()) {
+    throw new MatrixApiError('getRoomMembers 需要用户 token', 0);
+  }
+  const encoded = encodeURIComponent(roomId);
+  const out: RoomMemberEntry[] = [];
+
+  const joinedRes = await matrixFetchWithToken(
+    `/rooms/${encoded}/joined_members`,
+    {},
+    userToken
+  );
+  if (joinedRes.ok) {
+    const joinedData = (await joinedRes.json()) as { joined?: Record<string, { display_name?: string; avatar_url?: string }> };
+    const joined = joinedData.joined ?? {};
+    for (const [userId, info] of Object.entries(joined)) {
+      out.push({
+        userId,
+        membership: 'join',
+        displayName: info?.display_name,
+        avatarUrl: info?.avatar_url,
+      });
+    }
+  }
+
+  const stateRes = await matrixFetchWithToken(
+    `/rooms/${encoded}/state`,
+    {},
+    userToken
+  );
+  if (stateRes.ok) {
+    try {
+      const raw = await stateRes.json();
+      const stateEvents = Array.isArray(raw) ? raw : [];
+      const inviteUserIds = new Set(out.map((m) => m.userId));
+      for (const ev of stateEvents as Array<{
+        type?: string;
+        state_key?: string;
+        content?: { membership?: string; displayname?: string; avatar_url?: string };
+      }>) {
+        if (ev.type !== 'm.room.member' || ev.content?.membership !== 'invite') continue;
+        const userId = ev.state_key;
+        if (!userId || inviteUserIds.has(userId)) continue;
+        inviteUserIds.add(userId);
+        out.push({
+          userId,
+          membership: 'invite',
+          displayName: ev.content?.displayname,
+          avatarUrl: ev.content?.avatar_url,
+        });
+      }
+    } catch {
+      // state 解析失败时仅返回 joined 列表
+    }
+  }
+
+  return out;
 }
 
 /**

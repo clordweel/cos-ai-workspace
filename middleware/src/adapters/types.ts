@@ -137,6 +137,38 @@ export interface RedactMessageParams {
   currentUserMxid?: string;
 }
 
+/** 会话成员：join=已在房，invite=待接受邀请 */
+export interface NormalizedRoomMember {
+  userId: string;
+  membership: 'join' | 'invite';
+  displayName?: string;
+  avatarUrl?: string;
+  /** 是否为房间创建者（仅 Matrix 等支持时返回，用于 UI 标注与禁止踢出/屏蔽） */
+  isOwner?: boolean;
+}
+
+export interface ListSessionMembersParams {
+  sessionId: string;
+  backendSessionId?: string;
+  matrixAccessToken?: string;
+}
+
+export interface KickFromSessionParams {
+  sessionId: string;
+  backendSessionId?: string;
+  targetUserId: string;
+  matrixAccessToken?: string;
+  reason?: string;
+}
+
+export interface BanFromSessionParams {
+  sessionId: string;
+  backendSessionId?: string;
+  targetUserId: string;
+  matrixAccessToken?: string;
+  reason?: string;
+}
+
 /**
  * 聊天后端适配器接口（各适配器实现此契约）
  */
@@ -154,4 +186,7 @@ export interface ChatBackendAdapter {
   renameSession?(params: RenameSessionParams): Promise<void>;
   editMessage?(params: EditMessageParams): Promise<void>;
   redactMessage?(params: RedactMessageParams): Promise<void>;
+  listSessionMembers?(params: ListSessionMembersParams): Promise<NormalizedRoomMember[]>;
+  kickFromSession?(params: KickFromSessionParams): Promise<void>;
+  banFromSession?(params: BanFromSessionParams): Promise<void>;
 }

@@ -469,6 +469,15 @@ export function useSpaceChatPane(options: {
     if (ok) router.replace('/space')
   }
 
+  /** 退出当前会话（非拥有者用；与删除同一 API，成功后跳转 /space） */
+  async function onLeaveSession(): Promise<boolean> {
+    const id = chatId.value
+    if (!id) return false
+    const ok = await deleteSession(id)
+    if (ok) router.replace('/space')
+    return ok
+  }
+
   function onEditMessage(_index: number) { /* TODO */ }
   function onViewEditHistory(_index: number) { /* TODO */ }
 
@@ -594,6 +603,7 @@ export function useSpaceChatPane(options: {
     onRenameChat,
     onArchiveChat,
     onDeleteChat,
+    onLeaveSession,
     canEditMessage,
     onEditMessage,
     onViewEditHistory,

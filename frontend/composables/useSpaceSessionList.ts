@@ -10,6 +10,7 @@ import {
   useMockSessionListEnabled,
   isMockSession as isMockSessionId,
 } from '~/composables/useMockSessions'
+import { useAppExtensions } from '~/composables/useAppExtensions'
 
 export type ListViewTab = 'active' | 'favorites' | 'pending' | 'settings'
 

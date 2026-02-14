@@ -68,6 +68,13 @@ withDefaults(
 .logo-wrap {
   display: inline-block;
   transform-origin: center center;
+  margin-top: -1px;
+  margin-right: -5px;
+}
+
+/* 根因：inline SVG 参与基线对齐，浏览器会在下方预留 descender 空间，导致在 flex 中无法真正垂直居中。设为 block 后不再参与基线，行高等于 SVG 高度，居中即正确。 */
+.logo-wrap svg {
+  display: block;
 }
 
 /* 入场/循环：细描边路径绘制，无限循环；动画结束阶段描边淡出仅留填充 */
