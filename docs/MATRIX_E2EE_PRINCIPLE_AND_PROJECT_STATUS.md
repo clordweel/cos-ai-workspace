@@ -60,7 +60,7 @@
 2. **前端**  
    - 从 `/api/auth/me` 读取 **matrix_device_id**，在 **useMatrixSyncClient** 中：  
      - 使用 **deviceId** 调用 `createClient({ baseUrl, accessToken, userId, deviceId, ... })`；  
-     - 若存在 `deviceId` 且 client 有 `initRustCrypto`，则调用 **await client.initRustCrypto()** 启用 Rust Crypto（WASM）解密。  
+     - 若存在 `deviceId` 且 client 有 `initRustCrypto`，则调用 **await client.initRustCrypto({ cryptoDatabasePrefix })** 启用 Rust Crypto（WASM）解密；**cryptoDatabasePrefix** 按 (userId, deviceId) 生成，多用户/换用户登录时各自使用独立 IndexedDB，避免 “account in the store doesn't match” 错误。  
    - 解密完成后通过 **RoomEvent.TimelineRefresh** 重填当前房间消息（见 ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE.md）。
 
 3. **仍可能遇到的情况**  

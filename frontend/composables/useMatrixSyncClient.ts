@@ -17,6 +17,12 @@ const onSyncDoneCallbacks = ref<Array<() => void>>([])
 /** 从 Sync 客户端实时派生的待接受邀请列表（Cinny 方案：数据源与 sync 一致，新邀请随 sync 到达即更新） */
 const invitedRoomsFromSync = ref<{ id: string; title: string }[]>([])
 
+/** 按 (userId, deviceId) 生成 Rust Crypto IndexedDB 前缀，避免多用户共用同一 store 导致 "account in the store doesn't match" */
+function buildSyncCryptoPrefix(userId: string, deviceId: string): string {
+  const safe = (s: string) => s.replace(/[@:]/g, '_')
+  return `matrix-sync-${safe(userId)}-${safe(deviceId)}`
+}
+
 export function useMatrixSyncClient() {
   const auth = useAuth()
   const config = useRuntimeConfig()
@@ -81,7 +87,7 @@ export function useMatrixSyncClient() {
       syncClient.value = c
       if (deviceId && typeof c.initRustCrypto === 'function') {
         try {
-          await c.initRustCrypto()
+          await c.initRustCrypto({ cryptoDatabasePrefix: buildSyncCryptoPrefix(userId, deviceId) })
         } catch (e) {
           if (import.meta.dev) {
             console.warn('[MatrixSync] initRustCrypto 失败，加密房间消息将无法解密:', e)
