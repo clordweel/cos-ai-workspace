@@ -56,6 +56,8 @@
           </span>
         </button>
       </header>
+      <!-- Matrix 来电条：Element 等发起 1:1 呼叫时显示接听/拒绝 -->
+      <IncomingCallBar />
       <div
         class="workspace-grid flex-1 grid min-h-0 px-3 pt-0 pb-2 relative"
         :class="showAppPanel ? 'gap-3' : 'gap-0'"

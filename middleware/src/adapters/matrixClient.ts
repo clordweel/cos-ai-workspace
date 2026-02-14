@@ -346,9 +346,11 @@ export async function getRoomMessages(
   const data = (await res.json()) as RoomMessagesResponse & { error?: string };
   if (!res.ok) throw new MatrixApiError(data.error || res.statusText, res.status, data);
   const chunk = data.chunk || [];
-  // 仅保留时间线消息；m.room.name / m.room.member 为状态事件，与 Cinny 一致不放入聊天流
+  // 时间线消息 + m.call.*（语音/视频通话），状态事件不放入聊天流
   const events = chunk.filter(
-    (e) => e.type === 'm.room.message' && e.content?.body != null
+    (e) =>
+      (e.type === 'm.room.message' && e.content?.body != null) ||
+      (typeof e.type === 'string' && e.type.startsWith('m.call.'))
   );
   return { events, nextToken: data.end };
 }

@@ -1,13 +1,15 @@
 /**
  * Matrix 仅 sync/typing/已读 客户端（混合方案二/三）
  * 使用 /api/auth/me 下发的 matrixSyncToken + matrix_base_url + matrix_user_id，
- * 仅用于：收 sync 新消息、发 typing、发已读回执。禁止用于发消息、拉列表、拉历史。
+ * 仅用于：收 sync 新消息、发 typing、发已读回执、接收入场通话（Call.incoming）。禁止用于发消息、拉列表、拉历史。
  */
 import { nextTick } from 'vue'
-import type { MatrixClient } from 'matrix-js-sdk'
+import type { MatrixClient, MatrixCall } from 'matrix-js-sdk'
 
 const syncClient = ref<MatrixClient | null>(null)
 const syncReady = ref(false)
+/** 当前来电（1:1 语音/视频），由 SDK CallEventHandler 触发；接听/拒绝后或挂断后清空 */
+const incomingCallRef = ref<MatrixCall | null>(null)
 /** 当前前端正在展示的会话/房间 id，用于 TimelineRefresh 时仅重填当前房间（加密房间解密后刷新，见 ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE.md） */
 const currentRoomIdRef = ref<string | undefined>(undefined)
 /** Sync 完成（PREPARED/SYNCING）时触发的回调，用于刷新邀请列表等 */
@@ -88,6 +90,18 @@ export function useMatrixSyncClient() {
       }
       syncReady.value = false
       invitedRoomsFromSync.value = []
+
+      // 接收入场 1:1 通话（Element 等发起呼叫时 SDK 会触发 Call.incoming）
+      c.on('Call.incoming', (call: MatrixCall) => {
+        incomingCallRef.value = call
+        const onState = (state: string) => {
+          if (state === 'ended') {
+            incomingCallRef.value = null
+            try { call.off('state', onState) } catch { /* ignore */ }
+          }
+        }
+        try { call.on('state', onState) } catch { /* ignore */ }
+      })
 
       function refreshInvitedRoomsFromSync() {
         const client = syncClient.value
@@ -289,6 +303,25 @@ export function useMatrixSyncClient() {
           return
         }
 
+        // m.call.*：语音/视频通话事件，展示为占位条（与 ChatMessageBubble 一致）
+        if (typeof eventType === 'string' && eventType.startsWith('m.call.')) {
+          const role = event.getSender?.() === userId ? 'user' : 'assistant'
+          const msg = {
+            role: role as 'user' | 'assistant',
+            content: '',
+            id: eventId ?? undefined,
+            createdAt,
+            eventType,
+          }
+          nextTick(() => {
+            const room = c.getRoom?.(roomId)
+            const title = (room?.name ?? '').trim() || roomId
+            ensureChat(roomId, title)
+            appendMessage(roomId, msg)
+          })
+          return
+        }
+
         // 与 Cinny 一致：成员加入/离开等状态事件不放入聊天流，不展示为系统消息
         if (eventType === 'm.room.member') return
       })
@@ -317,6 +350,29 @@ export function useMatrixSyncClient() {
     }
     syncReady.value = false
     invitedRoomsFromSync.value = []
+    incomingCallRef.value = null
+  }
+
+  /** 接听当前来电（仅语音，不开启视频） */
+  async function answerIncomingCall(call: MatrixCall): Promise<void> {
+    try {
+      await call.answer(true, false)
+      incomingCallRef.value = null
+    } catch (e) {
+      if (import.meta.dev) console.error('[MatrixSync] answerIncomingCall 失败:', e)
+    }
+  }
+
+  /** 拒绝当前来电 */
+  function rejectIncomingCall(call: MatrixCall): void {
+    try {
+      if (call.state === 'ringing') call.reject()
+      else (call as { hangup: (reason: string, suppress: boolean) => void }).hangup?.('user_hangup', true)
+      incomingCallRef.value = null
+    } catch (e) {
+      if (import.meta.dev) console.error('[MatrixSync] rejectIncomingCall 失败:', e)
+      incomingCallRef.value = null
+    }
   }
 
   /** 发送正在输入状态（仅当 sync client 就绪时） */
@@ -429,6 +485,10 @@ export function useMatrixSyncClient() {
   return {
     syncClient: readonly(syncClient),
     syncReady: readonly(syncReady),
+    /** 当前来电（1:1）；用于展示来电条与接听/拒绝 */
+    incomingCall: readonly(incomingCallRef),
+    answerIncomingCall,
+    rejectIncomingCall,
     hasSyncToken,
     startSyncClient,
     stopSyncClient,

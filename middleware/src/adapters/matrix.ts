@@ -130,6 +130,18 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       const out: NormalizedMessage[] = [];
       for (const ev of events) {
         if (ev.type === 'm.room.member' || ev.type === 'm.room.name') continue;
+        // m.call.* 展示为「语音/视频通话」占位条
+        if (typeof ev.type === 'string' && ev.type.startsWith('m.call.')) {
+          out.push({
+            id: ev.event_id,
+            role: 'system',
+            content: '',
+            eventType: ev.type,
+            backendMessageId: ev.event_id,
+            createdAt: ev.origin_server_ts,
+          });
+          continue;
+        }
         if (ev.type !== 'm.room.message' || ev.content?.body == null) continue;
         const rel = (ev.content as { 'm.relates_to'?: { rel_type?: string } })['m.relates_to'];
         if (rel?.rel_type === 'm.replace') continue;
