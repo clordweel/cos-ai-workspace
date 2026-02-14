@@ -57,6 +57,27 @@
         </span>
       </button>
     </div>
+    <!-- 预留：语音/视频通话图标位，后续接 Matrix 1:1 / MatrixRTC -->
+    <div class="flex min-w-0 shrink-0 items-center gap-0.5">
+      <button
+        type="button"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+        aria-label="语音通话（敬请期待）"
+        title="语音通话（敬请期待）"
+        disabled
+      >
+        <Phone class="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+        aria-label="视频通话（敬请期待）"
+        title="视频通话（敬请期待）"
+        disabled
+      >
+        <Video class="h-4 w-4" />
+      </button>
+    </div>
     <div class="flex min-w-0 shrink-0 items-center justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -161,7 +182,7 @@ import {
   DropdownMenuTrigger,
 } from '~/components/ui/dropdown-menu'
 import { ref, computed } from 'vue'
-import { Archive, ChevronLeft, Download, Link, Menu, Pencil, Share2, Trash2, User, Users, X } from 'lucide-vue-next'
+import { Archive, ChevronLeft, Download, Link, Menu, Pencil, Phone, Share2, Trash2, User, Users, Video, X } from 'lucide-vue-next'
 import type { ApiSessionMember } from '~/composables/useChatSessionsApi'
 
 const props = defineProps<{
