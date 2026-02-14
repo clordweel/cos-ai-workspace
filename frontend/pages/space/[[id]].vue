@@ -107,6 +107,8 @@
             @add-participant="openAddParticipant"
             @cancel-reply="onCancelReply"
             @cancel-edit="onCancelEdit"
+            :has-more-older="hasMoreOlder"
+            @load-more-older="loadMoreOlder"
           >
             <template #content="{ message }">
               <div
@@ -290,6 +292,8 @@ const {
   onFavoriteMessage,
   onListenReply,
   retryMessage,
+  loadMoreOlder,
+  hasMoreOlder,
 } = useSpacePage()
 
 const { matrixUserId } = useAuth()

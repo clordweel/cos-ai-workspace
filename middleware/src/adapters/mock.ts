@@ -199,12 +199,13 @@ export function createMockAdapter(): ChatBackendAdapter {
       return [...data.sessions].sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     },
 
-    async listMessages(params: ListMessagesParams): Promise<NormalizedMessage[]> {
+    async listMessages(params: ListMessagesParams): Promise<{ messages: NormalizedMessage[]; nextToken?: string }> {
       const { sessionId, backendSessionId, userId, limit = 50 } = params;
       const id = backendSessionId || sessionId;
       const data = getUserData(userId);
       const list = data.messagesBySession.get(id) || [];
-      return list.slice(-Math.min(Number(limit) || 20, 100));
+      const messages = list.slice(-Math.min(Number(limit) || 20, 100));
+      return { messages };
     },
 
     async deleteSession(params: DeleteSessionParams): Promise<void> {

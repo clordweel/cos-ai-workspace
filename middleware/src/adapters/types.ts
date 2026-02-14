@@ -179,7 +179,7 @@ export interface ChatBackendAdapter {
   supportsListMessages(): boolean;
   streamMessage(params: StreamMessageParams): Promise<StreamMessageResult | void>;
   listSessions?(params: ListSessionsParams): Promise<NormalizedSession[]>;
-  listMessages?(params: ListMessagesParams): Promise<NormalizedMessage[]>;
+  listMessages?(params: ListMessagesParams): Promise<{ messages: NormalizedMessage[]; nextToken?: string }>;
   createSession?(params: CreateSessionParams): Promise<NormalizedSession>;
   inviteToSession?(params: InviteToSessionParams): Promise<void>;
   deleteSession?(params: DeleteSessionParams): Promise<void>;

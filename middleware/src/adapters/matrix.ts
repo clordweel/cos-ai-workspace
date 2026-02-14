@@ -97,13 +97,13 @@ export function createMatrixAdapter(): ChatBackendAdapter {
       return results;
     },
 
-    async listMessages(params: ListMessagesParams): Promise<NormalizedMessage[]> {
+    async listMessages(params: ListMessagesParams): Promise<{ messages: NormalizedMessage[]; nextToken?: string }> {
       const { sessionId, backendSessionId, userId, limit = 50, beforeId, matrixAccessToken: userToken, currentUserMxid } = params;
       if (!userToken) {
         throw new Error('需要 Matrix 用户 token（请先登录）');
       }
       const roomId = backendSessionId || sessionId;
-      const { events } = await getRoomMessages(
+      const { events, nextToken } = await getRoomMessages(
         roomId,
         Math.min(Number(limit) || 50, 100),
         beforeId ?? undefined,
@@ -168,7 +168,7 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         });
       }
       out.reverse();
-      return out;
+      return { messages: out, nextToken };
     },
 
     async streamMessage(params: StreamMessageParams): Promise<StreamMessageResult | void> {

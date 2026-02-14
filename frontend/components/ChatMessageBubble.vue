@@ -22,15 +22,24 @@
     <!-- 气泡 + 时间戳同一右对齐列，保证右侧对齐一致 -->
     <div class="flex flex-col items-end max-w-[85%]">
       <div class="flex items-end gap-1.5 w-full justify-end">
-        <!-- 发送状态：气泡左侧外侧 -->
+        <!-- 发送状态：气泡左侧外侧；失败时显示重试按钮 -->
         <span
           v-if="userReceiptStatus && userReceiptStatus !== 'read'"
-          class="flex h-6 w-6 shrink-0 items-center justify-center self-center"
+          class="flex shrink-0 items-center gap-1.5 self-center"
           :title="userReceiptStatusLabel"
           aria-hidden
         >
           <Loader2 v-if="userReceiptStatus === 'sending'" class="h-3.5 w-3.5 text-zinc-400 animate-spin" />
-          <XCircle v-else-if="userReceiptStatus === 'failed'" class="h-3.5 w-3.5 text-red-500" />
+          <template v-else-if="userReceiptStatus === 'failed'">
+            <XCircle class="h-3.5 w-3.5 text-red-500 shrink-0" />
+            <button
+              type="button"
+              class="text-[11px] text-red-600 dark:text-red-400 hover:underline shrink-0"
+              @click="emit('retryUserMessage')"
+            >
+              重试
+            </button>
+          </template>
           <Check v-else-if="userReceiptStatus === 'sent'" class="h-3.5 w-3.5 text-zinc-500" />
           <CheckCheck v-else-if="userReceiptStatus === 'delivered'" class="h-3.5 w-3.5 text-zinc-500" />
         </span>

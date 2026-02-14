@@ -63,8 +63,12 @@ export function useChatSessionsApi() {
     setChatUpdatedAt,
     setConversationId,
     setMessages,
+    prependMessages,
     setSessionLeftRoom,
   } = useChatSessions()
+
+  /** 各会话「向上加载更多」用的 next_token（Matrix 为 from token，非 event_id） */
+  const nextTokenByChatId = ref<Record<string, string | undefined>>({})
 
   /**
    * 拉取会话列表并合并到当前会话状态（同用户同会话周期内仅拉取一次，避免重复请求与列表闪动）
@@ -145,26 +149,30 @@ export function useChatSessionsApi() {
 
   /**
    * 拉取某会话历史消息并写入当前状态
-   * @param sessionId - 会话 id（与 GET :id 一致，如 Dify 的 conversation_id）
-   * @param userId - 不传时用当前登录用户 id，未登录为 'default'
+   * @param sessionId - 会话 id
+   * @param userId - 不传时用当前登录用户 id
    * @param limit - 条数，默认 50
-   * @returns 是否成功
+   * @param beforeId - 上一页的 next_token（向上加载更多时传）
+   * @returns { ok, nextToken } 成功时带下一页 token，无更多时 nextToken 为 undefined
    */
   async function loadSessionMessages(
     sessionId: string,
     userId?: string,
     limit = 50,
-  ): Promise<boolean> {
+    beforeId?: string,
+  ): Promise<{ ok: boolean; nextToken?: string }> {
     const uid = (userId ?? (useAuth().userId as { value?: string })?.value) || 'default'
     const base = apiBase || (typeof window !== 'undefined' ? window.location.origin : '')
-    if (!base) return false
+    if (!base) return { ok: false }
     try {
+      const params = new URLSearchParams({ user_id: uid, limit: String(limit) })
+      if (beforeId) params.set('before_id', beforeId)
       const res = await fetch(
-        `${base}/api/sessions/${encodeURIComponent(sessionId)}/messages?user_id=${encodeURIComponent(uid)}&limit=${limit}`,
+        `${base}/api/sessions/${encodeURIComponent(sessionId)}/messages?${params.toString()}`,
         { credentials: 'include' },
       )
-      if (res.status === 401) return false
-      if (res.status === 501) return false
+      if (res.status === 401) return { ok: false }
+      if (res.status === 501) return { ok: false }
       if (res.status === 403 || res.status === 502) {
         const body = (await res.json().catch(() => ({}))) as { code?: string; message?: string }
         const isNotInRoom =
@@ -173,17 +181,28 @@ export function useChatSessionsApi() {
             body.message.includes('not in room') &&
             body.message.includes('room previews are disabled'))
         if (isNotInRoom) setSessionLeftRoom(sessionId, true)
-        return false
+        return { ok: false }
       }
-      if (!res.ok) return false
-      const json = (await res.json()) as { messages?: ApiMessage[] }
-      const messages = (json.messages ?? []).map(apiMessageToChatMessage)
-      setMessages(sessionId, messages)
+      if (!res.ok) return { ok: false }
+      const json = (await res.json()) as { messages?: ApiMessage[]; next_token?: string }
+      const list = (json.messages ?? []).map(apiMessageToChatMessage)
+      const nextToken = json.next_token
+      if (beforeId) {
+        prependMessages(sessionId, list)
+      } else {
+        setMessages(sessionId, list)
+      }
+      nextTokenByChatId.value = { ...nextTokenByChatId.value, [sessionId]: nextToken }
       setSessionLeftRoom(sessionId, false)
-      return true
+      return { ok: true, nextToken }
     } catch {
-      return false
+      return { ok: false }
     }
+  }
+
+  /** 当前会话是否还有更早消息可加载（有 next_token） */
+  function getMessagesNextToken(sessionId: string): string | undefined {
+    return nextTokenByChatId.value[sessionId]
   }
 
   /**
@@ -443,6 +462,8 @@ export function useChatSessionsApi() {
     loadSessions,
     refreshSessions,
     loadSessionMessages,
+    getMessagesNextToken,
+    nextTokenByChatId,
     createSession,
     inviteToSession,
     joinSession,

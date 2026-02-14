@@ -39,6 +39,7 @@ export function useSpacePage() {
   const {
     loadSessions,
     loadSessionMessages,
+    getMessagesNextToken,
     createSession,
     inviteToSession,
     fetchInvitedSessions,
@@ -236,10 +237,10 @@ export function useSpacePage() {
     invitedSessions.value = invitedSessions.value.filter((inv) => inv.id !== id)
     await loadSessions()
     loadInvitedSessions().catch(() => {})
-    let loaded = await loadSessionMessages(id).catch(() => false)
-    if (!loaded && getMessages(id).length === 0) {
+    let result = await loadSessionMessages(id).catch(() => ({ ok: false }))
+    if (!result.ok && getMessages(id).length === 0) {
       await new Promise((r) => setTimeout(r, 400))
-      loaded = await loadSessionMessages(id).catch(() => false)
+      result = await loadSessionMessages(id).catch(() => ({ ok: false }))
     }
     if (getMessages(id).length === 0 && syncReady.value) {
       tryFillFromSyncWithRetry(id)
@@ -427,6 +428,19 @@ export function useSpacePage() {
     openPanel('contacts')
   }
 
+  /** 向上加载更多历史消息（使用当前会话的 next_token） */
+  async function loadMoreOlder() {
+    const id = chatId.value
+    if (!id) return
+    const token = getMessagesNextToken(id)
+    await loadSessionMessages(id, undefined, 50, token)
+  }
+
+  const hasMoreOlder = computed(() => {
+    const id = chatId.value
+    return !!id && !!getMessagesNextToken(id)
+  })
+
   return {
     chatId,
     showChatPlaceholderOnFirstLoad,
@@ -458,6 +472,8 @@ export function useSpacePage() {
     sessionMembers,
     refetchSessionMembers,
     isSessionLeftRoom,
+    loadMoreOlder,
+    hasMoreOlder,
     ...listApi,
     ...paneApi,
   }

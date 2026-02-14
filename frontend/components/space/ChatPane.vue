@@ -51,6 +51,18 @@
         >
         <!-- 日期分隔线与消息同级渲染（在消息容器外），便于全宽与居中样式生效 -->
         <div class="chat-messages-list flex min-w-0 flex-col gap-0.5 min-h-full w-full pl-4 pr-2">
+          <div
+            v-if="hasMoreOlder"
+            class="shrink-0 py-3 flex justify-center"
+          >
+            <button
+              type="button"
+              class="text-xs text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 px-3 py-1.5 rounded-md border border-zinc-200 dark:border-zinc-600 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 transition-colors"
+              @click="emit('load-more-older')"
+            >
+              加载更多
+            </button>
+          </div>
           <template v-for="(item, idx) in displayItems" :key="item.type === 'date' ? `date-${idx}-${item.label}` : item.uiMessage.id">
             <div
               v-if="item.type === 'date'"
@@ -227,6 +239,8 @@ const props = defineProps<{
   leaveSession?: (sessionId: string) => Promise<boolean>
   /** 用户已离开/被踢出该会话，无法查看历史 */
   isLeftRoom?: boolean
+  /** 是否还有更早消息可加载（有 next_token） */
+  hasMoreOlder?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -249,6 +263,7 @@ const emit = defineEmits<{
   'add-participant': []
   'cancel-reply': []
   'cancel-edit': []
+  'load-more-older': []
 }>()
 
 watch(() => props.displayItems.length, () => {

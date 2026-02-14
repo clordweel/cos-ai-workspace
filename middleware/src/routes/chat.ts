@@ -308,7 +308,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         const userId = await resolveUserId(req);
         const limit = req.query?.limit ?? 50;
         const beforeId = req.query?.before_id;
-        const messages = await adapter.listMessages({
+        const result = await adapter.listMessages({
           sessionId,
           backendSessionId: sessionId,
           userId,
@@ -319,7 +319,10 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
             ? getMatrixUserIdForSession(session.logtoSub, session.userProfile?.username, session.matrixUserId)
             : undefined,
         });
-        return reply.send({ messages });
+        return reply.send({
+          messages: result.messages,
+          next_token: result.nextToken,
+        });
       } catch (e) {
         req.log.error(e);
         const msg = e instanceof Error ? e.message : String(e);

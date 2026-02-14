@@ -74,6 +74,13 @@ export function useChatSessions() {
     touchChatUpdatedAt(chatId)
   }
 
+  /** 在现有消息列表头部插入更早的消息（向上加载更多时使用） */
+  const prependMessages = (chatId: string, olderMessages: ChatMessage[]) => {
+    if (olderMessages.length === 0) return
+    const list = getMessages(chatId)
+    setMessages(chatId, [...olderMessages, ...list])
+  }
+
   const updateLastMessage = (chatId: string, updater: (m: ChatMessage) => void) => {
     const list = getMessages(chatId)
     if (list.length === 0) return
@@ -183,6 +190,7 @@ export function useChatSessions() {
     getMessages,
     setMessages,
     appendMessage,
+    prependMessages,
     updateLastMessage,
     ensureChat,
     removeChat,

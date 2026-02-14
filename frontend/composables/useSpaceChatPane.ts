@@ -498,7 +498,30 @@ export function useSpaceChatPane(options: {
     editingMessageId.value = null
   }
 
-  function onRetryUserMessage(_index: number) { /* TODO */ }
+  /** 重试发送失败的用户消息（将 receiptStatus 从 failed 改为 sending 后重新请求流式回复） */
+  async function onRetryUserMessage(index: number) {
+    const id = chatId.value
+    if (!id || streaming.value) return
+    const list = getMessages(id)
+    if (index < 0 || index >= list.length) return
+    const msg = list[index]
+    if (msg?.role !== 'user' || msg.receiptStatus !== 'failed') return
+    const replyToId = msg.inReplyTo?.id
+    const next = [...list]
+    next[index] = { ...next[index]!, receiptStatus: 'sending' }
+    setMessages(id, next)
+    try {
+      await streamReply(id, msg.content, getMentionedBotIdsFromText(msg.content), replyToId)
+      const after = getMessages(id)
+      if (after[index]?.receiptStatus === 'sending') {
+        const next2 = [...after]
+        next2[index] = { ...next2[index]!, receiptStatus: 'sent' }
+        setMessages(id, next2)
+      }
+    } catch {
+      // streamReply 的 catch 已将 sending 置为 failed
+    }
+  }
   function onFavoriteMessage(_index: number) { /* TODO */ }
   function onListenReply(_index: number) { /* TODO */ }
 
