@@ -1,6 +1,6 @@
 <template>
   <div class="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
-    <!-- 刷新/首屏加载过场：鉴权完成且至少播完一轮 Logo 动画后再进入主界面 -->
+    <!-- 刷新/首屏加载过场：鉴权完成且至少播完一轮图标路径动画后再进入主界面 -->
     <Transition name="app-loading-fade">
       <div
         v-if="showLoadingOverlay"
@@ -9,25 +9,27 @@
         aria-busy="true"
         role="status"
       >
-        <!-- Logo 与字标同一块出现，避免“先只有图标、后出文字”的两段感 -->
+        <!-- IconCos 播一次，IconCosAi 循环 -->
         <div class="flex flex-col items-center justify-center gap-5 w-[140px] opacity-100">
-          <Logo
+          <IconCos
             :size="100"
             color="currentColor"
             class="text-zinc-700 dark:text-zinc-200 shrink-0"
             :animated="true"
-            :loading="false"
+            :loop="false"
           />
-          <CosAiWordmark
+          <IconCosAi
             :width="120"
-            :height="28"
+            :height="20"
+            color="currentColor"
             class="text-zinc-800 dark:text-zinc-100 shrink-0"
+            :animated="true"
           />
         </div>
       </div>
     </Transition>
     <main class="flex-1 min-h-0 flex flex-col overflow-hidden">
-      <!-- 顶栏：Logo + 名称（文本）+ 标语 整体居中；点击播放 Logo 动画 -->
+      <!-- 顶栏：IconCosAi 字标 + 标语；点击播放路径动画 -->
       <header
         class="workspace-topbar shrink-0 h-14 flex items-center justify-center px-4 w-full"
         role="banner"
@@ -35,23 +37,17 @@
       >
         <button
           type="button"
-          class="brand-block flex items-center gap-2 min-w-0 rounded-lg py-1.5 px-2 -mx-2 text-zinc-600 dark:text-zinc-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900"
-          aria-label="播放 Logo 动画"
-          @click="playTopbarLogoAnimation"
+          class="brand-block flex items-center gap-2 min-w-0 rounded-lg py-1.5 px-2 -mx-2 text-zinc-600 dark:text-zinc-300 select-none cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900"
+          aria-label="播放图标路径动画"
+          @click="playTopbarIconAnimation"
         >
-          <Logo
-            :size="24"
+          <IconCosAi
+            :width="72"
+            :height="12"
             color="currentColor"
-            class="shrink-0 ml-1 mr-1"
-            :animated="topbarLogoAnimating"
-            :loading="false"
+            class="shrink-0 pointer-events-none"
+            :animated="topbarIconAnimating"
           />
-          <span
-            class="text-base font-bold tracking-wide whitespace-nowrap"
-            aria-hidden="true"
-          >
-            COS&AI
-          </span>
           <span
             class="hidden sm:inline text-sm font-medium whitespace-nowrap pl-2 border-l border-zinc-400 dark:border-zinc-500"
             aria-hidden="true"
@@ -188,6 +184,8 @@
 
 <script setup lang="ts">
 import { PanelRightOpen, PanelRightClose, Pin, PinOff, Copyright, Mail, Home, HelpCircle, Info as InfoIcon } from 'lucide-vue-next'
+import IconCos from '~/components/icons/IconCos.vue'
+import IconCosAi from '~/components/icons/IconCosAi.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -196,23 +194,25 @@ const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggle
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
 const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isXl } = useWorkspaceLayout()
 
-/** 至少完成一轮 Logo 路径动画（3.2s）后再进入主界面 */
-const LOGO_CYCLE_MS = 3200
+/** 至少完成一轮图标路径动画（3.2s）后再进入主界面 */
+const ICON_CYCLE_MS = 3200
 const logoCycleDone = ref(false)
 let logoCycleTimer: ReturnType<typeof setTimeout> | null = null
 
-/** 顶栏 Logo 点击播放动画：播放一轮后自动停止 */
-const topbarLogoAnimating = ref(false)
-let topbarLogoAnimationTimer: ReturnType<typeof setTimeout> | null = null
-function playTopbarLogoAnimation() {
-  if (topbarLogoAnimating.value) return
-  topbarLogoAnimating.value = true
-  if (topbarLogoAnimationTimer) clearTimeout(topbarLogoAnimationTimer)
-  topbarLogoAnimationTimer = setTimeout(() => {
-    topbarLogoAnimating.value = false
-    topbarLogoAnimationTimer = null
-  }, LOGO_CYCLE_MS)
+/** 顶栏 IconCosAi 点击播放路径动画：播放一轮后停止 */
+const TOPBAR_ICON_CYCLE_MS = 3200
+const topbarIconAnimating = ref(false)
+let topbarIconAnimationTimer: ReturnType<typeof setTimeout> | null = null
+function playTopbarIconAnimation() {
+  if (topbarIconAnimating.value) return
+  topbarIconAnimating.value = true
+  if (topbarIconAnimationTimer) clearTimeout(topbarIconAnimationTimer)
+  topbarIconAnimationTimer = setTimeout(() => {
+    topbarIconAnimating.value = false
+    topbarIconAnimationTimer = null
+  }, TOPBAR_ICON_CYCLE_MS)
 }
+
 const showLoadingOverlay = computed(() => authLoading.value || !logoCycleDone.value)
 watch(authLoading, (loading) => {
   if (loading) {
@@ -221,7 +221,7 @@ watch(authLoading, (loading) => {
     logoCycleTimer = setTimeout(() => {
       logoCycleDone.value = true
       logoCycleTimer = null
-    }, LOGO_CYCLE_MS)
+    }, ICON_CYCLE_MS)
   } else {
     // 鉴权已结束或初始即为 false（如从其他页进入、水合后已就绪）：若从未启动过 timer，
     // 则直接允许隐藏遮罩，避免 showLoadingOverlay 恒为 true 导致遮罩常驻、整页无法点击
@@ -232,7 +232,7 @@ watch(authLoading, (loading) => {
 }, { immediate: true })
 onBeforeUnmount(() => {
   if (logoCycleTimer) clearTimeout(logoCycleTimer)
-  if (topbarLogoAnimationTimer) clearTimeout(topbarLogoAnimationTimer)
+  if (topbarIconAnimationTimer) clearTimeout(topbarIconAnimationTimer)
 })
 
 /** 按实际视口判断 xl：与 SSR 一致初值为 false，仅在 onMounted 后更新，避免水合时 grid-template-columns 不一致 */
