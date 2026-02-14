@@ -35,6 +35,8 @@ export interface ApiMessage {
   backendMessageId?: string
   createdAt?: number
   inReplyTo?: { id: string; role?: 'user' | 'assistant'; content?: string }
+  /** Matrix 等：事件类型，如 m.call.invite，前端展示为「语音/视频通话」占位 */
+  eventType?: string
 }
 
 function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
@@ -46,6 +48,7 @@ function apiMessageToChatMessage(m: ApiMessage): ChatMessage {
     id: m.id ?? m.backendMessageId,
     createdAt: m.createdAt,
     inReplyTo: m.inReplyTo,
+    eventType: m.eventType,
   }
 }
 

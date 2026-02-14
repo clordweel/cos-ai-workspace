@@ -128,9 +128,9 @@
           </section>
         </Transition>
       </div>
-      <!-- 底栏：断点 ≤ md 时隐藏，大屏显示 -->
+      <!-- 底栏：挂载后且断点 ≥ md 时显示，避免 SSR 与客户端首帧不一致导致水合告警 -->
       <footer
-        v-if="isMd"
+        v-if="showFooter"
         class="workspace-footer shrink-0 flex flex-col items-center justify-center gap-1.5 min-h-28 px-4 py-5 text-xs"
         role="contentinfo"
         aria-label="页脚"
@@ -193,7 +193,7 @@ const router = useRouter()
 useTheme()
 const { isPanelOpen, isContentVisible, isSidebarPinned, isSidebarHovered, toggleContentPanel, toggleSidebarPinned, cancelSidebarLeave, cancelSidebarExpand, scheduleSidebarLeave, openAuthTab } = useAppView()
 const { fetchUser, isAuthenticated, authLoading } = useAuth()
-const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isMd, isXl } = useWorkspaceLayout()
+const { isSessionExpanded, appContentVisible, gridTemplateColumns, showAppPanel, isXxs, isXl, showFooter } = useWorkspaceLayout()
 
 /** 至少完成一轮图标路径动画（3.2s）后再进入主界面 */
 const ICON_CYCLE_MS = 3200

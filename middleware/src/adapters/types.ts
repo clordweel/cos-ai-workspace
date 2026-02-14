@@ -42,6 +42,8 @@ export interface NormalizedMessage {
   createdAt?: number;
   /** 回复某条消息时的引用信息 */
   inReplyTo?: NormalizedInReplyTo;
+  /** Matrix 等：事件类型，如 m.call.invite / m.call.answer / m.call.hangup，前端可展示为「语音/视频通话」占位 */
+  eventType?: string;
 }
 
 export type SSESend = (event: string, data: Record<string, unknown>) => void;

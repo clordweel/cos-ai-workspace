@@ -121,6 +121,9 @@ export function useWorkspaceLayout() {
 
   const appPanelMaxWidthCss = `${WORKSPACE_APP_PANEL_MAX_WIDTH_PX}px`
 
+  /** 是否已挂载，用于延后依赖断点的 UI（如底栏 v-if），避免 SSR 与客户端首帧不一致导致水合告警 */
+  const showFooter = computed(() => isMounted.value && isMd.value)
+
   return {
     hasChat: readonly(hasChat),
     layoutMode: readonly(layoutMode),
@@ -131,6 +134,7 @@ export function useWorkspaceLayout() {
     isXxs: readonly(isXxs),
     isMd: readonly(isMd),
     isXl: readonly(isXl),
+    showFooter: readonly(showFooter),
     appPanelMaxWidthCss,
     appPanelMaxWidthPx: WORKSPACE_APP_PANEL_MAX_WIDTH_PX,
   }

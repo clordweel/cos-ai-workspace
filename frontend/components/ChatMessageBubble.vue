@@ -1,6 +1,19 @@
 <template>
+  <!-- m.call.* 占位：语音/视频通话记录 -->
+  <div
+    v-if="isCallPlaceholder"
+    class="w-full flex justify-center py-1"
+    aria-label="语音/视频通话"
+  >
+    <div
+      class="inline-flex items-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/60 px-3 py-1.5 text-[11px] text-zinc-500 dark:text-zinc-400"
+    >
+      <Phone class="h-3.5 w-3.5 shrink-0 text-zinc-400 dark:text-zinc-500" />
+      <span>语音/视频通话</span>
+    </div>
+  </div>
   <!-- 用户：发送状态在气泡左侧外侧，已读时顶部外侧对方头像；气泡与时间戳同一右对齐列 -->
-  <div v-if="message.role === 'user'" class="w-full flex flex-col items-end gap-1">
+  <div v-else-if="message.role === 'user'" class="w-full flex flex-col items-end gap-1">
     <!-- 已读：气泡顶部外侧，头像行占满宽度并右对齐，与气泡右侧对齐 -->
     <div
       v-if="userReceiptStatus === 'read' && readBySources.length > 0"
@@ -516,7 +529,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
 } from 'radix-vue'
-import { Bookmark, Bot, Check, CheckCheck, Cog, Copy, FileDown, History, Loader2, MoreHorizontal, MoreVertical, Pencil, RefreshCw, Reply, Sparkles, ThumbsDown, ThumbsUp, Trash2, Undo2, User, Volume2, XCircle } from 'lucide-vue-next'
+import { Bookmark, Bot, Check, CheckCheck, Cog, Copy, FileDown, History, Loader2, MoreHorizontal, MoreVertical, Pencil, Phone, RefreshCw, Reply, Sparkles, ThumbsDown, ThumbsUp, Trash2, Undo2, User, Volume2, XCircle } from 'lucide-vue-next'
 
 const THINKING_PLACEHOLDER = '思考中…'
 
@@ -535,6 +548,8 @@ const props = defineProps<{
     readBy?: MessageSource[]
     createdAt?: number
     inReplyTo?: { id: string; role?: 'user' | 'assistant'; content?: string }
+    /** Matrix 等：m.call.invite 等，展示为「语音/视频通话」占位 */
+    eventType?: string
   }
   streaming?: boolean
   showTimestamp?: boolean
@@ -554,6 +569,11 @@ const emit = defineEmits<{
 }>()
 
 const thinkingOpen = ref(true)
+
+/** Matrix m.call.* 事件展示为「语音/视频通话」占位条 */
+const isCallPlaceholder = computed(() =>
+  typeof props.message.eventType === 'string' && props.message.eventType.startsWith('m.call.'),
+)
 
 const displaySources = computed(() => {
   const s = props.message.sources

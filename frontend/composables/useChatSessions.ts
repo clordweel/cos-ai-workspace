@@ -51,6 +51,8 @@ export type ChatMessage = {
    * 为 false 时表示发送方为更高权限等，不展示编辑按钮；未设或 true 时依全局编辑权限决定。
    */
   editableByCurrentUser?: boolean
+  /** Matrix 等：事件类型，如 m.call.invite，前端可展示为「语音/视频通话」占位 */
+  eventType?: string
 }
 
 const chats = ref<Array<{ id: string; title: string; updatedAt?: number }>>([])
