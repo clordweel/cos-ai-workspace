@@ -341,6 +341,15 @@
                   </label>
                 </div>
               </section>
+              <section>
+                <h3 class="text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">语音与视频</h3>
+                <div class="rounded-md border border-zinc-200 dark:border-zinc-600 divide-y divide-zinc-100 dark:divide-zinc-600">
+                  <div class="px-3 py-2.5">
+                    <p class="text-sm text-zinc-800 dark:text-zinc-200">语音与视频通话</p>
+                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">敬请期待</p>
+                  </div>
+                </div>
+              </section>
               <section class="space-y-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">关于</h3>
                 <div class="rounded-lg border border-zinc-200 dark:border-zinc-600 bg-zinc-50/80 dark:bg-zinc-800/50 p-4 space-y-3">
