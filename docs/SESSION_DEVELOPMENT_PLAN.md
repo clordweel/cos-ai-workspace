@@ -162,7 +162,7 @@
 
 ### 8.1 对照要点
 
-- **时间轴**：分页策略 PAGE_SIZE（如 80）、向上加载、与 listMessages 对接；高度补偿用 scrollBy(0,x)。
+- **时间轴**：分页策略 PAGE_SIZE（常量 `TIMELINE_PAGE_SIZE`，前端 `frontend/constants/timeline.ts`、中间层 `middleware/src/constants.ts`，默认 50，可调为 80 等）、向上加载、与 listMessages 对接；高度补偿用 scrollBy(0,x)。
 - **房间列表**：已覆盖分类与 Sticky；补充搜索过滤缓存与「共 N 条」展示。
 - **消息类型**：时间轴与存储支持 m.call.* 等，用于展示「语音/视频通话」记录。
 - **房间头部**：ChatHeader 预留语音/视频按钮位。
@@ -170,7 +170,7 @@
 
 ### 8.2 计划内补漏项
 
-- Timeline 分页明确触发与 PAGE_SIZE
+- Timeline 分页明确触发与 PAGE_SIZE（已落常量为 `TIMELINE_PAGE_SIZE`，前后端一致）
 - 消息类型扩展（eventType、m.call.* 占位条）
 - ChatHeader 预留 1～2 个图标位
 - 设置页「语音与视频」分组占位

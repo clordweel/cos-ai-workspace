@@ -18,6 +18,7 @@ import {
 } from '../adapters/matrixClient.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import { config } from '../config.js';
+import { TIMELINE_PAGE_SIZE } from '../constants.js';
 import { messagesToMarkdown } from '../services/exportMarkdown.js';
 
 async function resolveUserId(req: { headers: { cookie?: string }; body?: unknown; query?: unknown }): Promise<string> {
@@ -306,13 +307,13 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         if (await requireMatrixToken(req, session, reply)) return;
 
         const userId = await resolveUserId(req);
-        const limit = req.query?.limit ?? 50;
+        const limit = req.query?.limit ?? TIMELINE_PAGE_SIZE;
         const beforeId = req.query?.before_id;
         const result = await adapter.listMessages({
           sessionId,
           backendSessionId: sessionId,
           userId,
-          limit: Number(limit) || 50,
+          limit: Number(limit) || TIMELINE_PAGE_SIZE,
           beforeId: beforeId || undefined,
           matrixAccessToken: session?.matrixAccessToken,
           currentUserMxid: session?.logtoSub

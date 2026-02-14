@@ -1,6 +1,7 @@
 /**
  * Space 页（会话区）状态与逻辑：组合 useSpaceSessionList 与 useSpaceChatPane，并处理路由、注入与生命周期
  */
+import { TIMELINE_PAGE_SIZE } from '~/constants/timeline'
 import { isMockSession as isMockSessionId, seedMockMessages } from '~/composables/useMockSessions'
 import { restoreBodyStylesAfterDialog } from '~/composables/restoreBodyAfterDialog'
 
@@ -433,7 +434,7 @@ export function useSpacePage() {
     const id = chatId.value
     if (!id) return
     const token = getMessagesNextToken(id)
-    await loadSessionMessages(id, undefined, 50, token)
+    await loadSessionMessages(id, undefined, TIMELINE_PAGE_SIZE, token)
   }
 
   const hasMoreOlder = computed(() => {

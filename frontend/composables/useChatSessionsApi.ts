@@ -5,6 +5,7 @@
 import { nextTick } from 'vue'
 import type { ChatMessage } from '~/composables/useChatSessions'
 import { useApiBase } from '~/composables/useApiBase'
+import { TIMELINE_PAGE_SIZE } from '~/constants/timeline'
 
 /** 中间层返回的标准化会话 */
 export interface ApiSession {
@@ -154,14 +155,14 @@ export function useChatSessionsApi() {
    * 拉取某会话历史消息并写入当前状态
    * @param sessionId - 会话 id
    * @param userId - 不传时用当前登录用户 id
-   * @param limit - 条数，默认 50
+   * @param limit - 条数，默认 TIMELINE_PAGE_SIZE
    * @param beforeId - 上一页的 next_token（向上加载更多时传）
    * @returns { ok, nextToken } 成功时带下一页 token，无更多时 nextToken 为 undefined
    */
   async function loadSessionMessages(
     sessionId: string,
     userId?: string,
-    limit = 50,
+    limit = TIMELINE_PAGE_SIZE,
     beforeId?: string,
   ): Promise<{ ok: boolean; nextToken?: string }> {
     const uid = (userId ?? (useAuth().userId as { value?: string })?.value) || 'default'
