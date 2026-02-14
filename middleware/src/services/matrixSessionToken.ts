@@ -32,6 +32,8 @@ import { config } from '../config.js';
 import type { Session } from './auth/sessionStore.js';
 
 const DEFAULT_EXPIRES_MS = 24 * 60 * 60 * 1000;
+/** Token 过期前多少毫秒即视为即将过期并主动刷新，避免 401 */
+const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000; // 5 分钟
 const LOG_TAG = '[matrixSessionToken]';
 
 function isMasPreferred(): boolean {
@@ -54,14 +56,34 @@ export interface MatrixTokenError {
 }
 
 /**
- * 若当前会话无 matrixAccessToken 但有 logtoSub，则获取 token 并写入 session
+ * 若当前会话无 matrixAccessToken 或有 token 但已/即将过期，则获取 token 并写入 session
+ * 即将过期：matrixTokenExpiresAt < Date.now() + TOKEN_EXPIRY_BUFFER_MS 时清空并重新获取，避免 401
  * MAS 方案：通过 username 查 MAS 用户 ULID → 创建 Personal Session（已停用用户跳过）
  * 回退方案：缓存密码 → Admin 设密 + login（不存在则 ensureMatrixUser 创建）
  */
+export type MatrixTokenResult =
+  | { access_token: string; expires_in_ms: number; device_id?: string }
+  | MatrixTokenError
+  | null;
+
 export async function ensureMatrixTokenForSession(
   session: Session
-): Promise<{ access_token: string; expires_in_ms: number } | MatrixTokenError | null> {
-  if (session.matrixAccessToken || !session.logtoSub) return null;
+): Promise<MatrixTokenResult> {
+  if (!session.logtoSub) return null;
+
+  if (session.matrixAccessToken) {
+    const expiresAt = session.matrixTokenExpiresAt;
+    if (expiresAt != null && expiresAt >= Date.now() + TOKEN_EXPIRY_BUFFER_MS) {
+      return null; // 未过期且有余量，无需刷新
+    }
+    // 已过期或即将过期：清空并重新获取
+    await updateSession(session.sessionId, {
+      matrixAccessToken: undefined,
+      matrixTokenExpiresAt: undefined,
+    });
+    session.matrixAccessToken = undefined;
+    session.matrixTokenExpiresAt = undefined;
+  }
 
   const matrixUserId = getMatrixUserIdForSession(
     session.logtoSub,

@@ -145,8 +145,14 @@ export function useSpaceSessionList(options: {
     return [...real, ...mockList]
   })
 
+  /** 按 updatedAt 降序（last_active 新→旧），与后端 listSessions 排序一致 */
+  const byLastActive = (a: DisplayChatItem, b: DisplayChatItem) =>
+    (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+
   const pinnedChats = computed<DisplayChatItem[]>(() =>
-    displayChats.value.filter((c) => pinnedIds.value.includes(c.id))
+    displayChats.value
+      .filter((c) => pinnedIds.value.includes(c.id))
+      .sort(byLastActive)
   )
   const mockChats = computed<DisplayChatItem[]>(() => {
     if (!mockSessionListEnabled.value) return []
@@ -154,12 +160,14 @@ export function useSpaceSessionList(options: {
       (c) => isMockSessionId(c.id) && !pinnedIds.value.includes(c.id)
     )
   })
-  /** 仅按数据顺序展示，不因选中而置顶；排序由 touchChatUpdatedAt（发消息时）驱动 */
+  /** 非置顶会话按 last_active（updatedAt）降序，与后端真实排序一致 */
   const activeChats = computed<DisplayChatItem[]>(() => {
     const base = mockSessionListEnabled.value
       ? displayChats.value.filter((c) => !isMockSessionId(c.id))
       : displayChats.value
-    return base.filter((c) => !pinnedIds.value.includes(c.id))
+    return base
+      .filter((c) => !pinnedIds.value.includes(c.id))
+      .sort(byLastActive)
   })
   const pendingChats = computed<DisplayChatItem[]>(() =>
     displayChats.value.filter((c) => getNonReadCount(c.id) > 0)

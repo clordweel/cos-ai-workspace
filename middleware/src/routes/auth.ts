@@ -194,15 +194,11 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         }
       }
 
-      let token = session.matrixAccessToken;
-      let deviceId = session.matrixDeviceId;
-      if (!token) {
-        const tokenResult = await ensureMatrixTokenForSession(session);
-        if (tokenResult && 'access_token' in tokenResult) {
-          token = tokenResult.access_token;
-          if (tokenResult.device_id) deviceId = tokenResult.device_id;
-        }
-      }
+      // 统一经 ensureMatrixTokenForSession 获取或刷新（含过期前主动刷新），再取 token
+      const tokenResult = await ensureMatrixTokenForSession(session);
+      const successResult = tokenResult && 'access_token' in tokenResult ? tokenResult : null;
+      let token: string | undefined = successResult ? successResult.access_token : session.matrixAccessToken;
+      let deviceId: string | undefined = successResult?.device_id ?? session.matrixDeviceId;
       if (token) {
         payload.matrixSyncToken = token;
         payload.matrix_base_url = config.matrix.baseUrl;

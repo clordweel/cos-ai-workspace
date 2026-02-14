@@ -354,6 +354,20 @@ export async function getRoomMessages(
 }
 
 /**
+ * 获取房间最后一条消息的时间戳（ms），用于会话列表按 last_active 排序
+ * 仅拉取 1 条最新消息，轻量
+ */
+export async function getRoomLastActivityTs(
+  roomId: string,
+  userToken: string
+): Promise<number> {
+  if (!userToken?.trim()) return 0;
+  const { events } = await getRoomMessages(roomId, 1, undefined, userToken);
+  const ts = events[0]?.origin_server_ts;
+  return typeof ts === 'number' && ts > 0 ? ts : 0;
+}
+
+/**
  * 发送一条文本消息到房间
  * userToken 必填：必须以当前用户 token 发送，否则消息归属到 admin
  * @param inReplyToEventId - 回复某条消息时，被回复消息的 event_id

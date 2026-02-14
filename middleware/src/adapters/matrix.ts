@@ -8,6 +8,7 @@ import {
   getJoinedRooms,
   getRoomName,
   getRoomMessages,
+  getRoomLastActivityTs,
   sendRoomMessage,
   editRoomMessage,
   redactRoomMessage,
@@ -76,24 +77,24 @@ export function createMatrixAdapter(): ChatBackendAdapter {
         throw new Error('需要 Matrix 用户 token（请先登录）');
       }
       const roomIds = await getJoinedRooms(userToken);
-      const sessions: NormalizedSession[] = [];
-      for (const roomId of roomIds) {
-        let title = roomId;
-        try {
-          title = await getRoomName(roomId, userToken);
-        } catch {
-          // 忽略单房间名失败
-        }
-        sessions.push({
-          id: roomId,
-          title: title || roomId,
-          updatedAt: Date.now(),
-          backendSessionId: roomId,
-          provider: 'matrix',
-        });
-      }
-      sessions.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
-      return sessions;
+      const now = Date.now();
+      const results = await Promise.all(
+        roomIds.map(async (roomId) => {
+          const [title, lastTs] = await Promise.all([
+            getRoomName(roomId, userToken).catch(() => roomId),
+            getRoomLastActivityTs(roomId, userToken).catch(() => 0),
+          ]);
+          return {
+            id: roomId,
+            title: title || roomId,
+            updatedAt: lastTs > 0 ? lastTs : now,
+            backendSessionId: roomId,
+            provider: 'matrix' as const,
+          };
+        })
+      );
+      results.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+      return results;
     },
 
     async listMessages(params: ListMessagesParams): Promise<NormalizedMessage[]> {

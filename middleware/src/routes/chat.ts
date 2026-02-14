@@ -45,36 +45,29 @@ async function requireMatrixToken(
     reply.code(401).send({ error: '需要登录' });
     return true;
   }
+  // 无 token 时先尝试同步用户，再统一通过 ensureMatrixTokenForSession 获取或刷新（含过期前主动刷新）
   if (!session.matrixAccessToken) {
-    if (session.logtoSub) {
-      await ensureMatrixUser(
-        session.logtoSub,
-        session.userProfile?.name ?? session.user,
-        session.userProfile?.email,
-        session.userProfile?.phone,
-        session.userProfile?.username
-      ).catch(() => {});
-    }
-    const ensured = await ensureMatrixTokenForSession(session);
-    const fresh = await getSessionFromCookie(req.headers.cookie);
-    if (fresh?.matrixAccessToken) {
-      session.matrixAccessToken = fresh.matrixAccessToken;
-      session.matrixTokenExpiresAt = fresh.matrixTokenExpiresAt;
-    }
-    if (!session.matrixAccessToken) {
-      const errMsg =
-        ensured && 'error' in ensured
-          ? MATRIX_TOKEN_ERROR_MESSAGES[ensured.error] ?? ensured.message ?? '无法使用会话，请稍后重试'
-          : '无法使用会话，请稍后重试';
-      reply.code(401).send({ error: errMsg });
-      return true;
-    }
+    await ensureMatrixUser(
+      session.logtoSub,
+      session.userProfile?.name ?? session.user,
+      session.userProfile?.email,
+      session.userProfile?.phone,
+      session.userProfile?.username
+    ).catch(() => {});
   }
-  // 确保使用最新 session（避免竞态导致使用错误的 token）
+  const ensured = await ensureMatrixTokenForSession(session);
   const latest = await getSessionFromCookie(req.headers.cookie);
   if (latest?.matrixAccessToken) {
     session.matrixAccessToken = latest.matrixAccessToken;
     session.matrixTokenExpiresAt = latest.matrixTokenExpiresAt;
+  }
+  if (!session.matrixAccessToken) {
+    const errMsg =
+      ensured && 'error' in ensured
+        ? MATRIX_TOKEN_ERROR_MESSAGES[ensured.error] ?? ensured.message ?? '无法使用会话，请稍后重试'
+        : '无法使用会话，请稍后重试';
+    reply.code(401).send({ error: errMsg });
+    return true;
   }
   return false;
 }
