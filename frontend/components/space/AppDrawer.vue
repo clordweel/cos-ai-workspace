@@ -4,7 +4,7 @@
       v-show="open"
       class="app-drawer z-20 flex w-full shrink-0 flex-col border-b border-zinc-200/60 dark:border-zinc-700/60 bg-zinc-100 dark:bg-zinc-800 shadow-lg isolate relative overflow-hidden"
       :class="fillParent ? 'absolute inset-0' : 'absolute left-0 right-0'"
-      :style="fillParent ? undefined : { top, height: `${heightRem}rem` }"
+      :style="drawerRootStyle"
     >
       <!-- 左上射出的渐变色带（仅装饰） -->
       <div
@@ -163,11 +163,13 @@ const profileAppItem: DrawerAppItem = {
   view: 'profile',
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     open: boolean
     /** 为 true 时填满父容器（用于「推动下移」布局） */
     fillParent?: boolean
+    /** 为 true 时按内容高度自适应，由父级用 ResizeObserver 测量后设外层高度 */
+    autoHeight?: boolean
     /** 抽屉定位 top，非 fillParent 时有效 */
     top?: string
     heightRem: number
@@ -175,8 +177,14 @@ withDefaults(
     favoriteApps: DrawerAppItem[]
     isActive: (app: DrawerAppItem) => boolean
   }>(),
-  { fillParent: false, top: '0' },
+  { fillParent: false, autoHeight: false, top: '0' },
 )
+
+const drawerRootStyle = computed(() => {
+  if (props.fillParent) return undefined
+  if (props.autoHeight) return { top: props.top, height: 'auto', maxHeight: '80vh' }
+  return { top: props.top, height: `${props.heightRem}rem` }
+})
 
 const emit = defineEmits<{
   select: [app: DrawerAppItem]

@@ -5,15 +5,20 @@
     :class="isSessionExpanded ? 'w-72 border-r' : 'flex-1 min-w-0 overflow-hidden border-b border-zinc-200 dark:border-zinc-700'"
   >
     <div class="flex-1 min-h-0 flex flex-col min-w-0">
-      <!-- 抽屉：高度过渡推动下方列表整体下移 -->
+      <!-- 抽屉：高度由内容测量值驱动，过渡推动下方列表整体下移 -->
       <div
-        class="flex shrink-0 overflow-hidden transition-[height] duration-200 ease-out"
-        :style="{ height: showAppList ? `${appDrawerHeightRem}rem` : '0' }"
+        class="flex shrink-0 overflow-hidden transition-[height] duration-200 ease-out relative"
+        :style="{ height: showAppList ? `${drawerHeightPx}px` : '0' }"
       >
-        <div class="relative h-full w-full">
+        <div
+          ref="drawerContentRef"
+          class="absolute left-0 right-0 top-0 w-full"
+          :class="showAppList ? '' : 'pointer-events-none invisible'"
+        >
           <SpaceAppDrawer
             :open="showAppList"
-            :fill-parent="true"
+            :fill-parent="false"
+            :auto-height="true"
             :height-rem="appDrawerHeightRem"
             :common-apps="drawerCommonApps"
             :favorite-apps="drawerFavoriteApps"
@@ -86,7 +91,7 @@ import SessionListHeader from '~/components/SessionListHeader.vue'
 import SpaceAppDrawer from '~/components/space/AppDrawer.vue'
 import SpaceSessionListContent from '~/components/space/SessionListContent.vue'
 
-defineProps<{
+const props = defineProps<{
   isSessionExpanded: boolean
   /** 应用区内容展开时为 true，此时始终显示会话列表、隐藏聊天区 */
   appContentVisible?: boolean
@@ -121,6 +126,46 @@ defineProps<{
   onAcceptInvite?: (id: string, title: string) => void
   onDeclineInvite?: (id: string) => void
 }>()
+
+/** 抽屉内容容器 ref，用于 ResizeObserver 测量实际高度 */
+const drawerContentRef = ref<HTMLElement | null>(null)
+/** 抽屉测量高度（px），驱动外层过渡容器高度 */
+const drawerHeightPx = ref(0)
+let resizeObserver: ResizeObserver | null = null
+
+function updateDrawerHeight(entry: ResizeObserverEntry) {
+  const h = entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height
+  drawerHeightPx.value = Math.round(h)
+}
+
+onMounted(() => {
+  resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) if (entry.target === drawerContentRef.value) updateDrawerHeight(entry)
+  })
+})
+
+watch(
+  () => props.showAppList,
+  (open) => {
+    if (!resizeObserver) return
+    if (open) {
+      nextTick(() => {
+        const el = drawerContentRef.value
+        if (el) resizeObserver!.observe(el)
+      })
+    } else {
+      const el = drawerContentRef.value
+      if (el) resizeObserver.unobserve(el)
+      drawerHeightPx.value = 0
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  if (resizeObserver && drawerContentRef.value) resizeObserver.unobserve(drawerContentRef.value)
+  resizeObserver = null
+})
 
 function onNewChat() {
   emit('new-chat')

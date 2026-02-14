@@ -129,6 +129,7 @@ export function useWorkspaceLayout() {
     gridTemplateColumns: readonly(gridTemplateColumns),
     showAppPanel: readonly(showAppPanel),
     isXxs: readonly(isXxs),
+    isMd: readonly(isMd),
     isXl: readonly(isXl),
     appPanelMaxWidthCss,
     appPanelMaxWidthPx: WORKSPACE_APP_PANEL_MAX_WIDTH_PX,

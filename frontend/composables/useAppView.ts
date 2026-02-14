@@ -58,12 +58,19 @@ const activeTab = computed(() => {
 
 const canGoBack = computed(() => tabs.value.length > 1)
 
+/** 是否已挂载（客户端水合后为 true），用于延后应用断点逻辑，避免 SSR 与客户端首帧 isContentVisible 不一致导致水合告警 */
+const isMounted = ref(false)
+
 export function useAppView() {
+  if (import.meta.client) {
+    onMounted(() => { isMounted.value = true })
+  }
   const isMd = useBreakpoint('md')
   const isLg = useBreakpoint('lg')
   const isXl = useBreakpoint('xl')
-  /** 视口 < lg 时保持面板打开；md~lg 区间内应用区内容区初始为折叠 */
-  watch([isMd, isLg], ([md, lg]) => {
+  /** 视口 < lg 时保持面板打开；md~lg 区间内应用区内容区初始为折叠。仅挂载后应用，保证 SSR 与客户端首帧一致。 */
+  watch([isMounted, isMd, isLg], ([mounted, md, lg]) => {
+    if (!mounted) return
     if (lg) return
     isPanelOpen.value = true
     const inMdLg = md && !lg
@@ -73,8 +80,9 @@ export function useAppView() {
       isContentVisible.value = true
     }
   }, { immediate: true })
-  /** xl 及以上强制应用区内容展开 */
-  watch(isXl, (xl) => {
+  /** xl 及以上强制应用区内容展开；仅挂载后应用。 */
+  watch([isMounted, isXl], ([mounted, xl]) => {
+    if (!mounted) return
     if (xl) isContentVisible.value = true
   }, { immediate: true })
 
