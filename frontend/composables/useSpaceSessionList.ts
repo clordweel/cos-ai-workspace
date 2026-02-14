@@ -3,6 +3,7 @@
  * 供 space 页 useSpacePage 使用，便于按需加载与维护
  */
 import { BarChart3, Bot, ClipboardList, Home, Layers, LogIn, Package, Settings, Users } from 'lucide-vue-next'
+import { restoreBodyStylesAfterDialog } from '~/composables/restoreBodyAfterDialog'
 import type { MockSessionItem } from '~/mock'
 import {
   getMockSessionById,
@@ -51,6 +52,8 @@ export function useSpaceSessionList(options: {
   invitedSessions?: Ref<{ id: string; title: string }[]>
   onAcceptInvite?: (id: string, title: string) => void | Promise<void>
   onDeclineInvite?: (id: string) => void | Promise<void>
+  /** 删除前回调（如弹出确认框）；若提供则不再直接调用 deleteSession */
+  onBeforeDeleteSession?: (id: string) => void | Promise<void>
 }) {
   const router = useRouter()
   const {
@@ -69,6 +72,7 @@ export function useSpaceSessionList(options: {
     invitedSessions = ref([]),
     onAcceptInvite,
     onDeclineInvite,
+    onBeforeDeleteSession,
   } = options
 
   const searchQuery = ref('')
@@ -263,6 +267,7 @@ export function useSpaceSessionList(options: {
     renameDialogOpen.value = false
     renameSessionId.value = ''
     renameCurrentTitle.value = ''
+    restoreBodyStylesAfterDialog()
   }
 
   async function confirmRename(title: string) {
@@ -281,6 +286,10 @@ export function useSpaceSessionList(options: {
   }
 
   async function onSessionDelete(id: string) {
+    if (onBeforeDeleteSession) {
+      await onBeforeDeleteSession(id)
+      return
+    }
     if (isMockSession(id)) {
       if (!mockHiddenIds.value.includes(id)) {
         mockHiddenIds.value = [...mockHiddenIds.value, id]

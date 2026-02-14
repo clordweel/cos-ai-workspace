@@ -98,7 +98,7 @@
             @export-screenshot="onExportLongScreenshot"
             @export-markdown="onExportMarkdown"
             @archive="onArchiveChat"
-            @delete="onDeleteChat"
+            @delete="() => chatId && openDeleteConfirm(chatId)"
             @members-closed="refetchSessionMembers"
             @submit="send"
             @stop="stopStream"
@@ -169,6 +169,12 @@
       @close="closeRenameDialog"
       @confirm="confirmRename"
     />
+    <SpaceDeleteSessionConfirmDialog
+      :open="deleteConfirmOpen"
+      :is-owner="deleteConfirmIsOwner"
+      @close="closeDeleteConfirm"
+      @confirm="confirmDeleteSession"
+    />
   </div>
 </template>
 
@@ -214,6 +220,11 @@ const {
   togglePin,
   onSessionRename,
   onSessionDelete,
+  deleteConfirmOpen,
+  deleteConfirmIsOwner,
+  closeDeleteConfirm,
+  openDeleteConfirm,
+  confirmDeleteSession,
   renameDialogOpen,
   renameCurrentTitle,
   closeRenameDialog,
@@ -265,7 +276,6 @@ const {
   onExportLongScreenshot,
   onExportMarkdown,
   onArchiveChat,
-  onDeleteChat,
   onLeaveSession,
   sessionMembers,
   refetchSessionMembers,

@@ -2,6 +2,7 @@
  * Space 页（会话区）状态与逻辑：组合 useSpaceSessionList 与 useSpaceChatPane，并处理路由、注入与生命周期
  */
 import { isMockSession as isMockSessionId, seedMockMessages } from '~/composables/useMockSessions'
+import { restoreBodyStylesAfterDialog } from '~/composables/restoreBodyAfterDialog'
 
 function isBackendSessionId(id: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
@@ -51,6 +52,40 @@ export function useSpacePage() {
   const { openPanel, openNavPage, addTab, currentView, activeTab } = useAppView()
 
   const mockSessionListEnabled = useMockSessionListEnabled()
+  const { matrixUserId } = useAuth()
+
+  /** 删除会话确认弹窗 */
+  const deleteConfirmOpen = ref(false)
+  const deleteConfirmSessionId = ref('')
+  const deleteConfirmIsOwner = ref(true)
+
+  async function openDeleteConfirm(sessionId: string) {
+    deleteConfirmSessionId.value = sessionId
+    deleteConfirmOpen.value = true
+    deleteConfirmIsOwner.value = true
+    if (isMockSessionId(sessionId)) return
+    try {
+      const members = await fetchSessionMembers(sessionId)
+      const mx = matrixUserId.value
+      deleteConfirmIsOwner.value = mx ? members.some((m) => m.userId === mx && m.isOwner) : true
+    } catch {
+      deleteConfirmIsOwner.value = true
+    }
+  }
+
+  function closeDeleteConfirm() {
+    deleteConfirmOpen.value = false
+    deleteConfirmSessionId.value = ''
+    restoreBodyStylesAfterDialog()
+  }
+
+  async function confirmDeleteSession() {
+    const id = deleteConfirmSessionId.value
+    if (!id) return
+    const ok = await deleteSessionApi(id)
+    closeDeleteConfirm()
+    if (ok && chatId.value === id) router.replace('/space')
+  }
 
   /** Matrix 实时消息：token 可用时启动 sync（含 auth 晚于 mount 完成的情况）；失败时单次延迟重试 */
   const {
@@ -234,6 +269,7 @@ export function useSpacePage() {
     invitedSessions: effectiveInvitedSessions,
     onAcceptInvite,
     onDeclineInvite,
+    onBeforeDeleteSession: openDeleteConfirm,
   })
 
   const paneApi = useSpaceChatPane({
@@ -401,6 +437,12 @@ export function useSpacePage() {
     chatScrollElRef,
     openAddParticipant,
     openPanel,
+    deleteConfirmOpen,
+    deleteConfirmSessionId,
+    deleteConfirmIsOwner,
+    openDeleteConfirm,
+    closeDeleteConfirm,
+    confirmDeleteSession,
     startNewChat,
     openCreateSessionDialog,
     showCreateSessionDialog,

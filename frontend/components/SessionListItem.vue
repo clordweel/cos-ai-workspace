@@ -22,6 +22,12 @@
         >
           已离开
         </span>
+        <span
+          v-if="unreadCount && unreadCount > 0"
+          class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-200 text-[11px] font-semibold tabular-nums"
+        >
+          {{ unreadCount > 99 ? '99+' : unreadCount }}
+        </span>
         <span v-if="dateLabel" class="shrink-0 text-[11px] text-inherit opacity-80">
           {{ dateLabel }}
         </span>
@@ -101,6 +107,8 @@ const props = defineProps<{
   /** 用户已离开/被踢出该会话，无法查看历史 */
   isLeftRoom?: boolean
   dateLabel?: string
+  /** 未读消息数量 */
+  unreadCount?: number
 }>()
 const emit = defineEmits<{
   (e: 'click'): void
