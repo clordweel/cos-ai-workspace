@@ -5,80 +5,54 @@
     <div class="session-list-inner flex flex-col min-h-0 min-w-0">
       <template v-if="listViewTab === 'active'">
         <div class="flex-1 min-h-0 flex flex-col">
-        <section
+        <SessionCategory
           v-if="pinnedChats.length > 0"
-          class="session-list-pinned shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
+          title="置顶"
+          :count="pinnedChats.length"
+          :collapsed="effectivePinnedCollapsed"
+          accent
+          @update:collapsed="emit('update:pinnedCollapsed', $event)"
         >
-          <button
-            type="button"
-            class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
-            @click="emit('update:pinnedCollapsed', !pinnedCollapsed)"
-          >
-            <component :is="effectivePinnedCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <span class="flex-1">置顶</span>
-            <span
-              class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums"
-            >
-              {{ pinnedChats.length }}
-            </span>
-          </button>
-          <ul v-show="!effectivePinnedCollapsed" class="divide-y divide-amber-100 dark:divide-amber-900/40">
-            <SessionListItem
-              v-for="c in pinnedChats"
-              :key="c.id"
-              :item="c"
-              :is-active="c.id === chatId && isSessionExpanded"
-              :is-mock="isMock(c.id)"
-              :is-pinned="true"
-              :is-left-room="isSessionLeftRoom?.(c.id)"
-              :date-label="getChatDateLabel(c.id)"
-              :unread-count="getNonReadCount(c.id)"
-              @click="emit('session-click', c.id)"
-              @toggle-pin="emit('toggle-pin', c.id)"
-              @rename="emit('rename', c.id)"
-              @delete="emit('delete', c.id)"
-            />
-          </ul>
-        </section>
-        <!-- Mock 会话折叠区：与置顶区同结构，便于开发前样式调试 -->
-        <section
+          <SessionListItem
+            v-for="c in pinnedChats"
+            :key="c.id"
+            :item="c"
+            :is-active="c.id === chatId && isSessionExpanded"
+            :is-mock="isMock(c.id)"
+            :is-pinned="true"
+            :is-left-room="isSessionLeftRoom?.(c.id)"
+            :date-label="getChatDateLabel(c.id)"
+            :unread-count="getNonReadCount(c.id)"
+            @click="emit('session-click', c.id)"
+            @toggle-pin="emit('toggle-pin', c.id)"
+            @rename="emit('rename', c.id)"
+            @delete="emit('delete', c.id)"
+          />
+        </SessionCategory>
+        <SessionCategory
           v-if="showMockSection"
-          class="session-list-mock shrink-0 border-b border-zinc-100 dark:border-zinc-700/80 bg-amber-50/60 dark:bg-amber-950/20 border-l-2 border-l-amber-400/70 dark:border-l-amber-500/50 rounded-r-md"
+          title="Mock 会话"
+          :count="mockChats?.length ?? 0"
+          :collapsed="effectiveMockCollapsed"
+          accent
+          @update:collapsed="emit('update:mockCollapsed', $event)"
         >
-          <button
-            type="button"
-            class="flex w-full items-center gap-2 px-3 py-2.5 text-left text-xs font-medium text-amber-800 dark:text-amber-200 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 rounded-r-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 focus-visible:ring-inset"
-            @click="emit('update:mockCollapsed', !mockCollapsed)"
-          >
-            <component :is="effectiveMockCollapsed ? ChevronRight : ChevronDown" class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <Pin class="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
-            <span class="flex-1">Mock 会话</span>
-            <span
-              v-if="mockChats.length > 0"
-              class="shrink-0 min-w-[1.25rem] h-5 px-1.5 flex items-center justify-center rounded-md bg-amber-200/80 dark:bg-amber-700/50 text-amber-800 dark:text-amber-200 text-[11px] font-semibold tabular-nums"
-            >
-              {{ mockChats.length }}
-            </span>
-          </button>
-          <ul v-show="!effectiveMockCollapsed && mockChats.length !== 0" class="divide-y divide-amber-100 dark:divide-amber-900/40">
-            <SessionListItem
-              v-for="c in mockChats"
-              :key="c.id"
-              :item="c"
-              :is-active="c.id === chatId && isSessionExpanded"
-              :is-mock="true"
-              :is-pinned="pinnedIds.includes(c.id)"
-              :is-left-room="isSessionLeftRoom?.(c.id)"
-              :date-label="getChatDateLabel(c.id)"
-              :unread-count="getNonReadCount(c.id)"
-              @click="emit('session-click', c.id)"
-              @toggle-pin="emit('toggle-pin', c.id)"
-              @rename="emit('rename', c.id)"
-              @delete="emit('delete', c.id)"
-            />
-          </ul>
-        </section>
+          <SessionListItem
+            v-for="c in (mockChats ?? [])"
+            :key="c.id"
+            :item="c"
+            :is-active="c.id === chatId && isSessionExpanded"
+            :is-mock="true"
+            :is-pinned="pinnedIds.includes(c.id)"
+            :is-left-room="isSessionLeftRoom?.(c.id)"
+            :date-label="getChatDateLabel(c.id)"
+            :unread-count="getNonReadCount(c.id)"
+            @click="emit('session-click', c.id)"
+            @toggle-pin="emit('toggle-pin', c.id)"
+            @rename="emit('rename', c.id)"
+            @delete="emit('delete', c.id)"
+          />
+        </SessionCategory>
         <section class="flex flex-col min-w-0">
           <template v-if="activeChats.length !== 0">
             <ul class="divide-y divide-zinc-100 dark:divide-zinc-700">
@@ -221,11 +195,12 @@
 </template>
 
 <script setup lang="ts">
-import { Archive, ChevronDown, ChevronRight, Inbox, Pin, Search, UserPlus } from 'lucide-vue-next'
+import { Archive, Inbox, Search, UserPlus } from 'lucide-vue-next'
 import { computed, onMounted, ref } from 'vue'
 import { Empty } from '~/components/ui/empty'
 import SessionListItem from '~/components/SessionListItem.vue'
 import SessionListThumb from '~/components/SessionListThumb.vue'
+import SessionCategory from '~/components/space/SessionCategory.vue'
 import InvitationDetailDialog from '~/components/space/InvitationDetailDialog.vue'
 import SessionListSettings from '~/components/space/SessionListSettings.vue'
 

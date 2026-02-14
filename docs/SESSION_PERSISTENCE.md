@@ -2,8 +2,10 @@
 
 ## 现状
 
-- **存储**：`middleware/src/services/auth/sessionStore.ts` 使用**内存 Map** 存会话，Cookie 仅存 `sessionId`，会话数据（user、logtoSub、logtoAccessToken/refresh_token、frappeSid 等）全在进程内存。
-- **结果**：中间层重启后 Map 清空，浏览器仍带 Cookie，但 `getSessionFromCookie` 查不到对应 session → 返回 401，用户需重新登录。
+- **存储**：`middleware/src/services/auth/sessionStore.ts` 支持 **memory**（默认）、**redis**、**file** 三种 store。Cookie 仅存 `sessionId`，会话数据在对应 store 中。
+- **memory**：进程内存 Map，重启后清空 → 401，需重新登录。
+- **file**：单文件 JSON（`sessionStoreFile.ts`），`SESSION_STORE=file` 且可选 `SESSION_FILE_PATH`，启动加载、变更防抖写回，重启后会话保留。
+- **redis**：`SESSION_STORE=redis` 且 `REDIS_URL`，多实例共享。
 
 ## 目标
 

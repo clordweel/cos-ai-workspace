@@ -1,9 +1,10 @@
 /**
- * 会话存储：内存 Map 或 Redis，Cookie 名与 TTL、会话 CRUD 与 Frappe 鉴权头
- * SESSION_STORE=redis 且 REDIS_URL 配置时使用 Redis，否则内存。见 docs/SESSION_PERSISTENCE.md
+ * 会话存储：内存 Map、Redis 或文件，Cookie 名与 TTL、会话 CRUD 与 Frappe 鉴权头
+ * SESSION_STORE=memory|redis|file，file 时见 sessionStoreFile。见 docs/SESSION_PERSISTENCE.md
  */
 import { config } from '../../config.js';
 import { Redis } from 'ioredis';
+import { FileStore } from './sessionStoreFile.js';
 
 const COOKIE_NAME = 'auth_session';
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 天
@@ -40,7 +41,7 @@ export interface Session {
   expiresAt: number;
 }
 
-type SessionData = Omit<Session, 'sessionId'>;
+export type SessionData = Omit<Session, 'sessionId'>;
 
 interface ISessionStore {
   get(id: string): Promise<SessionData | null>;
@@ -106,6 +107,9 @@ class RedisStore implements ISessionStore {
 function createStore(): ISessionStore {
   if (config.sessionStore === 'redis' && config.redisUrl) {
     return new RedisStore(config.redisUrl);
+  }
+  if (config.sessionStore === 'file') {
+    return new FileStore({ filePath: config.sessionFilePath });
   }
   return new MemoryStore();
 }

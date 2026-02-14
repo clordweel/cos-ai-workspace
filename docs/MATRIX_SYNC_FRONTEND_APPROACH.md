@@ -26,13 +26,12 @@ matrix-js-sdk 虽声明 `"type": "module"`，但**部分依赖**仍是 CommonJS�
 
 ## 三、当前应对：optimizeDeps.include 逐个纳入
 
-在 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps.include` 中，**一次性纳入 matrix-js-sdk 及其全部直接依赖**，由 Vite 统一预构建并做 CJS→ESM 互操作，避免「打地鼠」式逐个追加：
+在 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps` 中，**一次性纳入 matrix-js-sdk 及其除 WASM 外的直接依赖**，由 Vite 统一预构建并做 CJS→ESM 互操作；**`@matrix-org/matrix-sdk-crypto-wasm` 必须放在 `exclude`**，因其通过 `import('./pkg/xxx.wasm')` 加载 WASM，预构建后 WASM 不会复制到 deps 目录会导致 404。
 
 ```ts
 optimizeDeps: {
   include: [
     'matrix-js-sdk',
-    '@matrix-org/matrix-sdk-crypto-wasm',
     'another-json',
     'bs58',
     'content-type',
@@ -47,9 +46,10 @@ optimizeDeps: {
     'unhomoglyph',
     'uuid',
   ],
+  exclude: ['@matrix-org/matrix-sdk-crypto-wasm'],
 },
 ```
-注：不包含 `@babel/runtime`，因其无 `"."` 入口，作为 optimizeDeps 顶层条目会触发 "Missing . specifier"；预构建 matrix-js-sdk 时会自动拉入。
+注：不包含 `@babel/runtime`，因其无 `"."` 入口，作为 optimizeDeps 顶层条目会触发 "Missing . specifier"；预构建 matrix-js-sdk 时会自动拉入。修改 optimizeDeps 后若仍出现 WASM 404，可删除 `frontend/node_modules/.vite` 与 `frontend/.nuxt` 后重跑 `pnpm dev`。
 
 **曾单独暴露问题的包**（已包含在上述列表中）：
 

@@ -11,6 +11,7 @@ import {
   useMockSessionListEnabled,
   isMockSession as isMockSessionId,
 } from '~/composables/useMockSessions'
+import { useSessionCategories } from '~/composables/useSessionCategories'
 import { useAppExtensions } from '~/composables/useAppExtensions'
 
 export type ListViewTab = 'active' | 'favorites' | 'pending' | 'settings'
@@ -145,36 +146,19 @@ export function useSpaceSessionList(options: {
     return [...real, ...mockList]
   })
 
-  /** 按 updatedAt 降序（last_active 新→旧），与后端 listSessions 排序一致 */
-  const byLastActive = (a: DisplayChatItem, b: DisplayChatItem) =>
-    (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
-
-  const pinnedChats = computed<DisplayChatItem[]>(() =>
-    displayChats.value
-      .filter((c) => pinnedIds.value.includes(c.id))
-      .sort(byLastActive)
-  )
-  const mockChats = computed<DisplayChatItem[]>(() => {
-    if (!mockSessionListEnabled.value) return []
-    return displayChats.value.filter(
-      (c) => isMockSessionId(c.id) && !pinnedIds.value.includes(c.id)
-    )
+  const {
+    pinnedChats,
+    mockChats,
+    activeChats,
+    pendingChats,
+    totalPendingCount,
+  } = useSessionCategories({
+    displayChats,
+    pinnedIds,
+    getNonReadCount,
+    mockSessionListEnabled,
+    isMockSessionId,
   })
-  /** 非置顶会话按 last_active（updatedAt）降序，与后端真实排序一致 */
-  const activeChats = computed<DisplayChatItem[]>(() => {
-    const base = mockSessionListEnabled.value
-      ? displayChats.value.filter((c) => !isMockSessionId(c.id))
-      : displayChats.value
-    return base
-      .filter((c) => !pinnedIds.value.includes(c.id))
-      .sort(byLastActive)
-  })
-  const pendingChats = computed<DisplayChatItem[]>(() =>
-    displayChats.value.filter((c) => getNonReadCount(c.id) > 0)
-  )
-  const totalPendingCount = computed(() =>
-    displayChats.value.reduce((sum, c) => sum + getNonReadCount(c.id), 0)
-  )
 
   /** 顶栏在文档流中；抽屉推动整块下移，列表内容仅留顶栏高度 */
   const listPaddingTop = computed(() => `${SESSION_LIST_HEADER_HEIGHT_REM}rem`)

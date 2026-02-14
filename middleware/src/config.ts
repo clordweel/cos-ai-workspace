@@ -49,10 +49,12 @@ export interface Config {
   };
   /** 中间层对外访问根 URL，用于拼 Logto redirect_uri；不设则从请求头/主机推导 */
   middlewarePublicOrigin: string;
-  /** 会话存储：memory（默认）| redis。redis 时需配置 redisUrl，见 SESSION_PERSISTENCE.md */
-  sessionStore: 'memory' | 'redis';
-  /** Redis 连接 URL，SESSION_STORE=redis 时必填，如 redis://10.1.1.15:6379 或 redis://:password@host:6379 */
+  /** 会话存储：memory（默认）| redis | file。见 SESSION_PERSISTENCE.md */
+  sessionStore: 'memory' | 'redis' | 'file';
+  /** Redis 连接 URL，SESSION_STORE=redis 时必填 */
   redisUrl: string;
+  /** 会话文件路径，SESSION_STORE=file 时使用，默认 ./data/sessions.json */
+  sessionFilePath: string;
   /** Matrix 密码加密钥，配置后会将密码加密存 Logto customData 持久化，需 M2M */
   matrixPasswordEncryptionKey: string;
 }
@@ -108,7 +110,13 @@ export const config: Config = {
 
   middlewarePublicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || '').replace(/\/$/, ''),
 
-  sessionStore: (process.env.SESSION_STORE || 'memory').toLowerCase() === 'redis' ? 'redis' : 'memory',
+  sessionStore: (() => {
+    const v = (process.env.SESSION_STORE || 'memory').toLowerCase();
+    if (v === 'redis') return 'redis';
+    if (v === 'file') return 'file';
+    return 'memory';
+  })(),
   redisUrl: (process.env.REDIS_URL || '').trim(),
+  sessionFilePath: (process.env.SESSION_FILE_PATH || '').trim() || path.resolve(process.cwd(), 'data', 'sessions.json'),
   matrixPasswordEncryptionKey: (process.env.MATRIX_PASSWORD_ENCRYPTION_KEY || '').trim(),
 };
