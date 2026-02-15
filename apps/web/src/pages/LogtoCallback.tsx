@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 
 export default function LogtoCallback() {
@@ -6,7 +7,11 @@ export default function LogtoCallback() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
+    // Hash 路由下 Logto 会重定向到 origin/#/logto-callback?code=...，参数在 hash 的 query 部分
+    const hash = window.location.hash || '';
+    const hashQueryIndex = hash.indexOf('?');
+    const search = hashQueryIndex >= 0 ? hash.slice(hashQueryIndex + 1) : '';
+    const q = new URLSearchParams(search || window.location.search);
     const code = q.get('code')?.trim();
     const err = q.get('error');
     const errDesc = q.get('error_description');
@@ -24,7 +29,7 @@ export default function LogtoCallback() {
     }
 
     const origin = window.location.origin;
-    const redirectUri = `${origin}/logto-callback`;
+    const redirectUri = `${origin}/#/logto-callback`;
     const url = `/api/auth/logto/callback?${new URLSearchParams({ code, redirect_uri: redirectUri }).toString()}`;
     window.location.href = url;
   }, []);
@@ -39,10 +44,10 @@ export default function LogtoCallback() {
           {error && <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>}
           <div className="flex items-center gap-3">
             <Button asChild>
-              <a href="/logto">重新登录</a>
+              <Link to="/logto">重新登录</Link>
             </Button>
             <Button variant="outline" asChild>
-              <a href="/space">返回工作台</a>
+              <Link to="/space">返回工作台</Link>
             </Button>
           </div>
         </>

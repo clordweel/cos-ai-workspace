@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { HashRouter } from 'react-router-dom';
 import { AppViewProvider } from './contexts/AppViewContext';
 import App from './App';
 import './index.css';
@@ -9,7 +9,7 @@ const container = document.getElementById('root');
 if (!container) throw new Error('root element not found');
 createRoot(container).render(
   <React.StrictMode>
-    <BrowserRouter
+    <HashRouter
       future={{
         v7_startTransition: true,
         v7_relativeSplatPath: true,
@@ -18,6 +18,6 @@ createRoot(container).render(
       <AppViewProvider>
         <App />
       </AppViewProvider>
-    </BrowserRouter>
+    </HashRouter>
   </React.StrictMode>
 );

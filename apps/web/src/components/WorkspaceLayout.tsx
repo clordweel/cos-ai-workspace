@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Moon, Sun, Home, Users, Bot, Settings, LogIn } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Moon, Sun, Pin, PinOff } from 'lucide-react';
 import { Button } from './ui/button';
 import { useAppViewContext } from '../contexts/AppViewContext';
+import { WorkspaceLayoutProvider } from '../contexts/WorkspaceLayoutContext';
 import { useTheme } from '../hooks/useTheme';
 import { SettingsPanel } from './SettingsPanel';
+import { MaterialConfirmCard } from './task/MaterialConfirmCard';
+import { WorkspaceAppNav } from './WorkspaceAppNav';
 import type { AppView } from '../constants/appView';
 
 /** 断点 md (768px) 以上显示应用区与底栏 */
@@ -19,21 +23,21 @@ function useMediaMd() {
   return md;
 }
 
-const APP_NAV: { view: AppView; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { view: 'home', label: '首页', icon: Home },
-  { view: 'contacts', label: '联系人', icon: Users },
-  { view: 'bots', label: '机器人', icon: Bot },
-  { view: 'settings', label: '设置', icon: Settings },
-  { view: 'auth', label: '认证', icon: LogIn },
-];
-
 function AppPanelContent({ currentView }: { currentView: AppView }) {
   switch (currentView) {
     case 'home':
       return (
-        <div className="text-zinc-600 dark:text-zinc-400 space-y-2">
+        <div className="text-zinc-600 dark:text-zinc-400 space-y-4">
           <p>欢迎使用智能交互工作台。</p>
           <p className="text-xs">更多扩展应用将在此展示（阶段 5.4 扩展入口）。</p>
+          <div className="pt-2">
+            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">任务卡片示例</p>
+            <MaterialConfirmCard
+              draftId="MAT-DRAFT-demo"
+              itemName="示例物料（确认后将请求接口）"
+              onConfirmed={() => {}}
+            />
+          </div>
         </div>
       );
     case 'contacts':
@@ -50,9 +54,9 @@ function AppPanelContent({ currentView }: { currentView: AppView }) {
       return (
         <div className="text-zinc-600 dark:text-zinc-400 space-y-2">
           <p>认证登录。</p>
-          <a href="/logto" className="text-primary-600 dark:text-primary-400 hover:underline">
+          <Link to="/logto" className="text-primary-600 dark:text-primary-400 hover:underline">
             前往 Logto 登录
-          </a>
+          </Link>
         </div>
       );
     case 'profile':
@@ -70,35 +74,41 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
     isPanelOpen,
     isContentVisible,
     toggleContentPanel,
+    isSidebarPinned,
+    toggleSidebarPinned,
+    cancelSidebarLeave,
+    scheduleSidebarLeave,
     tabs,
     activeTabId,
     currentView,
-    openView,
     switchTab,
     closeTab,
   } = useAppViewContext();
   const md = useMediaMd();
   const showAppPanel = isPanelOpen && md;
+  /** 会话区是否展开：应用区关闭或应用内容区折叠时为 true（FRONTEND_SPEC） */
+  const isSessionExpanded = !showAppPanel || !isContentVisible;
 
   return (
-    <div className="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
-      <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
-        {/* 顶栏：品牌 + 主题切换 */}
-        <header
+    <WorkspaceLayoutProvider value={{ isSessionExpanded, isMd: md }}>
+      <div className="h-screen min-h-0 bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 flex flex-col">
+        <main className="flex-1 min-h-0 flex flex-col overflow-hidden">
+          {/* 顶栏：品牌 + 主题切换 */}
+          <header
           className="shrink-0 h-14 flex items-center justify-center px-4 w-full border-b border-zinc-200 dark:border-zinc-700"
           role="banner"
           aria-label="产品"
         >
           <div className="flex items-center justify-between w-full max-w-[1600px]">
-            <a
-              href="/space"
+            <Link
+              to="/space"
               className="flex items-center gap-2 min-w-0 rounded-lg py-1.5 px-2 -mx-2 text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-50 dark:focus-visible:ring-offset-zinc-900"
             >
               <span className="text-sm font-semibold">COS&AI</span>
               <span className="hidden sm:inline text-sm font-medium text-zinc-500 dark:text-zinc-400 border-l border-zinc-300 dark:border-zinc-600 pl-2">
                 智能交互工作台
               </span>
-            </a>
+            </Link>
             <Button
               type="button"
               variant="ghost"
@@ -120,90 +130,93 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
             gridTemplateRows: 'minmax(0, 1fr)',
           }}
         >
-          {/* 左栏：会话区 */}
-          <div className="h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden">
+          {/* 左栏：会话区（应用区打开且内容展开时限制宽度 max-w-sm，与 FRONTEND_SPEC 一致） */}
+          <div
+            className={`h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden ${showAppPanel && isContentVisible ? 'max-w-sm' : ''}`}
+          >
             <div className="h-full min-h-0 w-full min-w-0 flex flex-col overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800">
               {children}
             </div>
           </div>
 
-          {/* 右栏：应用区（md+ 且打开时显示） */}
+          {/* 右栏：应用区（md+ 且打开时显示）= 工具栏 + 侧栏 + 内容区 */}
           {showAppPanel && (
             <section
-              className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 min-w-0"
+              className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 min-w-0 shadow-sm"
               aria-label="应用区"
             >
-              {/* 侧栏导航：首页/联系人/机器人/设置/认证 */}
-              <div className="shrink-0 flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-700 px-2 py-1.5">
-                {APP_NAV.map(({ view, label, icon: Icon }) => (
-                  <button
-                    key={view}
-                    type="button"
-                    onClick={() => openView(view)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                      currentView === view
-                        ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
-                        : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700'
-                    }`}
-                    title={label}
-                  >
-                    <Icon className="h-3.5 w-3.5 shrink-0" />
-                    <span className="hidden sm:inline">{label}</span>
-                  </button>
-                ))}
-                <div className="flex-1 min-w-0" />
+              {/* 顶部工具栏：固定侧栏 + 折叠内容区（FRONTEND_SPEC：固定/展开按钮在侧栏上方） */}
+              <div
+                className="shrink-0 flex items-center gap-1 border-b border-zinc-200 dark:border-zinc-700 px-2 py-1.5"
+                onMouseEnter={cancelSidebarLeave}
+                onMouseLeave={scheduleSidebarLeave}
+              >
+                <button
+                  type="button"
+                  onClick={toggleSidebarPinned}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                  title={isSidebarPinned ? '取消固定侧栏' : '固定侧栏'}
+                  aria-label={isSidebarPinned ? '取消固定侧栏' : '固定侧栏'}
+                >
+                  {isSidebarPinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+                </button>
                 <button
                   type="button"
                   onClick={toggleContentPanel}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
                   title={isContentVisible ? '折叠内容区' : '展开内容区'}
                   aria-label="切换应用内容区"
                 >
                   {isContentVisible ? '◧' : '▢'}
                 </button>
+                <div className="flex-1 min-w-0" />
               </div>
-              {isContentVisible && (
-                <>
-                  {/* 标签条：可切换、关闭 */}
-                  {tabs.length > 0 && (
-                    <div className="shrink-0 flex items-center gap-0.5 overflow-x-auto border-b border-zinc-100 dark:border-zinc-700/80 px-2 py-1 min-h-0">
-                      {tabs.map((tab) => (
-                        <div
-                          key={tab.id}
-                          className={`flex items-center gap-1 shrink-0 rounded-md px-2 py-1 text-xs ${
-                            activeTabId === tab.id
-                              ? 'bg-zinc-200 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100'
-                              : 'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/80 dark:hover:bg-zinc-600/50'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => switchTab(tab.id)}
-                            className="truncate max-w-[100px]"
-                          >
-                            {tab.title}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              closeTab(tab.id, { force: true });
-                            }}
-                            className="shrink-0 p-0.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-500"
-                            aria-label="关闭标签"
-                          >
-                            ×
-                          </button>
+              <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+                <WorkspaceAppNav />
+                {isContentVisible && (
+                  <>
+                    {/* 标签条 + 应用内容区（内层圆角、浅底、阴影，见 layout-app-content） */}
+                    <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
+                      {tabs.length > 0 && (
+                        <div className="shrink-0 flex items-center gap-0.5 overflow-x-auto border-b border-zinc-100 dark:border-zinc-700/80 px-2 py-1 min-h-0">
+                          {tabs.map((tab) => (
+                            <div
+                              key={tab.id}
+                              className={`flex items-center gap-1 shrink-0 rounded-md px-2 py-1 text-xs ${
+                                activeTabId === tab.id
+                                  ? 'bg-zinc-200 dark:bg-zinc-600 text-zinc-900 dark:text-zinc-100'
+                                  : 'bg-zinc-100 dark:bg-zinc-700/50 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200/80 dark:hover:bg-zinc-600/50'
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => switchTab(tab.id)}
+                                className="truncate max-w-[100px]"
+                              >
+                                {tab.title}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  closeTab(tab.id, { force: true });
+                                }}
+                                className="shrink-0 p-0.5 rounded hover:bg-zinc-300 dark:hover:bg-zinc-500"
+                                aria-label="关闭标签"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                      <div className="flex-1 min-h-0 overflow-auto rounded-xl bg-zinc-50/50 dark:bg-zinc-900/50 border border-zinc-200/80 dark:border-zinc-700/80 shadow-inner m-2 mt-0 p-3 text-sm">
+                        <AppPanelContent currentView={currentView} />
+                      </div>
                     </div>
-                  )}
-                  {/* 内容区：按 currentView 渲染 */}
-                  <div className="flex-1 min-h-0 overflow-auto p-3 text-sm">
-                    <AppPanelContent currentView={currentView} />
-                  </div>
-                </>
-              )}
+                  </>
+                )}
+              </div>
             </section>
           )}
         </div>
@@ -219,13 +232,14 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
               © {new Date().getFullYear()} COS&AI · 智能交互工作台
             </p>
             <nav className="flex items-center justify-center gap-4" aria-label="底栏链接">
-              <a href="/space" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
+              <Link to="/space" className="hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
                 首页
-              </a>
+              </Link>
             </nav>
           </footer>
         )}
-      </main>
-    </div>
+        </main>
+      </div>
+    </WorkspaceLayoutProvider>
   );
 }

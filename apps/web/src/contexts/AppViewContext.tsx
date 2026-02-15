@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import type { AppView, AppTab } from '../constants/appView';
 import { defaultHomeTab, isSingleInstanceView, VIEW_TITLES } from '../constants/appView';
 
@@ -16,6 +16,17 @@ interface AppViewContextValue {
   isContentVisible: boolean;
   toggleContentPanel: () => void;
   togglePanelOpen: () => void;
+  /** 侧栏是否固定（固定后常开、不随鼠标收起） */
+  isSidebarPinned: boolean;
+  /** 侧栏是否展开（固定或悬停展开后） */
+  isSidebarExpanded: boolean;
+  toggleSidebarPinned: () => void;
+  /** nav mouseenter 时调用 */
+  scheduleSidebarExpand: () => void;
+  /** nav 或工具栏 mouseleave 时调用 */
+  scheduleSidebarLeave: () => void;
+  /** 工具栏 mouseenter 时调用，取消延迟收起 */
+  cancelSidebarLeave: () => void;
   tabs: AppTab[];
   activeTabId: string | null;
   activeTab: AppTab | null;
@@ -29,14 +40,72 @@ interface AppViewContextValue {
 
 const AppViewContext = createContext<AppViewContextValue | null>(null);
 
+const SIDEBAR_EXPAND_DELAY_MS = 500;
+const SIDEBAR_LEAVE_DELAY_MS = 180;
+const SIDEBAR_IGNORE_LEAVE_MS = 280;
+
 export function AppViewProvider({ children }: { children: React.ReactNode }) {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [isContentVisible, setIsContentVisible] = useState(true);
+  const [isSidebarPinned, setIsSidebarPinned] = useState(false);
+  const [hoverExpanded, setHoverExpanded] = useState(false);
   const [tabs, setTabs] = useState<AppTab[]>([defaultHomeTab]);
   const [activeTabId, setActiveTabId] = useState<string | null>(defaultHomeTab.id);
 
+  const expandTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const expandTimeRef = useRef<number>(0);
+
+  const isSidebarExpanded = isSidebarPinned || hoverExpanded;
+
   const toggleContentPanel = useCallback(() => {
     setIsContentVisible((v) => !v);
+  }, []);
+
+  const toggleSidebarPinned = useCallback(() => {
+    setIsSidebarPinned((p) => !p);
+    if (expandTimerRef.current) {
+      clearTimeout(expandTimerRef.current);
+      expandTimerRef.current = null;
+    }
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleSidebarExpand = useCallback(() => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    if (expandTimerRef.current) return;
+    expandTimerRef.current = setTimeout(() => {
+      expandTimerRef.current = null;
+      expandTimeRef.current = Date.now();
+      setHoverExpanded(true);
+    }, SIDEBAR_EXPAND_DELAY_MS);
+  }, []);
+
+  const scheduleSidebarLeave = useCallback(() => {
+    if (expandTimerRef.current) {
+      clearTimeout(expandTimerRef.current);
+      expandTimerRef.current = null;
+    }
+    const now = Date.now();
+    if (!isSidebarPinned && now - expandTimeRef.current < SIDEBAR_IGNORE_LEAVE_MS) return;
+    if (leaveTimerRef.current) return;
+    leaveTimerRef.current = setTimeout(() => {
+      leaveTimerRef.current = null;
+      setHoverExpanded(false);
+    }, SIDEBAR_LEAVE_DELAY_MS);
+  }, [isSidebarPinned]);
+
+  const cancelSidebarLeave = useCallback(() => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
   }, []);
 
   const togglePanelOpen = useCallback(() => {
@@ -115,6 +184,12 @@ export function AppViewProvider({ children }: { children: React.ReactNode }) {
       isContentVisible,
       toggleContentPanel,
       togglePanelOpen,
+      isSidebarPinned,
+      isSidebarExpanded,
+      toggleSidebarPinned,
+      scheduleSidebarExpand,
+      scheduleSidebarLeave,
+      cancelSidebarLeave,
       tabs,
       activeTabId,
       activeTab,
@@ -130,6 +205,12 @@ export function AppViewProvider({ children }: { children: React.ReactNode }) {
       isContentVisible,
       toggleContentPanel,
       togglePanelOpen,
+      isSidebarPinned,
+      isSidebarExpanded,
+      toggleSidebarPinned,
+      scheduleSidebarExpand,
+      scheduleSidebarLeave,
+      cancelSidebarLeave,
       tabs,
       activeTabId,
       activeTab,

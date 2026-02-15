@@ -36,7 +36,11 @@ module.exports = (_, { mode }) => ({
   devServer: {
     port: 3001,
     host: '0.0.0.0',
-    historyApiFallback: true,
+    // SPA 路由：/space、/space/:id（含 Matrix room id 如 !xxx%3Ahost）等均返回 index.html
+    historyApiFallback: {
+      index: '/index.html',
+      disableDotRule: true,
+    },
     // 关闭压缩，避免代理缓冲 SSE 流导致“一次性蹦出”而非逐字/逐块
     compress: false,
     proxy: [

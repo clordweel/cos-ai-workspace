@@ -5,7 +5,8 @@
   "description": "重构版工作台前端（React + Webpack），参考原 frontend",
   "scripts": {
     "dev": "webpack serve --mode development",
-    "build": "webpack --mode production"
+    "build": "webpack --mode production",
+    "preview": "serve -s dist -l 3001"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
@@ -19,6 +20,7 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "serve": "^14.2.5",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.24",

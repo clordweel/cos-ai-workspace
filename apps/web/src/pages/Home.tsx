@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import WorkspaceLayout from '../components/WorkspaceLayout';
 
@@ -13,11 +14,11 @@ export default function Home() {
         </p>
         <nav className="flex items-center gap-3">
           <Button variant="link" asChild>
-            <a href="/space">会话</a>
+            <Link to="/space">会话</Link>
           </Button>
           <span className="text-zinc-400 dark:text-zinc-500">·</span>
           <Button variant="link" asChild>
-            <a href="/logto">登录</a>
+            <Link to="/logto">登录</Link>
           </Button>
         </nav>
       </div>
