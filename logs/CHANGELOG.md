@@ -6,6 +6,11 @@
 
 ## 2026-02-15
 
+### 阶段 2.1：新前端认证流（apps/web）
+
+- **apps/api**：新增 `getLogtoAuthUrl`、`GET /api/auth/logto/url`（返回 Logto 授权 URL，redirect_uri 为前端 `/logto-callback`），供前端 /logto 跳转。
+- **apps/web**：/logto 请求 `/api/auth/logto/url` 后重定向到 Logto；/logto-callback 收到 code 后重定向到 `/api/auth/logto/callback?code=…&redirect_uri=…`，由后端写 Cookie 并重定向到 /space?auth=ok；新增 `useAuth` 拉取 `/api/auth/me`（credentials: 'include'）；Space 页展示当前用户或登录入口；devServer 代理 /api 默认指向 `http://localhost:3000`（新后端）。
+
 ### 阶段 1 完成：新后端鉴权与 /api/auth/me
 
 - **apps/api**：实现环境与配置（`src/config.ts`，从根或本目录加载 .env）、内存会话存储（`src/services/sessionStore.ts`，与现 middleware Session 结构可对照）、Logto 回调（`src/services/logto.ts`：code 换 token、/oidc/me、建会话）、认证路由（`src/routes/auth.ts`）。
@@ -22,7 +27,7 @@
 ### 阶段 0 完成：技术栈结论与脚手架
 
 - **技术栈结论**：在 `docs/REFACTOR_PLAN.md` §2.4 写入推荐默认（新后端 `@cosai/api`、Node+Fastify；新前端 `@cosai/web`、React 18+Webpack 5+shadcn-ui+Zustand）。
-- **apps/api**：Fastify + TypeScript，`GET /health`，端口 3002（或 `API_PORT`/`PORT`）；根脚本 `dev:api`、`build:api`。
+- **apps/api**：Fastify + TypeScript，`GET /health`，端口 3000（或 `API_PORT`/`PORT`）；根脚本 `dev:api`、`build:api`。
 - **apps/web**：React 18 + Webpack 5 + React Router，路由占位 /、/space、/space/:id、/logto、/logto-callback；devServer 代理 /api → 现 middleware（可配置）；根脚本 `dev:web`、`build:web`。
 - **根 package.json**：新增 `dev:api`、`dev:web`、`build:api`、`build:web`；`apps/README.md`、`docs/MONOREPO_APPS_PACKAGES.md` 更新。
 

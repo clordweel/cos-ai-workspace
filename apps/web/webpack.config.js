@@ -23,7 +23,7 @@ module.exports = (_, { mode }) => ({
     }),
   ],
   devServer: {
-    port: 3003,
+    port: 3001,
     host: '0.0.0.0',
     historyApiFallback: true,
     proxy: [

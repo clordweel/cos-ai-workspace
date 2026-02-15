@@ -1,10 +1,41 @@
 /**
  * Logto 回调：code 换 token、拉 /oidc/me、建会话（阶段 1 最小集，无 Matrix/Account API 补全）
+ * 并提供授权 URL 供前端 /logto 跳转（阶段 2）。
  */
 import { config } from '../config.js';
 import { saveSession, type UserProfile } from './sessionStore.js';
 
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+
+export interface LogtoAuthUrlResult {
+  ok: true;
+  url: string;
+}
+export interface LogtoAuthUrlError {
+  ok: false;
+  error: string;
+}
+
+/** 生成 Logto 授权 URL，redirectUri 通常为前端 origin + /logto-callback */
+export function getLogtoAuthUrl(
+  redirectUri: string,
+  options?: { prompt?: 'consent' | 'login' }
+): LogtoAuthUrlResult | LogtoAuthUrlError {
+  const { endpoint, appId } = config.logto;
+  if (!endpoint || !appId) {
+    return { ok: false, error: '未配置 Logto（LOGTO_ENDPOINT / LOGTO_APP_ID）' };
+  }
+  const state = `s_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  const params = new URLSearchParams({
+    client_id: appId,
+    redirect_uri: redirectUri,
+    response_type: 'code',
+    scope: 'openid profile email',
+    state,
+  });
+  if (options?.prompt) params.set('prompt', options.prompt);
+  return { ok: true, url: `${endpoint.replace(/\/$/, '')}/oidc/auth?${params.toString()}` };
+}
 
 export interface CallbackOk {
   ok: true;

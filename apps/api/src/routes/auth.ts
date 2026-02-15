@@ -4,7 +4,7 @@
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { getSessionFromCookie, getStableUserId, getCookieName } from '../services/sessionStore.js';
-import { handleLogtoCallback } from '../services/logto.js';
+import { getLogtoAuthUrl, handleLogtoCallback } from '../services/logto.js';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -43,6 +43,19 @@ function redirectToFront(redirectUri: string | undefined, path: string): string 
 
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const cookieName = getCookieName();
+
+  /** 阶段 2：前端 /logto 请求此 URL 后重定向到 Logto；redirect_uri 为前端 /logto-callback */
+  app.get('/api/auth/logto/url', async (req, reply) => {
+    const frontOrigin = config.frontendOrigin.replace(/\/$/, '');
+    const redirectUri = `${frontOrigin}/logto-callback`;
+    const prompt = (req.query as { prompt?: string }).prompt;
+    const promptOpt = prompt === 'consent' || prompt === 'login' ? prompt : undefined;
+    const result = getLogtoAuthUrl(redirectUri, promptOpt ? { prompt: promptOpt } : undefined);
+    if (!result.ok) {
+      return reply.code(503).send({ ok: false, error: result.error });
+    }
+    return reply.send({ ok: true, url: result.url });
+  });
 
   app.get('/api/auth/logto/callback', async (req, reply) => {
     const query = req.query as { code?: string; redirect_uri?: string };

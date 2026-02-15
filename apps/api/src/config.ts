@@ -11,12 +11,12 @@ dotenv.config({ path: rootEnv });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export const config = {
-  port: Number(process.env.API_PORT) || Number(process.env.PORT) || 3002,
+  port: Number(process.env.API_PORT) || Number(process.env.PORT) || 3000,
   logto: {
     endpoint: (process.env.LOGTO_ENDPOINT || '').replace(/\/$/, ''),
     appId: process.env.LOGTO_APP_ID || '',
     appSecret: process.env.LOGTO_APP_SECRET || '',
   },
   publicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || process.env.API_PUBLIC_ORIGIN || '').replace(/\/$/, ''),
-  frontendOrigin: process.env.FRONTEND_ORIGIN || process.env.MIDDLEWARE_PUBLIC_ORIGIN || 'http://localhost:3003',
+  frontendOrigin: process.env.FRONTEND_ORIGIN || process.env.MIDDLEWARE_PUBLIC_ORIGIN || 'http://localhost:3001',
 };
