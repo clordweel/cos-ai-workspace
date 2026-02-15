@@ -58,12 +58,13 @@ workspace/
 │   ├── components/            # SessionList*, ChatMessageBubble, ChatInputPanel, AppPanel, TaskCard/*, space/*
 │   ├── composables/          # useChatStream, useChatSessions, useAppView, useAuth, useWorkspaceLayout, usePermissions…
 │   └── types/app-extensions.ts
-├── middleware/                # Node.js (Fastify) TypeScript，SSE + 适配器 + 编排
-│   └── src/
-│       ├── index.ts, config.ts
-│       ├── adapters/         # mock, matrix（聊天后端适配器）
-│       ├── routes/           # auth, chat, material, diagnostics, health, options
-│       └── services/         # auth, difyStream, cosClient, exportMarkdown
+├── apps/
+│   └── middleware/            # Node.js (Fastify) TypeScript，SSE + 适配器 + 编排
+│       └── src/
+│           ├── index.ts, config.ts
+│           ├── adapters/     # mock, matrix（聊天后端适配器）
+│           ├── routes/       # auth, chat, material, diagnostics, health, options
+│           └── services/     # auth, difyStream, cosClient, exportMarkdown
 ├── cos/                       # Frappe 自定义 App 说明与占位（见 cos/README.md）
 │   └── README.md
 └── logs/CHANGELOG.md          # 开发变更记录

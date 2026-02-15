@@ -9,7 +9,8 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.resolve(__dirname, '..', '..');
+// 工作区根目录（middleware 现位于 apps/middleware，scripts 上溯两级到 middleware、再一级到 apps、再一级到根）
+const root = path.resolve(__dirname, '..', '..', '..');
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(root, '.env') });
 

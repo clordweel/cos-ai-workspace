@@ -1,7 +1,6 @@
-# 标准 monorepo 结构（参考 Element 等）：apps/* + packages/*；现有 frontend、middleware 保持不变
+# 标准 monorepo 结构（参考 Element 等）：apps/* 含中间层等应用，packages/* 为共享包；frontend 暂留根目录
 packages:
   - frontend
-  - middleware
   - "apps/*"
   - "packages/*"
 

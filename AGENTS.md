@@ -18,7 +18,7 @@
 ## 目录与职责
 
 - **frontend/** — Nuxt 3 + Vue 3，对话流与任务卡片；不直连 Frappe/Dify，经中间层。
-- **middleware/** — Fastify，SSE 流式、鉴权、聊天适配器（mock/matrix）、cos/物料 API。
+- **apps/middleware/** — Fastify 中间层，SSE 流式、鉴权、聊天适配器（mock/matrix）、cos/物料 API。
 - **docs/** — 架构、API、认证、前端规范等；先查 `PROJECT_STATUS.md`、`ARCHITECTURE.md`。研究/选型已归档至 `docs/archive/research/`、`docs/archive/mas/`。
 - **.cursor/rules/** — 团队约定与 Agent 规则（全局、前端、提交、Agent 工作流等）。
 - **.cursor/plans/** — 可保存的实现计划，供 Plan Mode 产出与复用。

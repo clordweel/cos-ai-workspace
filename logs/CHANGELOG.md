@@ -4,6 +4,17 @@
 
 ---
 
+## 2026-02-15
+
+### Monorepo 重构：middleware 迁入 apps/
+
+- **结构**：中间层由根目录 `middleware/` 迁入 **apps/middleware/**，符合 pnpm monorepo 标准目录 `apps/*`、`packages/*`。
+- **pnpm-workspace.yaml**：移除显式 `middleware` 项，由 `apps/*` 覆盖；根脚本 `dev:middleware`、`build:middleware` 仍通过 `pnpm --filter ai-workbench-middleware` 运行，无需修改。
+- **路径**：`apps/middleware/src/config.ts`、`apps/middleware/scripts/release-port.ts` 中工作区根目录 `.env` 上溯路径由两级改为三级（因现位于 apps/middleware 下）。
+- **文档**：`docs/MONOREPO_APPS_PACKAGES.md`、`apps/README.md`、`PROJECT.md`、`AGENTS.md`、`docs/PROJECT_STATUS.md` 与 `.cursor/skills/release-middleware-port/SKILL.md` 已更新为 apps/middleware 路径与说明。
+
+---
+
 ## 2026-02-12
 
 ### 聊天区接入 Nuxt UI ChatMessages

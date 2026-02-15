@@ -9,10 +9,10 @@ description: 释放中间层（middleware）意外退出后占用的端口，使
 
 ## 优先方式：使用项目脚本
 
-在**仓库根目录**或 **middleware 目录**下执行：
+在**仓库根目录**或 **apps/middleware 目录**下执行：
 
 ```bash
-cd middleware && pnpm run release-port
+cd apps/middleware && pnpm run release-port
 ```
 
 或从根目录一步执行：
@@ -21,7 +21,7 @@ cd middleware && pnpm run release-port
 pnpm --filter ai-workbench-middleware run release-port
 ```
 
-脚本会读取 `.env` 中的 `PORT`（缺省 3000），对该端口执行 `lsof -ti :PORT` 并终止占用进程。脚本路径：`middleware/scripts/release-port.ts`。
+脚本会读取 `.env` 中的 `PORT`（缺省 3000），对该端口执行 `lsof -ti :PORT` 并终止占用进程。脚本路径：`apps/middleware/scripts/release-port.ts`。
 
 ## 手动释放
 
@@ -43,5 +43,5 @@ pnpm --filter ai-workbench-middleware run release-port
 
 ## 说明
 
-- 中间层端口由 `middleware/src/config.ts` 的 `config.port` 决定，来源于 `process.env.PORT` 或默认 3000。
-- `middleware/package.json` 的 `predev` 会在 `pnpm dev` 前自动执行 `release-port`，若仍遇占用，多为上次进程未完全退出或非通过 predev 启动，可按上文手动释放。
+- 中间层端口由 `apps/middleware/src/config.ts` 的 `config.port` 决定，来源于 `process.env.PORT` 或默认 3000。
+- `apps/middleware/package.json` 的 `predev` 会在 `pnpm dev` 前自动执行 `release-port`，若仍遇占用，多为上次进程未完全退出或非通过 predev 启动，可按上文手动释放。

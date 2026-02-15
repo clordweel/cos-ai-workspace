@@ -6,7 +6,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootEnv = path.resolve(__dirname, '..', '..', '.env');
+// 工作区根目录 .env（middleware 现位于 apps/middleware，需上溯三级）
+const rootEnv = path.resolve(__dirname, '..', '..', '..', '.env');
 const cwdEnv = path.resolve(process.cwd(), '.env');
 dotenv.config({ path: cwdEnv });
 dotenv.config({ path: rootEnv });

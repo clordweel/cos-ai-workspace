@@ -72,7 +72,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **Matrix** | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MIDDLEWARE_MATRIX_REVIEW.md` | 整合现状、最佳实践、中间层审查 |
 | **前端** | `docs/FRONTEND_SPEC.md`、`docs/FRONTEND_AUTH_AND_PERMISSIONS.md`、`docs/APP_EXTENSIONS.md` | 布局与鉴权、扩展 |
 | **前端迁移** | `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` | Vue→React+Webpack 评估与分阶段方案 |
-| **Monorepo 结构** | `docs/MONOREPO_APPS_PACKAGES.md` | apps/、packages/ 引入说明（frontend、middleware 保持不变） |
+| **Monorepo 结构** | `docs/MONOREPO_APPS_PACKAGES.md` | apps/、packages/ 说明（middleware 已迁入 apps/middleware） |
 | **前端视觉/UI** | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` | 统一按钮/输入/圆角/颜色，Agent 与开发按同一风格开发组件 |
 | **业务/安全** | `docs/API_SPEC.md`、`docs/STREAM_AND_SAFETY.md` | cos API、SSE 与写入安全 |
 | **变更与规则** | `logs/CHANGELOG.md`、`.cursor/rules/*.mdc` | 变更记录、提交与前端规则 |
