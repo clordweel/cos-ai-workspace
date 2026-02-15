@@ -14,7 +14,7 @@
 | 前端迁移（Vue→React+Webpack） | `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` |
 | Monorepo（apps/packages） | `docs/MONOREPO_APPS_PACKAGES.md` |
 | 重构计划（阶段/步骤/技术栈确认） | `docs/REFACTOR_PLAN.md` |
-| 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc` |
+| 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc`；任务执行与提交 `.cursor/rules/task-execution.mdc`（下一步任务时先 commit、每步完成给检验方式与效果说明） |
 
 ## 目录与职责
 

@@ -7,8 +7,12 @@
     "dev": "concurrently \"npm run dev:middleware\" \"npm run dev:frontend\"",
     "dev:middleware": "pnpm --filter ai-workbench-middleware run dev",
     "dev:frontend": "pnpm --filter ai-workbench-frontend run dev",
+    "dev:api": "pnpm --filter @ai-workbench/api run dev",
+    "dev:web": "pnpm --filter ai-workbench-web run dev",
     "build:frontend": "pnpm --filter ai-workbench-frontend run build",
-    "build:middleware": "pnpm --filter ai-workbench-middleware run start"
+    "build:middleware": "pnpm --filter ai-workbench-middleware run start",
+    "build:api": "pnpm --filter @ai-workbench/api run build",
+    "build:web": "pnpm --filter ai-workbench-web run build"
   },
   "devDependencies": {
     "concurrently": "^9.0.0",

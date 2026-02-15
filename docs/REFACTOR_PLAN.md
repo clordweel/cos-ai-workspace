@@ -43,6 +43,22 @@
 | **packages/** | 已存在 `packages/tsconfig-base`；是否新增 `shared-types`、`eslint-config` 等，供 apps/* 与 frontend、middleware 共用 | 可按阶段引入，先不阻塞。 |
 | **契约与类型** | 前后端共享类型（如会话、消息、用户）是否通过 `packages/shared-types` 或 OpenAPI 生成 | 有利于减少漏改，建议在阶段 1 前定方案。 |
 
+### 2.4 技术栈结论（推荐默认，2026-02-15）
+
+以下为阶段 0 执行采用的**推荐默认**，后续若有讨论变更可在此更新。
+
+| 类别 | 结论 | 说明 |
+|------|------|------|
+| **新后端包名** | `@ai-workbench/api`，目录 `apps/api` | 与现 `ai-workbench-middleware` 区分，后续根脚本 `dev:api`。 |
+| **新后端框架** | Node.js + Fastify + TypeScript | 与现 middleware 同栈，便于对照迁移；API 与现 `/api/*` 保持兼容。 |
+| **新前端包名** | `ai-workbench-web`，目录 `apps/web` | 根脚本 `dev:web`。 |
+| **新前端框架** | React 18 + TypeScript | 与 REFONTEND_REACT_WEBPACK_MIGRATION 一致。 |
+| **新前端构建** | Webpack 5 | matrix-js-sdk CJS 友好；与 Element 对齐。 |
+| **新前端 UI** | shadcn-ui（React 原生版） | Radix React + Tailwind，与现 shadcn-vue 语义接近。 |
+| **新前端状态** | Zustand | 全局 UI、会话、认证等。 |
+| **认证** | 延续「前端跳转 + 后端写 Cookie + GET /api/auth/me」 | 不引入 @logto/react，新后端实现 callback 与 /me。 |
+| **packages/** | 阶段 0 仅用现有 `tsconfig-base` | shared-types、eslint-config 按阶段 1 或后续引入。 |
+
 ---
 
 ## 三、阶段与步骤总览

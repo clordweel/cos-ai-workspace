@@ -12,6 +12,13 @@
 - **重构方式**：在 `apps/` 下**新建**后端应用（新包名、可更换技术栈），以原 middleware 为参考重构，而非迁移现有代码。
 - **计划**：详见 `docs/REFACTOR_PLAN.md`：分阶段与步骤、技术栈需先讨论确认（如 React 下 shadcn 用原生版或更合适方案）、故障点与可介入修复策略。
 
+### 阶段 0 完成：技术栈结论与脚手架
+
+- **技术栈结论**：在 `docs/REFACTOR_PLAN.md` §2.4 写入推荐默认（新后端 `@ai-workbench/api`、Node+Fastify；新前端 `ai-workbench-web`、React 18+Webpack 5+shadcn-ui+Zustand）。
+- **apps/api**：Fastify + TypeScript，`GET /health`，端口 3002（或 `API_PORT`/`PORT`）；根脚本 `dev:api`、`build:api`。
+- **apps/web**：React 18 + Webpack 5 + React Router，路由占位 /、/space、/space/:id、/logto、/logto-callback；devServer 代理 /api → 现 middleware（可配置）；根脚本 `dev:web`、`build:web`。
+- **根 package.json**：新增 `dev:api`、`dev:web`、`build:api`、`build:web`；`apps/README.md`、`docs/MONOREPO_APPS_PACKAGES.md` 更新。
+
 ---
 
 ## 2026-02-12

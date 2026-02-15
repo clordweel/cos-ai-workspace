@@ -28,7 +28,7 @@
 |------|------|
 | **frontend** | 现有 Nuxt/Vue 前端，**不移动**；仍为 workspace 一员，根脚本 `dev:frontend`、`build:frontend` 继续指向此处。 |
 | **middleware** | 现有 Fastify 中间层，**不移动**；仍为 workspace 一员，根脚本 `dev:middleware`、`build:middleware` 继续指向此处。 |
-| **apps/** | 标准「应用」目录；当前仅含 README，后续可在此新增应用（如 `apps/web` 为 React+Webpack 工作台，见 `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md`）。 |
+| **apps/** | 标准「应用」目录；含 **apps/api**（`@ai-workbench/api`，重构版后端）、**apps/web**（`ai-workbench-web`，重构版 React 前端）；见 `docs/REFACTOR_PLAN.md` 阶段 0。 |
 | **packages/** | 标准「共享包」目录；已含占位包 `packages/tsconfig-base`，供各应用扩展共享 TS 配置；可继续增加 eslint-config、shared-types 等。 |
 
 ---
@@ -52,7 +52,7 @@ packages:
 
 - **引用共享包**：在 frontend、middleware 或 apps/* 的 `package.json` 中可添加依赖，例如  
   `"@ai-workbench/tsconfig-base": "workspace:*"`，用于继承 `packages/tsconfig-base` 的配置。
-- **根脚本**：当前不增加 `dev:web` 等；待 `apps/web` 实际创建后再在根 `package.json` 增加对应 script。
+- **根脚本**：已增加 `dev:api`、`dev:web`、`build:api`、`build:web`；原 `dev:frontend`、`dev:middleware` 不变。
 - **CI/文档**：若 CI 或文档中有「前端路径」「中间层路径」的假设，仍以 `frontend`、`middleware` 为准；新应用以 `apps/<name>` 为准。
 
 ---
