@@ -1,0 +1,8 @@
+{
+  "name": "@ai-workbench/tsconfig-base",
+  "version": "0.0.1",
+  "private": true,
+  "description": "共享 TypeScript 基础配置，供 frontend、middleware、apps/* 扩展",
+  "main": "tsconfig.json",
+  "files": ["tsconfig.json"]
+}
