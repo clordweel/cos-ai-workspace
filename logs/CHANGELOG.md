@@ -6,6 +6,12 @@
 
 ## 2026-02-15
 
+### 阶段 3.1：新后端会话与聊天 API（apps/api）
+
+- **Mock 适配器**：`src/adapters/types.ts`（NormalizedSession、NormalizedMessage、StreamMessageParams 等）、`src/adapters/mockChat.ts`（按 userId 内存存储，listSessions、listMessages、createSession、streamMessage 逐字 echo）。
+- **路由**：`GET /api/sessions`、`POST /api/sessions`、`GET /api/sessions/:id/messages`、`POST /api/chat/stream`；与现 middleware 路径与响应结构对齐；userId 由 Cookie 会话 getStableUserId 或 'default'。
+- **SSE**：`/api/chat/stream` 返回 text/event-stream，发送 session_created、status、message(delta)、message_end、error。
+
 ### 阶段 2.4：shadcn-ui 与 Button 组件（apps/web）
 
 - **依赖**：class-variance-authority、clsx、tailwind-merge、lucide-react、@radix-ui/react-slot。

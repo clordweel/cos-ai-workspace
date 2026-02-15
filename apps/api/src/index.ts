@@ -7,6 +7,7 @@ import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import { config } from './config.js';
 import { authRoutes } from './routes/auth.js';
+import { chatRoutes } from './routes/chat.js';
 
 const fastify = Fastify({ logger: true });
 
@@ -15,6 +16,7 @@ await fastify.register(cookie);
 
 fastify.get('/health', async () => ({ ok: true, service: '@cosai/api' }));
 await fastify.register(authRoutes, { prefix: '/' });
+await fastify.register(chatRoutes, { prefix: '/' });
 
 try {
   await fastify.listen({ port: config.port, host: '0.0.0.0' });
