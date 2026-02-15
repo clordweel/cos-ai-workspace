@@ -6,18 +6,18 @@ export default function Space() {
   const { isAuthenticated, user, authLoading, login } = useAuth();
 
   return (
-    <div style={{ padding: 24, fontFamily: 'sans-serif' }}>
-      <h1>会话</h1>
+    <div className="p-4 flex flex-col gap-3">
+      <h1 className="text-base font-semibold text-zinc-800 dark:text-zinc-200">会话</h1>
       {authLoading ? (
-        <p className="text-zinc-500">加载中…</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">加载中…</p>
       ) : isAuthenticated && user ? (
-        <p>当前用户：{user.name}</p>
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">当前用户：{user.name}</p>
       ) : (
-        <p>
-          <a href="/logto" onClick={(e) => { e.preventDefault(); login(); }}>登录</a> 后使用工作台。
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+          <a href="/logto" onClick={(e) => { e.preventDefault(); login(); }} className="text-primary-600 dark:text-primary-400 hover:underline">登录</a> 后使用工作台。
         </p>
       )}
-      <p>会话 id: {id ?? '—'}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">会话 id: {id ?? '—'}</p>
     </div>
   );
 }

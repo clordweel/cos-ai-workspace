@@ -6,6 +6,13 @@
 
 ## 2026-02-15
 
+### 阶段 2.2：Workspace 布局与主题（apps/web）
+
+- **Tailwind CSS v4**：接入 `@tailwindcss/postcss`、`postcss-loader`，`src/index.css` 含 `@theme` 主色与 `@custom-variant dark`，与 `docs/UI_DESIGN_SYSTEM.md` 一致。
+- **主题**：`useTheme` 读写 localStorage（`cosai-theme`）、切换浅色/深色；`index.html` 首屏脚本防闪。
+- **布局**：`WorkspaceLayout` 顶栏（品牌 + 主题切换）、会话区（左栏，圆角卡片）+ 应用区（右栏，md+ 显示、可折叠）、底栏（md+）；`AppViewProvider` 管理应用区展开/折叠状态；/space、/space/:id 使用该布局。
+- **视觉**：bg-zinc-50/dark:bg-zinc-900、卡片 rounded-xl/rounded-2xl、border-zinc-200/dark:border-zinc-700，与现前端可对照。
+
 ### 阶段 2.1：新前端认证流（apps/web）
 
 - **apps/api**：新增 `getLogtoAuthUrl`、`GET /api/auth/logto/url`（返回 Logto 授权 URL，redirect_uri 为前端 `/logto-callback`），供前端 /logto 跳转。
