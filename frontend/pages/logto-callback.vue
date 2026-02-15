@@ -50,7 +50,9 @@ onMounted(() => {
     return
   }
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // 优先使用配置的对外地址，与 logto.vue 一致，避免 426 Upgrade Required（代理要求 HTTPS 时）
+  const appOrigin = (config.public?.appOrigin as string) || ''
+  const origin = typeof window !== 'undefined' ? (appOrigin || window.location.origin) : appOrigin || ''
   const redirectUri = `${origin}/logto-callback`
   // 必须跳转到「当前页同源」的 /api/...，Cookie 才会落在前端域名；若用 apiBase（如 127.0.0.1:3000）则 Cookie 在中间层域名，回到前端后无 Cookie
   const base = (typeof window !== 'undefined' ? origin : apiBase) || apiBase

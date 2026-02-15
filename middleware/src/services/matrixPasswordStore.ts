@@ -4,7 +4,8 @@
  * 存储层：内存/Redis（快速）+ 可选 Logto customData（持久化，需 MATRIX_PASSWORD_ENCRYPTION_KEY + M2M）
  */
 import { config } from '../config.js';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
+import { createRedisClient } from '../lib/redisClient.js';
 import {
   isLogtoMatrixPasswordEnabled,
   getMatrixPasswordFromLogto,
@@ -46,23 +47,68 @@ class MemoryMatrixPasswordStore implements IMatrixPasswordStore {
   }
 }
 
+function isRedisUnavailable(err: unknown): boolean {
+  if (err instanceof Error) {
+    if (err.message?.includes('max retries')) return true;
+    const code = (err as NodeJS.ErrnoException).code;
+    return code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'ENOTFOUND';
+  }
+  return false;
+}
+
+/** Redis 存储，不可用时自动降级为内存存储并打日志 */
 class RedisMatrixPasswordStore implements IMatrixPasswordStore {
   private redis: Redis;
+  private fallback: MemoryMatrixPasswordStore | null = null;
+  private fallbackLogged = false;
 
   constructor(url: string) {
-    this.redis = new Redis(url, { maxRetriesPerRequest: 3 });
+    this.redis = createRedisClient(url);
+  }
+
+  private useFallback(reason: string): MemoryMatrixPasswordStore {
+    if (!this.fallback) this.fallback = new MemoryMatrixPasswordStore();
+    if (!this.fallbackLogged) {
+      this.fallbackLogged = true;
+      console.warn('[matrixPasswordStore] Redis 不可用，已降级为内存存储:', reason);
+    }
+    return this.fallback;
   }
 
   async get(logtoSub: string): Promise<string | null> {
-    return this.redis.get(REDIS_KEY_PREFIX + logtoSub);
+    if (this.fallback) return this.fallback.get(logtoSub);
+    try {
+      return await this.redis.get(REDIS_KEY_PREFIX + logtoSub);
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).get(logtoSub);
+      }
+      throw err;
+    }
   }
 
   async set(logtoSub: string, password: string): Promise<void> {
-    await this.redis.setex(REDIS_KEY_PREFIX + logtoSub, TTL_SEC, password);
+    if (this.fallback) return this.fallback.set(logtoSub, password);
+    try {
+      await this.redis.setex(REDIS_KEY_PREFIX + logtoSub, TTL_SEC, password);
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).set(logtoSub, password);
+      }
+      throw err;
+    }
   }
 
   async delete(logtoSub: string): Promise<void> {
-    await this.redis.del(REDIS_KEY_PREFIX + logtoSub);
+    if (this.fallback) return this.fallback.delete(logtoSub);
+    try {
+      await this.redis.del(REDIS_KEY_PREFIX + logtoSub);
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).delete(logtoSub);
+      }
+      throw err;
+    }
   }
 }
 

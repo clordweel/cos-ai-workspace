@@ -41,6 +41,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
+      /** 前端对外访问根地址（如 https://your-app.com），用于 Logto redirect_uri；设后可避免反向代理要求 HTTPS 时出现 426 Upgrade Required */
+      appOrigin: process.env.NUXT_PUBLIC_APP_ORIGIN ?? '',
       logtoEndpoint: process.env.NUXT_PUBLIC_LOGTO_ENDPOINT ?? '',
       logtoAppId: process.env.NUXT_PUBLIC_LOGTO_APP_ID ?? '',
       /** Matrix homeserver URL，用于 Matrix 客户端（如 matrix-js-sdk） */

@@ -3,7 +3,8 @@
  * SESSION_STORE=memory|redis|file，file 时见 sessionStoreFile。见 docs/SESSION_PERSISTENCE.md
  */
 import { config } from '../../config.js';
-import { Redis } from 'ioredis';
+import type { Redis } from 'ioredis';
+import { createRedisClient } from '../../lib/redisClient.js';
 import { FileStore } from './sessionStoreFile.js';
 
 const COOKIE_NAME = 'auth_session';
@@ -75,32 +76,76 @@ class MemoryStore implements ISessionStore {
   }
 }
 
-/** Redis 存储 */
+function isRedisUnavailable(err: unknown): boolean {
+  if (err instanceof Error) {
+    if (err.message?.includes('max retries')) return true;
+    const code = (err as NodeJS.ErrnoException).code;
+    return code === 'ECONNREFUSED' || code === 'ETIMEDOUT' || code === 'ENOTFOUND';
+  }
+  return false;
+}
+
+/** Redis 存储，不可用时自动降级为内存存储并打日志 */
 class RedisStore implements ISessionStore {
   private redis: Redis;
+  private fallback: MemoryStore | null = null;
+  private fallbackLogged = false;
 
   constructor(url: string) {
-    this.redis = new Redis(url, { maxRetriesPerRequest: 3 });
+    this.redis = createRedisClient(url);
+  }
+
+  private useFallback(reason: string): MemoryStore {
+    if (!this.fallback) this.fallback = new MemoryStore();
+    if (!this.fallbackLogged) {
+      this.fallbackLogged = true;
+      console.warn('[sessionStore] Redis 不可用，已降级为内存存储:', reason);
+    }
+    return this.fallback;
   }
 
   async get(id: string): Promise<SessionData | null> {
-    const raw = await this.redis.get(REDIS_KEY_PREFIX + id);
-    if (!raw) return null;
+    if (this.fallback) return this.fallback.get(id);
     try {
-      return JSON.parse(raw) as SessionData;
-    } catch {
-      return null;
+      const raw = await this.redis.get(REDIS_KEY_PREFIX + id);
+      if (!raw) return null;
+      try {
+        return JSON.parse(raw) as SessionData;
+      } catch {
+        return null;
+      }
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).get(id);
+      }
+      throw err;
     }
   }
 
   async set(id: string, data: SessionData, ttlMs: number): Promise<void> {
-    const key = REDIS_KEY_PREFIX + id;
-    const ttlSec = Math.max(1, Math.ceil(ttlMs / 1000));
-    await this.redis.setex(key, ttlSec, JSON.stringify(data));
+    if (this.fallback) return this.fallback.set(id, data, ttlMs);
+    try {
+      const key = REDIS_KEY_PREFIX + id;
+      const ttlSec = Math.max(1, Math.ceil(ttlMs / 1000));
+      await this.redis.setex(key, ttlSec, JSON.stringify(data));
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).set(id, data, ttlMs);
+      }
+      throw err;
+    }
   }
 
   async delete(id: string): Promise<void> {
-    await this.redis.del(REDIS_KEY_PREFIX + id);
+    if (this.fallback) return this.fallback.delete(id);
+    try {
+      await this.redis.del(REDIS_KEY_PREFIX + id);
+    } catch (err) {
+      if (isRedisUnavailable(err)) {
+        return this.useFallback(err instanceof Error ? err.message : String(err)).delete(id);
+      }
+      throw err;
+    }
   }
 }
 

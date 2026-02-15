@@ -24,7 +24,9 @@ onMounted(() => {
     error.value = '未配置单点登录（NUXT_PUBLIC_LOGTO_ENDPOINT / NUXT_PUBLIC_LOGTO_APP_ID）'
     return
   }
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // 优先使用配置的对外地址，避免反向代理要求 HTTPS 时用 HTTP 拼 redirect_uri 导致 426 Upgrade Required
+  const appOrigin = (config.public?.appOrigin as string) || ''
+  const origin = typeof window !== 'undefined' ? (appOrigin || window.location.origin) : appOrigin || ''
   const redirectUri = `${origin}/logto-callback`
   const state = `nuxt_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
   const params = new URLSearchParams({

@@ -1,3 +1,10 @@
 packages:
-  - 'frontend'
-  - 'middleware'
+  - frontend
+  - middleware
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - msw
+  - sharp
+  - vue-demi

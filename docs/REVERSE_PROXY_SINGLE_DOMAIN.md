@@ -84,6 +84,7 @@ your-app.com {
 | 变量 | 说明 | 同域推荐 |
 |------|------|----------|
 | **前端** `NUXT_PUBLIC_API_BASE` | API 基址，空则用相对路径 `/api` | **留空**，请求走同源 `/api`，由代理转发 |
+| **前端** `NUXT_PUBLIC_APP_ORIGIN` | 前端对外访问根地址（如 `https://your-app.com`），用于拼 Logto redirect_uri | 当代理强制 HTTPS 且出现 **426 Upgrade Required** 时必设，见下文第 7 节 |
 | **中间层** `MIDDLEWARE_PUBLIC_ORIGIN` | 拼 Logto redirect_uri 的根地址 | 可选。设为 `https://your-app.com` 更稳；不设则依赖代理传来的 X-Forwarded-* |
 | **中间层** `FRONTEND_ORIGIN` | 回调后 302 到前端的地址 | **可不设**。未设且请求带 X-Forwarded-Host 时，会用 `https://your-app.com` 作为回调后跳转地址 |
 | **中间层** `PORT` | 中间层监听端口 | 如 3000（仅本机被代理访问） |
@@ -128,3 +129,20 @@ Redirect URI 填中间层在该域名下的回调地址（与拼出的地址完�
 | 前端 API 基址 | 同域时 `NUXT_PUBLIC_API_BASE` 留空，使用相对路径 `/api` |
 
 按上述方式配置后，用户全程只接触主域名，中间层不暴露。
+
+---
+
+## 7. 登录跳转出现「Upgrade Required」(426)
+
+**现象**：点击登录后跳转到 Logto，或在 Logto 登录完成跳回时，页面显示 **Upgrade Required**。
+
+**原因**：HTTP 426 表示服务器要求升级协议（常见为要求使用 HTTPS）。若反向代理或上游要求「仅 HTTPS」，但前端用当前页的 `window.location.origin` 拼出的 redirect_uri 是 **http**（例如用户从 `http://your-app.com` 打开、或代理未正确设置 `X-Forwarded-Proto`），则 Logto 回调会重定向到该 http 地址，请求到达代理后可能被以 426 拒绝。
+
+**处理**：
+
+1. **前端**：设置 **`NUXT_PUBLIC_APP_ORIGIN`** 为对外访问的完整根地址（必须与用户实际访问的协议一致，生产一般为 HTTPS）：
+   - 例如：`NUXT_PUBLIC_APP_ORIGIN=https://your-app.com`
+   - 前端会用该值拼 Logto 的 redirect_uri 及回调跳转的 `/api/auth/logto/callback`，避免使用到 http。
+2. **代理**：确保对前端的请求正确设置 `X-Forwarded-Proto: https`、`X-Forwarded-Host`，并尽量让用户只通过 https 访问（如有需要可 301 将 http 重定向到 https）。
+3. **中间层**：同域部署时建议设置 `MIDDLEWARE_PUBLIC_ORIGIN=https://your-app.com`，与前端一致，避免从请求头推导出 http。
+4. **Logto 控制台**：Redirect URI 必须与上述地址完全一致（如 `https://your-app.com/logto-callback`），且为 HTTPS（若生产环境强制 HTTPS）。
