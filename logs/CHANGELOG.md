@@ -6,6 +6,14 @@
 
 ## 2026-02-15
 
+### 阶段 2.4：shadcn-ui 与 Button 组件（apps/web）
+
+- **依赖**：class-variance-authority、clsx、tailwind-merge、lucide-react、@radix-ui/react-slot。
+- **路径别名**：tsconfig 与 webpack 配置 `@/*` → `./src/*`。
+- **工具**：`src/lib/utils.ts` 提供 `cn()`；`src/components/ui/button.tsx` 提供 Button（variant：default/outline/ghost/link/secondary/destructive，size：default/sm/lg/icon），支持 `asChild`。
+- **页面**：Logto 页使用 Button「重试」、LogtoCallback 使用 Button「重新登录」「返回工作台」、WorkspaceLayout 顶栏主题切换使用 Button ghost+icon+Lucide Sun/Moon、Home/Space 导航使用 Button link + asChild。
+- **base 层**：button/role=button 默认 cursor: pointer。
+
 ### 阶段 2.2：Workspace 布局与主题（apps/web）
 
 - **Tailwind CSS v4**：接入 `@tailwindcss/postcss`、`postcss-loader`，`src/index.css` 含 `@theme` 主色与 `@custom-variant dark`，与 `docs/UI_DESIGN_SYSTEM.md` 一致。

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Button } from '../components/ui/button';
 
 export default function LogtoCallback() {
   const [resolved, setResolved] = useState(false);
@@ -29,17 +30,21 @@ export default function LogtoCallback() {
   }, []);
 
   return (
-    <div style={{ padding: 24, fontFamily: 'sans-serif', textAlign: 'center' }}>
-      <h1>登录回调</h1>
+    <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4 p-6 bg-zinc-50 dark:bg-zinc-900">
+      <h1 className="text-lg font-semibold text-zinc-800 dark:text-zinc-200">登录回调</h1>
       {!resolved ? (
-        <p className="text-zinc-500">登录处理中…</p>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">登录处理中…</p>
       ) : (
         <>
-          {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
-          <a href="/logto" style={{ marginRight: 12 }}>
-            重新登录
-          </a>
-          <a href="/space">返回工作台</a>
+          {error && <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>}
+          <div className="flex items-center gap-3">
+            <Button asChild>
+              <a href="/logto">重新登录</a>
+            </Button>
+            <Button variant="outline" asChild>
+              <a href="/space">返回工作台</a>
+            </Button>
+          </div>
         </>
       )}
     </div>

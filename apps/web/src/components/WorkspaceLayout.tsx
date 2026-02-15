@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
+import { Button } from './ui/button';
 import { useAppViewContext } from '../contexts/AppViewContext';
 import { useTheme } from '../hooks/useTheme';
 
@@ -40,15 +42,16 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
                 智能交互工作台
               </span>
             </a>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="icon"
               onClick={toggleTheme}
-              className="p-2 rounded-lg text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
               aria-label={theme === 'dark' ? '切换到浅色' : '切换到深色'}
               title={theme === 'dark' ? '浅色模式' : '深色模式'}
             >
-              {theme === 'dark' ? '☀️' : '🌙'}
-            </button>
+              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
           </div>
         </header>
 
