@@ -1,5 +1,5 @@
 {
-  "name": "ai-workbench-web",
+  "name": "@cosai/web",
   "version": "0.1.0",
   "private": true,
   "description": "重构版工作台前端（React + Webpack），参考原 frontend",

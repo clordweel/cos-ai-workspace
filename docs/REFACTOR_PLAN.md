@@ -32,7 +32,7 @@
 
 | 议题 | 选项 | 待确认 |
 |------|------|--------|
-| **包名** | 不与现有 `ai-workbench-middleware` 混淆，例如：`@ai-workbench/api`、`@ai-workbench/gateway`、`ai-workbench-server` 等 | 需定一个**新包名**及对应目录名（如 `apps/api`、`apps/gateway`）。 |
+| **包名** | 不与现有 `ai-workbench-middleware` 混淆，例如：`@cosai/api`、`@cosai/gateway`、`cosai-server` 等 | 需定一个**新包名**及对应目录名（如 `apps/api`、`apps/gateway`）。 |
 | **运行时/框架** | **A. 保持 Node.js + Fastify**（与现 middleware 同栈，对照迁移成本低）。**B. Node.js + 其他**（Express、Hono、Nest 等）。**C. 换运行时**（如 Go、Rust、Bun 等） | 换栈需评估：API 契约、Logto/Matrix/cos 等集成、部署与运维。建议先确认「是否必须换栈」及候选范围。 |
 | **API 契约** | 与现 middleware 的 `/api/*` 保持兼容（便于前端逐步切流量） vs 新设计一版再提供适配层 | 若保持兼容，可先按现有路由与请求/响应形态对照实现，再逐步优化。 |
 
@@ -49,9 +49,9 @@
 
 | 类别 | 结论 | 说明 |
 |------|------|------|
-| **新后端包名** | `@ai-workbench/api`，目录 `apps/api` | 与现 `ai-workbench-middleware` 区分，后续根脚本 `dev:api`。 |
+| **新后端包名** | `@cosai/api`，目录 `apps/api` | 与现 `ai-workbench-middleware` 区分，后续根脚本 `dev:api`。 |
 | **新后端框架** | Node.js + Fastify + TypeScript | 与现 middleware 同栈，便于对照迁移；API 与现 `/api/*` 保持兼容。 |
-| **新前端包名** | `ai-workbench-web`，目录 `apps/web` | 根脚本 `dev:web`。 |
+| **新前端包名** | `@cosai/web`，目录 `apps/web` | 根脚本 `dev:web`。 |
 | **新前端框架** | React 18 + TypeScript | 与 REFONTEND_REACT_WEBPACK_MIGRATION 一致。 |
 | **新前端构建** | Webpack 5 | matrix-js-sdk CJS 友好；与 Element 对齐。 |
 | **新前端 UI** | shadcn-ui（React 原生版） | Radix React + Tailwind，与现 shadcn-vue 语义接近。 |
@@ -82,7 +82,7 @@
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
 | 0.1 | **技术栈确认**：根据 §二 完成讨论，在本文档或 CHANGELOG 中记录结论（前端 UI、构建、后端框架与包名等）。 | 无未决选型再开工。 |
-| 0.2 | **新后端脚手架**：在 `apps/` 下创建新目录（如 `apps/api` 或 `apps/gateway`），新包名（如 `@ai-workbench/api`）；选定框架（Fastify 或其他）初始化，健康检查 `GET /health` 可访问。 | `pnpm --filter <新包名> run dev` 能起、/health 返回 200。 |
+| 0.2 | **新后端脚手架**：在 `apps/` 下创建新目录（如 `apps/api` 或 `apps/gateway`），新包名（如 `@cosai/api`）；选定框架（Fastify 或其他）初始化，健康检查 `GET /health` 可访问。 | `pnpm --filter <新包名> run dev` 能起、/health 返回 200。 |
 | 0.3 | **新前端脚手架**：在 `apps/` 下创建新前端（如 `apps/web`），React + 选定构建工具 + 路由占位（/、/space、/logto、/logto-callback），代理 `/api` 到新后端或现 middleware。 | `pnpm --filter <前端包名> run dev` 能起、访问 / 不报错、/api 代理正确。 |
 | 0.4 | **根脚本与文档**：根 `package.json` 增加 `dev:api`、`dev:web` 等；`docs/MONOREPO_APPS_PACKAGES.md`、`apps/README.md` 更新为新应用名与职责。 | 从根目录能一条命令起新前端、新后端。 |
 

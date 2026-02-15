@@ -17,6 +17,12 @@ importers:
 
   apps/api:
     dependencies:
+      '@fastify/cookie':
+        specifier: ^10.x
+        version: 10.0.1
+      '@fastify/cors':
+        specifier: ^10.x
+        version: 10.1.0
       dotenv:
         specifier: ^16.6.1
         version: 16.6.1

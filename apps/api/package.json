@@ -1,5 +1,5 @@
 {
-  "name": "@ai-workbench/api",
+  "name": "@cosai/api",
   "version": "0.1.0",
   "private": true,
   "description": "重构版 API 层（参考原 middleware），Fastify + TypeScript",
@@ -11,6 +11,8 @@
     "start": "node dist/src/index.js"
   },
   "dependencies": {
+    "@fastify/cookie": "^10.x",
+    "@fastify/cors": "^10.x",
     "dotenv": "^16.6.1",
     "fastify": "^5.x"
   },

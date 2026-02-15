@@ -6,6 +6,13 @@
 
 ## 2026-02-15
 
+### 阶段 1 完成：新后端鉴权与 /api/auth/me
+
+- **apps/api**：实现环境与配置（`src/config.ts`，从根或本目录加载 .env）、内存会话存储（`src/services/sessionStore.ts`，与现 middleware Session 结构可对照）、Logto 回调（`src/services/logto.ts`：code 换 token、/oidc/me、建会话）、认证路由（`src/routes/auth.ts`）。
+- **路由**：`GET /api/auth/logto/callback`（写 Cookie、重定向到前端）、`GET /api/auth/me`（带 Cookie 返回 ok、user、userId、type、preferences 占位；Matrix 相关字段暂未实现）。
+- **依赖**：`@fastify/cookie`、`@fastify/cors`；入口注册 CORS（credentials: true）与 cookie，并挂载 auth 路由。
+- **验收**：同一 Logto 应用经新后端 callback 可登录并写 Cookie；带 Cookie 调 `GET /api/auth/me` 可得与现网可比的响应结构（preferences 为 {}，无 matrix 字段）。
+
 ### 还原 middleware 迁入，明确重构方式与计划
 
 - **还原**：此前将 `middleware/` 迁入 `apps/middleware/` 的改动已还原；**原 middleware 保持根目录不动**，作为直接参考。
@@ -14,7 +21,7 @@
 
 ### 阶段 0 完成：技术栈结论与脚手架
 
-- **技术栈结论**：在 `docs/REFACTOR_PLAN.md` §2.4 写入推荐默认（新后端 `@ai-workbench/api`、Node+Fastify；新前端 `ai-workbench-web`、React 18+Webpack 5+shadcn-ui+Zustand）。
+- **技术栈结论**：在 `docs/REFACTOR_PLAN.md` §2.4 写入推荐默认（新后端 `@cosai/api`、Node+Fastify；新前端 `@cosai/web`、React 18+Webpack 5+shadcn-ui+Zustand）。
 - **apps/api**：Fastify + TypeScript，`GET /health`，端口 3002（或 `API_PORT`/`PORT`）；根脚本 `dev:api`、`build:api`。
 - **apps/web**：React 18 + Webpack 5 + React Router，路由占位 /、/space、/space/:id、/logto、/logto-callback；devServer 代理 /api → 现 middleware（可配置）；根脚本 `dev:web`、`build:web`。
 - **根 package.json**：新增 `dev:api`、`dev:web`、`build:api`、`build:web`；`apps/README.md`、`docs/MONOREPO_APPS_PACKAGES.md` 更新。

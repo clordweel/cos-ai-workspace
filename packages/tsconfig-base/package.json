@@ -1,5 +1,5 @@
 {
-  "name": "@ai-workbench/tsconfig-base",
+  "name": "@cosai/tsconfig-base",
   "version": "0.0.1",
   "private": true,
   "description": "共享 TypeScript 基础配置，供 frontend、middleware、apps/* 扩展",
