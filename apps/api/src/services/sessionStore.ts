@@ -21,6 +21,10 @@ export interface SessionData {
   logtoRefreshToken?: string;
   logtoTokenExpiresAt?: number;
   expiresAt: number;
+  /** 阶段 4.1：与现 middleware 一致，供 /api/auth/me 返回 Matrix 相关字段；token 逻辑后续接入 */
+  matrixUserId?: string;
+  matrixAccessToken?: string;
+  matrixDeviceId?: string;
 }
 
 export interface Session extends SessionData {

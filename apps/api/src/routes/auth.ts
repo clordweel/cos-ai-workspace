@@ -86,13 +86,31 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     const user = session.userProfile ?? { name: session.user };
     const userId = getStableUserId(session);
-    const payload = {
-      ok: true as const,
+    const payload: {
+      ok: true;
+      user: unknown;
+      userId: string;
+      type: string;
+      preferences: Record<string, unknown>;
+      matrixSyncToken?: string;
+      matrix_base_url?: string;
+      matrix_user_id?: string;
+      matrix_device_id?: string;
+    } = {
+      ok: true,
       user,
       userId,
       type: session.type,
       preferences: {} as Record<string, unknown>,
     };
+    if (config.chat.provider === 'matrix' && config.matrix.baseUrl) {
+      payload.matrix_base_url = config.matrix.baseUrl;
+      if (session.matrixAccessToken) {
+        payload.matrixSyncToken = session.matrixAccessToken;
+        if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
+        if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
+      }
+    }
     return reply.send(payload);
   });
 }

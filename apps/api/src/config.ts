@@ -7,7 +7,9 @@ import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootEnv = path.resolve(__dirname, '..', '..', '..', '.env');
+const apiEnv = path.resolve(__dirname, '..', '.env');
 dotenv.config({ path: rootEnv });
+dotenv.config({ path: apiEnv });
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export const config = {
@@ -19,4 +21,8 @@ export const config = {
   },
   publicOrigin: (process.env.MIDDLEWARE_PUBLIC_ORIGIN || process.env.API_PUBLIC_ORIGIN || '').replace(/\/$/, ''),
   frontendOrigin: process.env.FRONTEND_ORIGIN || process.env.MIDDLEWARE_PUBLIC_ORIGIN || 'http://localhost:3001',
+  /** 与现 middleware 一致：聊天适配器 mock | matrix */
+  chat: { provider: (process.env.CHAT_PROVIDER || 'mock').toLowerCase() },
+  /** Matrix 服务 base URL，/api/auth/me 返回 matrix_base_url 时使用 */
+  matrix: { baseUrl: (process.env.MATRIX_BASE_URL || '').replace(/\/$/, '') },
 };

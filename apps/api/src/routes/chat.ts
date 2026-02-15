@@ -92,8 +92,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     const origin = req.headers.origin || '*';
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
       'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Credentials': 'true',
     });

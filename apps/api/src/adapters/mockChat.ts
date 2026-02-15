@@ -28,12 +28,16 @@ function getUserData(userId: string): UserData {
   return data;
 }
 
+/** 默认逐字间隔（ms）与块大小，便于前端看到打字机效果 */
+const STREAM_ECHO_DELAY_MS = 50;
+const STREAM_ECHO_CHUNK_SIZE = 1;
+
 function streamEcho(
   send: SSESend,
   flush: SSEFlush,
   text: string,
-  chunkSize = 1,
-  delayMs = 20
+  chunkSize = STREAM_ECHO_CHUNK_SIZE,
+  delayMs = STREAM_ECHO_DELAY_MS
 ): Promise<void> {
   return new Promise((resolve) => {
     let i = 0;

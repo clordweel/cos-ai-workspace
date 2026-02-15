@@ -6,6 +6,35 @@
 
 ## 2026-02-15
 
+### 阶段 4.2 / 4.3：新前端 Matrix Sync 与构建（apps/web）
+
+- **4.3 构建**：安装 `matrix-js-sdk@^39.4.0`；Webpack 增加 `experiments.asyncWebAssembly: true`、`resolve.conditionNames` 含 `matrix-org:wasm-esm`，开发与生产构建通过，WASM 正常产出。
+- **useAuth**：从 `/api/auth/me` 解析并暴露 `matrixSyncToken`、`matrixBaseUrl`、`matrixUserId`、`matrixDeviceId`。
+- **messagesByRoomStore**：按房间维度的消息存储（getMessages、setMessages、appendMessage、appendStreamingContent、commitStreamingMessage、discardStreamingMessage、subscribe、getSnapshot），供 useMessages 与 Sync 共用。
+- **useMessages**：改为基于 store + `useSyncExternalStore` 读取当前 sessionId 的消息，保证 Sync 写入任意房间后当前房间视图可更新。
+- **useSessions**：新增 `addOrUpdateSession(id, title)`，供 Sync 发现新房间或房间名变更时更新会话列表。
+- **useMatrixSyncClient**：React Hook，接收 token/baseUrl/userId/deviceId 与 ensureSession；创建 client、startClient、订阅 ClientEvent.Sync/Room/Event、RoomEvent.TimelineRefresh/Name；暴露 syncReady、setCurrentRoomId、fillMessagesFromSyncTimeline、sendTyping、sendReadReceipt；可选 initRustCrypto（deviceId 时）。
+- **Space**：当 `hasSyncToken` 且已登录时调用 `startSyncClient()`；随 sessionId 更新 `setCurrentRoomId`；在 syncReady 且 sessionId 存在时调用 `fillMessagesFromSyncTimeline(sessionId)`。
+
+### 阶段 4.1：新后端 /api/auth/me 返回 Matrix 相关字段（apps/api）
+
+- **config**：新增 `chat.provider`（`CHAT_PROVIDER`，默认 mock）、`matrix.baseUrl`（`MATRIX_BASE_URL`），与现 middleware 对齐。
+- **sessionStore**：SessionData 增加可选字段 `matrixUserId`、`matrixAccessToken`、`matrixDeviceId`，供后续接入 Matrix token 逻辑。
+- **GET /api/auth/me**：当 `chat.provider === 'matrix'` 且配置了 `matrix.baseUrl` 时，响应中增加 `matrix_base_url`；若 session 带 `matrixAccessToken`，则一并返回 `matrixSyncToken`、`matrix_user_id`、`matrix_device_id`。当前未接入 ensureMatrixTokenForSession，仅返回 base_url，前端可据此判断 API 已就绪。
+
+### 阶段 3.3：SSE 流式与错误态（apps/web）
+
+- **useChatStream**：4xx/5xx 时读取响应 body 的 `error` 或 `message` 作为抛出文案；解析 SSE `event: error` 并抛出 `data.message`；流读取异常时抛出「连接中断，请重试」。
+- **useMessages**：新增 `discardStreamingMessage()`，流式出错时移除未完成的助手占位消息。
+- **Space**：发送失败时调用 `discardStreamingMessage()` 并展示错误文案；错误条旁增加「清除」按钮可关闭错误提示。
+
+### 阶段 3.2：新前端会话列表与聊天区（apps/web）
+
+- **useSessions**：GET /api/sessions、POST /api/sessions，sessions / loading / error、createSession、fetchSessions。
+- **useMessages**：GET /api/sessions/:id/messages，messages / loading / error、appendStreamingContent、commitStreamingMessage、appendUserMessage。
+- **useChatStream**：POST /api/chat/stream，解析 SSE（session_created、message delta），返回完整回复文本。
+- **Space 页**：顶栏用户/登录 +「新建会话」；会话列表（链接到 /space/:id）；消息区（历史 + 流式追加）+ 输入框 + 发送；无会话时发送自动创建并流式结束后跳转新会话。
+
 ### 阶段 3.1：新后端会话与聊天 API（apps/api）
 
 - **Mock 适配器**：`src/adapters/types.ts`（NormalizedSession、NormalizedMessage、StreamMessageParams 等）、`src/adapters/mockChat.ts`（按 userId 内存存储，listSessions、listMessages、createSession、streamMessage 逐字 echo）。
