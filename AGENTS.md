@@ -13,12 +13,13 @@
 | Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MATRIX_JS_SDK_RESEARCH.md`（SDK 困境多角度调研） |
 | 前端迁移（Vue→React+Webpack） | `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` |
 | Monorepo（apps/packages） | `docs/MONOREPO_APPS_PACKAGES.md` |
+| 重构计划（阶段/步骤/技术栈确认） | `docs/REFACTOR_PLAN.md` |
 | 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc` |
 
 ## 目录与职责
 
 - **frontend/** — Nuxt 3 + Vue 3，对话流与任务卡片；不直连 Frappe/Dify，经中间层。
-- **apps/middleware/** — Fastify 中间层，SSE 流式、鉴权、聊天适配器（mock/matrix）、cos/物料 API。
+- **middleware/** — Fastify，SSE 流式、鉴权、聊天适配器（mock/matrix）、cos/物料 API。
 - **docs/** — 架构、API、认证、前端规范等；先查 `PROJECT_STATUS.md`、`ARCHITECTURE.md`。研究/选型已归档至 `docs/archive/research/`、`docs/archive/mas/`。
 - **.cursor/rules/** — 团队约定与 Agent 规则（全局、前端、提交、Agent 工作流等）。
 - **.cursor/plans/** — 可保存的实现计划，供 Plan Mode 产出与复用。

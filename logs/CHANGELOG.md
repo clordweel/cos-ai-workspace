@@ -6,12 +6,11 @@
 
 ## 2026-02-15
 
-### Monorepo 重构：middleware 迁入 apps/
+### 还原 middleware 迁入，明确重构方式与计划
 
-- **结构**：中间层由根目录 `middleware/` 迁入 **apps/middleware/**，符合 pnpm monorepo 标准目录 `apps/*`、`packages/*`。
-- **pnpm-workspace.yaml**：移除显式 `middleware` 项，由 `apps/*` 覆盖；根脚本 `dev:middleware`、`build:middleware` 仍通过 `pnpm --filter ai-workbench-middleware` 运行，无需修改。
-- **路径**：`apps/middleware/src/config.ts`、`apps/middleware/scripts/release-port.ts` 中工作区根目录 `.env` 上溯路径由两级改为三级（因现位于 apps/middleware 下）。
-- **文档**：`docs/MONOREPO_APPS_PACKAGES.md`、`apps/README.md`、`PROJECT.md`、`AGENTS.md`、`docs/PROJECT_STATUS.md` 与 `.cursor/skills/release-middleware-port/SKILL.md` 已更新为 apps/middleware 路径与说明。
+- **还原**：此前将 `middleware/` 迁入 `apps/middleware/` 的改动已还原；**原 middleware 保持根目录不动**，作为直接参考。
+- **重构方式**：在 `apps/` 下**新建**后端应用（新包名、可更换技术栈），以原 middleware 为参考重构，而非迁移现有代码。
+- **计划**：详见 `docs/REFACTOR_PLAN.md`：分阶段与步骤、技术栈需先讨论确认（如 React 下 shadcn 用原生版或更合适方案）、故障点与可介入修复策略。
 
 ---
 
