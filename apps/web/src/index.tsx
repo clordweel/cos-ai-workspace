@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter } from 'react-router-dom';
-import { AppViewProvider } from './contexts/AppViewContext';
 import App from './App';
 import './index.css';
 
@@ -15,9 +14,7 @@ createRoot(container).render(
         v7_relativeSplatPath: true,
       }}
     >
-      <AppViewProvider>
-        <App />
-      </AppViewProvider>
+      <App />
     </HashRouter>
   </React.StrictMode>
 );
