@@ -9,6 +9,7 @@
     "dev:frontend": "pnpm --filter ai-workbench-frontend run dev",
     "dev:api": "pnpm --filter @cosai/api run dev",
     "dev:web": "pnpm --filter @cosai/web run dev",
+    "dev:matrix": "concurrently \"pnpm run dev:middleware\" \"pnpm run dev:web\"",
     "build:frontend": "pnpm --filter ai-workbench-frontend run build",
     "build:middleware": "pnpm --filter ai-workbench-middleware run start",
     "build:api": "pnpm --filter @cosai/api run build",

@@ -10,7 +10,7 @@
 | 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
 | 前端视觉/UI 组件 | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` |
-| Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MATRIX_JS_SDK_RESEARCH.md`（SDK 困境多角度调研） |
+| Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MATRIX_JS_SDK_RESEARCH.md`（SDK 困境多角度调研）；**会话功能验证** `docs/MATRIX_SESSION_VERIFICATION.md`（middleware + apps/web 联调步骤与 `pnpm run dev:matrix`） |
 | 前端迁移（Vue→React+Webpack） | `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` |
 | Monorepo（apps/packages） | `docs/MONOREPO_APPS_PACKAGES.md` |
 | 重构计划（阶段/步骤/技术栈确认） | `docs/REFACTOR_PLAN.md` |

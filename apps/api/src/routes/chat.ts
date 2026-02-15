@@ -1,18 +1,31 @@
 /**
- * 会话与聊天 API（阶段 3.1）：与现 middleware 路径与响应结构对齐，mock 适配器
+ * 会话与聊天 API：按 config.chat.provider 使用 mock 或 matrix 适配器（在 api 内实现）
  */
 import type { FastifyInstance } from 'fastify';
 import { getSessionFromCookie, getStableUserId } from '../services/sessionStore.js';
+import { getChatAdapter } from '../adapters/index.js';
 import { getMockChatAdapter } from '../adapters/mockChat.js';
 
-export async function chatRoutes(app: FastifyInstance): Promise<void> {
-  const adapter = getMockChatAdapter();
+function getAdapter(req: { log: { error: (e: unknown) => void } }) {
+  const adapter = getChatAdapter();
+  if (!adapter) {
+    req.log.error('getChatAdapter 返回 null，回退 mock');
+    return getMockChatAdapter();
+  }
+  return adapter;
+}
 
+export async function chatRoutes(app: FastifyInstance): Promise<void> {
   app.get('/api/sessions', async (req, reply) => {
     const session = await getSessionFromCookie(req.headers.cookie);
     const userId = session ? getStableUserId(session) : 'default';
+    const adapter = getAdapter(req);
     try {
-      const sessions = await adapter.listSessions({ userId });
+      const sessions = await adapter.listSessions({
+        userId,
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid: session?.matrixUserId,
+      });
       return reply.send({ sessions });
     } catch (e) {
       req.log.error(e);
@@ -27,10 +40,13 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     const session = await getSessionFromCookie(req.headers.cookie);
     const userId = session ? getStableUserId(session) : 'default';
     const body = (req.body as { title?: string }) || {};
+    const adapter = getAdapter(req);
     try {
       const created = await adapter.createSession({
         userId,
         title: body.title?.trim(),
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid: session?.matrixUserId,
       });
       return reply.send(created);
     } catch (e) {
@@ -53,12 +69,15 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       const userId = session ? getStableUserId(session) : 'default';
       const limit = req.query?.limit ? Number(req.query.limit) : 50;
       const beforeId = req.query?.before_id;
+      const adapter = getAdapter(req);
       try {
         const result = await adapter.listMessages({
           sessionId: decodeURIComponent(sessionId),
           userId,
           limit,
           beforeId: beforeId || undefined,
+          matrixAccessToken: session?.matrixAccessToken,
+          currentUserMxid: session?.matrixUserId,
         });
         return reply.send({
           messages: result.messages,
@@ -88,6 +107,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
 
     const session = await getSessionFromCookie(req.headers.cookie);
     const userId = session ? getStableUserId(session) : 'default';
+    const adapter = getAdapter(req);
 
     const origin = req.headers.origin || '*';
     reply.raw.writeHead(200, {
@@ -115,6 +135,8 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         send,
         flush,
         replyToMessageId: body.reply_to_message_id,
+        matrixAccessToken: session?.matrixAccessToken,
+        currentUserMxid: session?.matrixUserId,
       });
     } catch (e) {
       req.log.error(e);

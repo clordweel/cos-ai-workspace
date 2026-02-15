@@ -5,6 +5,16 @@ import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { getSessionFromCookie, getStableUserId, getCookieName } from '../services/sessionStore.js';
 import { getLogtoAuthUrl, handleLogtoCallback } from '../services/logto.js';
+import { ensureMatrixUser } from '../services/matrixUserSync.js';
+import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
+import {
+  getPreferencesFromCustomData,
+  mergePreferencesIntoCustomData,
+  getLogtoUserCustomDataViaAccountApi,
+  patchLogtoUserCustomDataViaAccountApi,
+  getLogtoUserCustomData,
+  patchLogtoUserCustomData,
+} from '../services/logtoPreferences.js';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -101,16 +111,101 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       user,
       userId,
       type: session.type,
-      preferences: {} as Record<string, unknown>,
+      preferences: {},
     };
+    if (session.logtoSub) {
+      let customData: Record<string, unknown> | null = null;
+      const token = session.logtoAccessToken;
+      if (token) {
+        const prefRes = await getLogtoUserCustomDataViaAccountApi(token);
+        if (prefRes.ok) customData = prefRes.customData;
+      }
+      if (customData === null) {
+        const m2mRes = await getLogtoUserCustomData(session.logtoSub);
+        if (m2mRes.ok) customData = m2mRes.customData;
+      }
+      if (customData !== null) {
+        payload.preferences = getPreferencesFromCustomData(customData);
+      }
+    }
     if (config.chat.provider === 'matrix' && config.matrix.baseUrl) {
       payload.matrix_base_url = config.matrix.baseUrl;
-      if (session.matrixAccessToken) {
+      if (session.logtoSub) {
+        const ensureOut = await ensureMatrixUser(
+          session.logtoSub,
+          session.userProfile?.name ?? session.user,
+          session.userProfile?.email,
+          session.userProfile?.phone,
+          session.userProfile?.username
+        );
+        if (ensureOut.ok && ensureOut.matrixUserId) {
+          if (session.matrixUserId !== ensureOut.matrixUserId) {
+            const { updateSession } = await import('../services/sessionStore.js');
+            await updateSession(session.sessionId, { matrixUserId: ensureOut.matrixUserId });
+            session.matrixUserId = ensureOut.matrixUserId;
+          }
+        }
+        const tokenResult = await ensureMatrixTokenForSession(session);
+        if (tokenResult && 'access_token' in tokenResult) {
+          session.matrixAccessToken = tokenResult.access_token;
+          session.matrixUserId = tokenResult.matrix_user_id ?? session.matrixUserId;
+          session.matrixDeviceId = tokenResult.device_id;
+          payload.matrixSyncToken = tokenResult.access_token;
+          payload.matrix_user_id = session.matrixUserId;
+          payload.matrix_device_id = tokenResult.device_id ?? session.matrixDeviceId;
+        } else if (session.matrixAccessToken) {
+          payload.matrixSyncToken = session.matrixAccessToken;
+          if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
+          if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
+        }
+      } else if (session.matrixAccessToken) {
         payload.matrixSyncToken = session.matrixAccessToken;
         if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
         if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
       }
     }
     return reply.send(payload);
+  });
+
+  app.patch('/api/auth/me/preferences', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session?.logtoSub) {
+      return reply.code(401).send({ ok: false, error: '请先使用 Logto 登录' });
+    }
+    const body = (req.body as Record<string, unknown>) || {};
+    const patch: Record<string, unknown> = {};
+    if (body.theme !== undefined) patch.theme = body.theme;
+    if (body.uiFontSizeStep !== undefined) patch.uiFontSizeStep = Number(body.uiFontSizeStep);
+    if (body.notificationsEnabled !== undefined) patch.notificationsEnabled = Boolean(body.notificationsEnabled);
+    if (Object.keys(patch).length === 0) {
+      return reply.code(400).send({ ok: false, error: '请提供要更新的偏好字段（theme、uiFontSizeStep、notificationsEnabled）' });
+    }
+    const token = session.logtoAccessToken;
+    let result: { ok: true; customData: Record<string, unknown> } | { ok: false; error: string; statusCode?: number };
+    if (token) {
+      const current = await getLogtoUserCustomDataViaAccountApi(token);
+      const toWrite = current.ok ? mergePreferencesIntoCustomData(current.customData, patch) : { preferences: patch };
+      result = await patchLogtoUserCustomDataViaAccountApi(token, toWrite);
+      const needM2mFallback =
+        !result.ok &&
+        (result.statusCode === 401 ||
+          result.statusCode === 403 ||
+          /token.*not active|token.*invalid|token.*expired|account.*center/i.test(result.error ?? ''));
+      if (needM2mFallback) {
+        const m2mCurrent = await getLogtoUserCustomData(session.logtoSub);
+        const toWriteM2m = m2mCurrent.ok ? mergePreferencesIntoCustomData(m2mCurrent.customData, patch) : { preferences: patch };
+        result = await patchLogtoUserCustomData(session.logtoSub, toWriteM2m);
+      }
+    } else {
+      const m2mCurrent = await getLogtoUserCustomData(session.logtoSub);
+      const toWriteM2m = m2mCurrent.ok ? mergePreferencesIntoCustomData(m2mCurrent.customData, patch) : { preferences: patch };
+      result = await patchLogtoUserCustomData(session.logtoSub, toWriteM2m);
+    }
+    if (!result.ok) {
+      return reply
+        .code(result.statusCode && result.statusCode >= 400 ? result.statusCode : 503)
+        .send({ ok: false, error: result.error });
+    }
+    return reply.send({ ok: true, preferences: getPreferencesFromCustomData(result.customData) });
   });
 }

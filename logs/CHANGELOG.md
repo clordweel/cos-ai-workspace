@@ -6,6 +6,27 @@
 
 ## 2026-02-15
 
+### Matrix 在 apps/api 内完整迁移（不依赖 middleware）
+
+- **原则**：重构不启动、不依赖旧 frontend/middleware，仅作迁移参照；Matrix 等能力在 **apps/api** 中重新实现。
+- **文档**：REFACTOR_PLAN 与 MATRIX_SESSION_VERIFICATION 已更新，明确验证使用 apps/api + apps/web，迁移完成后无需启动 middleware。
+- **config**：api 补全 matrix 配置（serverName、userId、accessToken、password、botUserId、botAccessToken）。
+- **adapters**：迁移 matrixClient（REST：getMatrixAccessToken、loginAsUser、getJoinedRooms、getRoomName、getRoomMessages、sendRoomMessage、createRoom、leaveRoom、setRoomName、verifyMatrixTokenUserId 等）；新增 matrixChat 适配器（listSessions、listMessages、streamMessage、createSession）；adapters/index 提供 getChatAdapter()（按 config.chat.provider 返回 mock 或 matrix）。
+- **types**：StreamMessageParams、ListSessionsParams、ListMessagesParams、CreateSessionParams 增加 matrixAccessToken、currentUserMxid。
+- **services**：matrixUserSync（ensureMatrixUser、setMatrixPasswordByAdmin，仅 Synapse Admin、无 MAS）；matrixPasswordStore（内存缓存）；matrixSessionToken（ensureMatrixTokenForSession：缓存密码登录或 Admin 设密 + login）；sessionStore 增加 updateSession、matrixTokenExpiresAt。
+- **routes**：chat 使用 getChatAdapter() 并传入 session.matrixAccessToken、session.matrixUserId；auth GET /me 在 provider=matrix 时调用 ensureMatrixUser + ensureMatrixTokenForSession，返回 matrixSyncToken、matrix_base_url、matrix_user_id、matrix_device_id。
+
+### 阶段 5.2：设置与偏好（apps/api + apps/web）
+
+- **apps/api**：config 增加 `logto.m2mAppId`、`logto.m2mAppSecret`；新增 `services/logtoPreferences.ts`（getPreferencesFromCustomData、mergePreferencesIntoCustomData、Account API 获取/更新 customData、M2M 获取/更新 customData、M2M token 缓存）。GET /api/auth/me 在 session.logtoSub 时从 Logto 拉取 customData 并填充 `payload.preferences`（先 Account API 再 M2M 回退）。新增 PATCH /api/auth/me/preferences，接受 theme、uiFontSizeStep、notificationsEnabled，先 Account API 写回，401/403 时回退 M2M。
+- **apps/web**：useAuth 增加 `preferences` 状态与 `updatePreferences(patch)`（PATCH /api/auth/me/preferences 后更新本地状态）；设置页使用 SettingsPanel（主题 light/dark/system、字体档位、通知开关），修改后即写 Logto 并展示保存结果。
+
+### 阶段 5.1：应用区标签与 currentView 切换（apps/web）
+
+- **constants/appView.ts**：AppView 类型、AppTab、VIEW_TITLES、isSingleInstanceView、defaultHomeTab，与现 frontend useAppViewConstants 对照。
+- **AppViewContext**：扩展 tabs、activeTabId、activeTab、currentView、openView、switchTab、closeTab、setView、openAuthTab；单例视图（settings/auth/profile）再次打开时切换已有标签。
+- **WorkspaceLayout**：应用区增加侧栏导航（首页、联系人、机器人、设置、认证）、标签条（可切换/关闭）、按 currentView 渲染的 AppPanelContent（各视图占位，设置/偏好与扩展留待 5.2/5.4）。
+
 ### 阶段 4.2 / 4.3：新前端 Matrix Sync 与构建（apps/web）
 
 - **4.3 构建**：安装 `matrix-js-sdk@^39.4.0`；Webpack 增加 `experiments.asyncWebAssembly: true`、`resolve.conditionNames` 含 `matrix-org:wasm-esm`，开发与生产构建通过，WASM 正常产出。

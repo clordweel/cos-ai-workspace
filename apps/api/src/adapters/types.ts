@@ -29,10 +29,16 @@ export interface StreamMessageParams {
   send: SSESend;
   flush: SSEFlush;
   replyToMessageId?: string;
+  /** Matrix 用户 token，provider=matrix 时必传 */
+  matrixAccessToken?: string;
+  /** 当前用户 MXID，用于 role/sources 判断 */
+  currentUserMxid?: string;
 }
 
 export interface ListSessionsParams {
   userId: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
 }
 
 export interface ListMessagesParams {
@@ -41,9 +47,13 @@ export interface ListMessagesParams {
   userId: string;
   limit?: number;
   beforeId?: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
 }
 
 export interface CreateSessionParams {
   userId: string;
   title?: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
 }

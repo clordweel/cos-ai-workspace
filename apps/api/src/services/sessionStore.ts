@@ -21,10 +21,11 @@ export interface SessionData {
   logtoRefreshToken?: string;
   logtoTokenExpiresAt?: number;
   expiresAt: number;
-  /** 阶段 4.1：与现 middleware 一致，供 /api/auth/me 返回 Matrix 相关字段；token 逻辑后续接入 */
+  /** Matrix：与 middleware 一致，供 /api/auth/me 与 chat 适配器使用 */
   matrixUserId?: string;
   matrixAccessToken?: string;
   matrixDeviceId?: string;
+  matrixTokenExpiresAt?: number;
 }
 
 export interface Session extends SessionData {
@@ -67,4 +68,15 @@ export async function getSessionFromCookie(cookieHeader: string | undefined): Pr
     return null;
   }
   return { sessionId, ...data };
+}
+
+/** 部分更新会话（用于 Matrix token 等写入） */
+export async function updateSession(
+  sessionId: string,
+  patch: Partial<Pick<SessionData, 'matrixUserId' | 'matrixAccessToken' | 'matrixDeviceId' | 'matrixTokenExpiresAt'>>
+): Promise<void> {
+  const data = store.get(sessionId);
+  if (!data) return;
+  Object.assign(data, patch);
+  store.set(sessionId, data);
 }
