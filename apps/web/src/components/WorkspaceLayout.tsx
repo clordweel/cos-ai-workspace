@@ -1,12 +1,16 @@
 import React from 'react';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 /**
- * 工作台布局壳：仅包裹子内容，界面已清空待重写
+ * 工作台布局壳：顶栏含主题切换，主区为子内容
  */
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen min-h-0 flex flex-col bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
-      <div className="flex-1 min-h-0 overflow-hidden">
+    <div className="flex h-screen min-h-0 flex-col bg-background text-foreground">
+      <header className="flex shrink-0 items-center justify-end gap-2 border-b border-border px-3 py-2">
+        <ThemeSwitcher />
+      </header>
+      <div className="min-h-0 flex-1 overflow-hidden">
         {children}
       </div>
     </div>

@@ -5,6 +5,8 @@ import Home from './pages/Home';
 import Space from './pages/Space';
 import Logto from './pages/Logto';
 import LogtoCallback from './pages/LogtoCallback';
+import { AnchoredToastProvider, ToastProvider } from '@/components/ui/toast';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 /** Hash 路由下：登录成功后中间层重定向到 /space?auth=ok 时，跳转到 #/space 并清理地址栏（auth=ok 在主 URL，需读 window.location） */
 function AuthOkRedirect() {
@@ -21,7 +23,10 @@ function AuthOkRedirect() {
 
 export default function App() {
   return (
-    <>
+    <TooltipProvider delayDuration={300}>
+      <ToastProvider position="bottom-right">
+        <AnchoredToastProvider />
+        <div className="isolate min-h-screen">
       <AuthOkRedirect />
       <Routes>
         <Route path="/" element={<Home />} />
@@ -30,6 +35,8 @@ export default function App() {
       <Route path="/logto" element={<Logto />} />
         <Route path="/logto-callback" element={<LogtoCallback />} />
       </Routes>
-    </>
+        </div>
+      </ToastProvider>
+    </TooltipProvider>
   );
 }
