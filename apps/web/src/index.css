@@ -80,6 +80,47 @@
   }
 }
 
+/* 页脚 Logo 点击播放：描边绘制 → 填充渐显（与 frontend IconCos.vue / IconCosAi.vue 一致） */
+@keyframes path-draw-fill {
+  0% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+    stroke-opacity: 1;
+  }
+  35% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+    stroke-opacity: 1;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
+}
+.logo-path-draw path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill-opacity: 1;
+  stroke-opacity: 0;
+}
+.logo-path-draw.playing path {
+  animation: path-draw-fill 2s ease-in-out forwards;
+}
+/* IconCos：第二条 path 错峰（对应 Vue 的 line 0.35s delay） */
+.logo-path-draw.playing path.logo-path-line {
+  animation-delay: 0.3s;
+}
+/* IconCosAi：各字母错峰 */
+.logo-path-draw.playing path.logo-path-idx-1 { animation-delay: 0.12s; }
+.logo-path-draw.playing path.logo-path-idx-2 { animation-delay: 0.24s; }
+.logo-path-draw.playing path.logo-path-idx-3 { animation-delay: 0.36s; }
+.logo-path-draw.playing path.logo-path-idx-4 { animation-delay: 0.48s; }
+.logo-path-draw.playing path.logo-path-idx-5 { animation-delay: 0.6s; }
+
 /*
   ---break---
 */
