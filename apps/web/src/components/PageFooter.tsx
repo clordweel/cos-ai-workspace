@@ -31,7 +31,7 @@ export function PageFooter({ className }: { className?: string }) {
     <footer
       role="contentinfo"
       aria-label="页脚"
-      className={cn('shrink-0 border-t border-border/50 bg-background/80 py-5', className)}
+      className={cn('shrink-0 bg-transparent py-5', className)}
     >
       <div className="flex w-full flex-col items-center px-4">
         {/* 品牌：Logo + 字标（点击播放路径描边动画） */}

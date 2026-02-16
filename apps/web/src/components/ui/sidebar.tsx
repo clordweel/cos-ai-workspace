@@ -375,7 +375,7 @@ function SidebarSeparator({
 function SidebarContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <ScrollArea
-      className="**:data-[slot=scroll-area-scrollbar]:hidden"
+      className="flex min-h-0 flex-1 flex-col **:data-[slot=scroll-area-scrollbar]:hidden"
       scrollFade
     >
       <div

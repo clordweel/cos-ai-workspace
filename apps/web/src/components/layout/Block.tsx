@@ -27,7 +27,7 @@ export function Block({
     <section
       className={clsx(
         '@container',
-        fill && 'min-h-0 flex flex-col overflow-hidden',
+        fill && 'min-h-0 flex flex-col',
         minHeight,
         className
       )}

@@ -29,7 +29,7 @@ export function PageGrid({
       className={clsx(
         'grid min-h-0 w-full',
         gap,
-        !useStyle && 'grid-cols-1 md:grid-cols-2',
+        !useStyle && 'grid-cols-1 grid-rows-[minmax(0,1fr)] md:grid-cols-2',
         className
       )}
       style={
