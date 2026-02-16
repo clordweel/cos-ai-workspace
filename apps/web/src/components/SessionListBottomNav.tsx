@@ -219,7 +219,9 @@ export function SessionListBottomNav({
           <span
             className={cn(
               'flex shrink-0 items-center justify-center bg-muted dark:bg-zinc-600/60',
-              value === 'me' ? 'rounded-xl ring-1 ring-zinc-200/60 dark:ring-zinc-500/40' : 'h-6 w-6 rounded-full'
+              value === 'me'
+                ? 'rounded-xl border-2 border-white ring-1 ring-zinc-200/60 dark:ring-zinc-500/40'
+                : 'h-6 w-6 rounded-full'
             )}
             style={value === 'me' ? { width: 'inherit', height: 'inherit' } : undefined}
           >
