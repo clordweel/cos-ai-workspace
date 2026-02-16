@@ -130,7 +130,7 @@ export default function Space() {
               className="min-h-0 flex-1 flex w-full flex-row"
               style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
             >
-              <div className="relative flex min-h-0 shrink-0 flex-col rounded-2xl border border-border bg-white shadow-sm dark:bg-background dark:shadow-none">
+              <div className="relative flex min-h-0 shrink-0 flex-col rounded-2xl border border-border bg-white dark:bg-background">
             <Sidebar
               collapsible="none"
               side="left"

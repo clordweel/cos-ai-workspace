@@ -137,7 +137,7 @@ export function SessionListBottomNav({
   }, [value, tabIndex, updateIndicatorPosition]);
 
   const activeClass =
-    'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 shadow-md ring-1 ring-primary-200/50 dark:ring-primary-400/25';
+    'text-zinc-800 dark:text-zinc-100 bg-white/90 dark:bg-zinc-600/80 ring-1 ring-primary-200/50 dark:ring-primary-400/25';
   const inactiveClass =
     'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-white/50 dark:hover:bg-zinc-600/40';
 
@@ -145,7 +145,7 @@ export function SessionListBottomNav({
     <nav
       ref={navRef}
       className={cn(
-        'absolute bottom-2 left-1/2 z-10 flex h-11 w-fit -translate-x-1/2 items-end justify-center gap-1 rounded-2xl border border-zinc-200/80 bg-white/50 px-2 pb-1 pt-2 shadow-[0_8px_32px_rgba(0,0,0,0.08)] backdrop-blur-xl transition-all duration-300 ease-out dark:border-white/10 dark:bg-zinc-800/40 dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)]',
+        'absolute bottom-2 left-1/2 z-10 flex h-11 w-fit -translate-x-1/2 items-end justify-center gap-1 rounded-2xl border border-zinc-200/80 bg-white/50 px-2 pb-1 pt-2 backdrop-blur-xl transition-all duration-300 ease-out dark:border-white/10 dark:bg-zinc-800/40',
         className
       )}
       aria-label="会话列表视图"
