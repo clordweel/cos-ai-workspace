@@ -9,6 +9,7 @@
     "preview": "nuxt preview"
   },
   "dependencies": {
+    "@cosai/mock": "workspace:*",
     "@logto/nuxt": "^1.2.8",
     "@nuxt/ui": "^4.4.0",
     "@radix-icons/vue": "^1.0.0",

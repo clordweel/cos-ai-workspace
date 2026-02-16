@@ -129,6 +129,11 @@
 .session-list-scroll::-webkit-scrollbar {
   width: 4px;
 }
+.session-list-scroll::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
 .session-list-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -157,6 +162,35 @@
 .dark .session-list-indicator {
   background: #60a5fa;
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.15);
+}
+
+/* 聊天消息区极细滚动条（与 frontend ChatPane 一致） */
+.chat-messages-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+.chat-messages-scroll::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+.chat-messages-scroll::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+.chat-messages-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-messages-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 2px;
+}
+.dark .chat-messages-scroll {
+  scrollbar-color: rgb(82 82 91) transparent;
+}
+.dark .chat-messages-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
 }
 
 /*

@@ -1,80 +1,41 @@
 /**
- * Mock 会话列表数据，用于消息列表区占位与联调。
- * 与 frontend mock 结构对齐，后续可替换为接口或 MSW。
+ * Mock 会话与消息：从共享包 @cosai/mock 获取，与 frontend 共用同一数据源。
  */
 
-export type MockSessionType = 'private' | 'group';
+import {
+  getSessionList,
+  getMessages,
+  type MockSessionItem,
+  type MockMessage,
+} from '@cosai/mock';
 
-export type MockParticipant = {
-  name: string;
-  avatar?: string;
-  kind?: 'user' | 'bot';
-};
+/** 会话列表（与 frontend mock 一致） */
+export const MOCK_SESSION_LIST: MockSessionItem[] = getSessionList();
 
-export interface MockSessionItem {
+export type { MockSessionItem };
+
+/** 聊天栏展示用消息：仅 user/assistant，含 id/role/content/createdAt */
+export interface MockChatMessage {
   id: string;
-  title: string;
-  type: MockSessionType;
-  updatedAt: number;
-  participants?: MockParticipant[];
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: number;
 }
 
-const now = Date.now();
-const hour = 60 * 60 * 1000;
+function toChatMessage(m: MockMessage): MockChatMessage | null {
+  if (m.role !== 'user' && m.role !== 'assistant') return null;
+  return {
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    createdAt: m.createdAt,
+  };
+}
 
-export const MOCK_SESSION_LIST: MockSessionItem[] = [
-  {
-    id: 'mock-debug',
-    title: '【调试】全情景',
-    type: 'private',
-    updatedAt: now,
-    participants: [{ name: 'AI 助手', kind: 'bot' }],
-  },
-  {
-    id: 'mock-private-zhangsan',
-    title: '张三',
-    type: 'private',
-    updatedAt: now - 2 * hour,
-    participants: [{ name: '张三' }],
-  },
-  {
-    id: 'mock-private-lisi',
-    title: '李四',
-    type: 'private',
-    updatedAt: now - 5 * hour,
-    participants: [{ name: '李四' }],
-  },
-  {
-    id: 'mock-private-wangwu',
-    title: '王五',
-    type: 'private',
-    updatedAt: now - 24 * hour,
-    participants: [{ name: '王五' }],
-  },
-  {
-    id: 'mock-private-assistant',
-    title: 'AI 助手',
-    type: 'private',
-    updatedAt: now - 48 * hour,
-    participants: [{ name: 'AI 助手', kind: 'bot' }],
-  },
-  {
-    id: 'mock-group-1',
-    title: '产品组同步群',
-    type: 'group',
-    updatedAt: now - 1 * hour,
-    participants: [
-      { name: '张三' },
-      { name: '李四' },
-      { name: '王五' },
-      { name: 'AI 助手', kind: 'bot' },
-    ],
-  },
-  {
-    id: 'mock-group-2',
-    title: '订单与物料',
-    type: 'group',
-    updatedAt: now - 12 * hour,
-    participants: [{ name: '物料助手', kind: 'bot' }, { name: '订单助手', kind: 'bot' }],
-  },
-];
+/** 按会话 id 返回该会话的 mock 消息（仅 user/assistant），用于聊天栏展示 */
+export function getMockMessagesForSession(sessionId: string): MockChatMessage[] {
+  const list = getMessages(sessionId)
+    .map(toChatMessage)
+    .filter((m): m is MockChatMessage => m != null);
+  return list.sort((a, b) => a.createdAt - b.createdAt);
+}

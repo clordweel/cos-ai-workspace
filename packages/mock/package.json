@@ -1,0 +1,27 @@
+{
+  "name": "@cosai/mock",
+  "version": "0.1.0",
+  "private": true,
+  "description": "共享 Mock 会话与消息数据，供 frontend 与 apps/web 使用",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@faker-js/faker": "^10.3.0"
+  },
+  "devDependencies": {
+    "@cosai/tsconfig-base": "workspace:*",
+    "typescript": "^5.7.2"
+  },
+  "files": ["dist"]
+}

@@ -1,0 +1,167 @@
+'use client';
+
+import { ArrowDown } from 'lucide-react';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { ChatHeader } from '@/components/chat/ChatHeader';
+import { ChatInputPanel } from '@/components/chat/ChatInputPanel';
+import { ChatMessageBubble, type ChatMessageItem } from '@/components/chat/ChatMessageBubble';
+import { cn } from '@/lib/utils';
+
+export type ChatDisplayItem =
+  | { type: 'date'; label: string }
+  | { type: 'message'; message: ChatMessageItem };
+
+export interface ChatPaneProps {
+  /** 会话标题 */
+  chatTitle: string;
+  /** 对方头像（顶栏展示） */
+  chatUserAvatar?: string | null;
+  /** 对方名称 */
+  chatUserName?: string | null;
+  /** 日期分隔与消息交错列表 */
+  displayItems: ChatDisplayItem[];
+  /** 输入框受控值 */
+  input: string;
+  /** 输入框变更 */
+  onInputChange: (value: string) => void;
+  /** 发送消息 */
+  onSubmit?: () => void;
+  /** 关闭会话（顶栏菜单） */
+  onClose?: () => void;
+  /** 是否展示顶栏返回按钮 */
+  showBack?: boolean;
+  /** 输入区高度（px），未测前用 8.75rem 约 140px */
+  inputAreaHeightPx?: number | null;
+  /** 输入区高度变化回调 */
+  onInputAreaHeightChange?: (heightPx: number) => void;
+  className?: string;
+}
+
+const SCROLL_THRESHOLD = 50;
+const DEFAULT_INPUT_HEIGHT_PX = 140;
+
+export function ChatPane({
+  chatTitle,
+  chatUserAvatar,
+  chatUserName,
+  displayItems,
+  input,
+  onInputChange,
+  onSubmit,
+  onClose,
+  showBack = false,
+  inputAreaHeightPx = null,
+  onInputAreaHeightChange,
+  className,
+}: ChatPaneProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
+
+  const inputHeight = inputAreaHeightPx ?? DEFAULT_INPUT_HEIGHT_PX;
+
+  const checkScrollPosition = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, clientHeight, scrollHeight } = el;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setShowScrollToBottom(distanceFromBottom > SCROLL_THRESHOLD);
+  }, []);
+
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+    setShowScrollToBottom(false);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', checkScrollPosition, { passive: true });
+    const ro = new ResizeObserver(() => checkScrollPosition());
+    ro.observe(el);
+    return () => {
+      el.removeEventListener('scroll', checkScrollPosition);
+      ro.disconnect();
+    };
+  }, [checkScrollPosition]);
+
+  useEffect(() => {
+    if (displayItems.length === 0) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => scrollToBottom('auto'));
+    });
+  }, [displayItems.length, scrollToBottom]);
+
+  return (
+    <div className={cn('relative flex min-h-0 flex-1 flex-col overflow-hidden', className)}>
+      {/* 滚动区占满聊天区容器高度，内容用 padding 避开上/下栏 */}
+      <div className="absolute inset-0">
+        <div
+          ref={scrollRef}
+          className="chat-messages-scroll h-full overflow-x-hidden overflow-y-auto"
+          style={{ paddingTop: '6rem', paddingBottom: `${inputHeight}px` }}
+        >
+          <div className="flex min-h-full w-full min-w-0 flex-col gap-0.5 pl-4 pr-2">
+              {displayItems.map((item, idx) =>
+                item.type === 'date' ? (
+                  <div
+                    key={`date-${idx}-${item.label}`}
+                    className="date-separator-full relative my-3 w-full min-w-0 shrink-0 py-2 pl-2"
+                    aria-hidden
+                  >
+                    <span className="block h-0 w-full overflow-hidden" aria-hidden />
+                    <div
+                      className="absolute inset-x-0 top-1/2 h-[0.5px] -translate-y-1/2 bg-gradient-to-r from-transparent via-zinc-300 to-transparent dark:via-zinc-600"
+                      aria-hidden
+                    />
+                    <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-white px-2 text-[11px] text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                      {item.label}
+                    </span>
+                  </div>
+                ) : (
+                  <ChatMessageBubble key={item.message.id} message={item.message} />
+                )
+              )}
+            </div>
+        </div>
+        {showScrollToBottom && (
+          <button
+            type="button"
+            className="absolute left-1/2 top-20 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-md text-zinc-600 transition-opacity hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            aria-label="回到底部"
+            onClick={() => scrollToBottom()}
+          >
+            <ArrowDown className="h-4 w-4" aria-hidden />
+          </button>
+        )}
+      </div>
+      {/* 顶部渐变遮罩：单独层、更浓，鼠标穿透不阻挡滚动区交互 */}
+      <div
+        className="absolute left-0 right-0 top-0 z-10 h-24 select-none pointer-events-none bg-gradient-to-b from-zinc-100 via-zinc-100/95 to-transparent dark:from-zinc-800 dark:via-zinc-800/95 dark:to-transparent"
+        style={{ pointerEvents: 'none' }}
+        aria-hidden
+      />
+      {/* 底部渐变遮罩：单独层、加强效果，鼠标穿透 */}
+      <div
+        className="absolute left-0 right-0 bottom-0 z-10 h-32 select-none pointer-events-none bg-gradient-to-b from-transparent via-zinc-100/85 to-zinc-100 dark:via-zinc-800/85 dark:to-zinc-800"
+        style={{ pointerEvents: 'none' }}
+        aria-hidden
+      />
+      <ChatHeader
+        title={chatTitle}
+        userAvatar={chatUserAvatar}
+        userName={chatUserName}
+        showBack={showBack}
+        onClose={onClose}
+      />
+      <ChatInputPanel
+        value={input}
+        onChange={onInputChange}
+        onSubmit={onSubmit}
+        placeholder="说点什么？"
+        onHeightChange={onInputAreaHeightChange}
+      />
+    </div>
+  );
+}

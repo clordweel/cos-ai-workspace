@@ -1,7 +1,10 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MOCK_SESSION_LIST } from '@/data/mockSessions';
+import { MessageCircle } from 'lucide-react';
+import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
+import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
+import { ChatPane } from '@/components/chat/ChatPane';
 import { SessionListItem } from '@/components/SessionListItem';
 import { Block } from '@/components/layout/Block';
 import { PageGrid } from '@/components/layout/PageGrid';
@@ -58,6 +61,33 @@ export default function Space() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState<SessionFilter>('all');
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const [chatInput, setChatInput] = useState('');
+  const [chatInputAreaHeightPx, setChatInputAreaHeightPx] = useState<number | null>(null);
+  const [localMessagesByChat, setLocalMessagesByChat] = useState<Record<string, Array<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: number }>>>({});
+
+  const selectedSession = useMemo(
+    () => (selectedChatId ? MOCK_SESSION_LIST.find((s) => s.id === selectedChatId) ?? null : null),
+    [selectedChatId]
+  );
+
+  const chatDisplayItems = useMemo(() => {
+    if (!selectedChatId) return [];
+    const fromMock = getMockMessagesForSession(selectedChatId);
+    const local = localMessagesByChat[selectedChatId] ?? [];
+    const combined = [...fromMock, ...local].sort((a, b) => a.createdAt - b.createdAt);
+    return buildChatDisplayItems(combined);
+  }, [selectedChatId, localMessagesByChat]);
+
+  const handleChatSubmit = useCallback(() => {
+    const text = chatInput.trim();
+    if (!text || !selectedChatId) return;
+    const msg = { id: `local-${Date.now()}`, role: 'user' as const, content: text, createdAt: Date.now() };
+    setLocalMessagesByChat((prev) => ({
+      ...prev,
+      [selectedChatId]: [...(prev[selectedChatId] ?? []), msg],
+    }));
+    setChatInput('');
+  }, [selectedChatId, chatInput]);
 
   const filteredSessions = useMemo((): MockSessionItem[] => {
     let list = MOCK_SESSION_LIST;
@@ -79,17 +109,17 @@ export default function Space() {
     <PageGrid className="min-h-0 flex-1 px-4">
       <Block
         containerName="session"
-        className="flex flex-col rounded-3xl border border-border bg-zinc-100 p-3 dark:bg-zinc-800/50"
+        className="flex flex-col rounded-3xl border border-border bg-zinc-100 pl-3 pt-3 pb-3 dark:bg-zinc-800/50"
       >
         <SidebarProvider
           className="min-h-0 flex-1 flex w-full flex-row"
           style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
         >
-          <div className="relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-white dark:bg-background">
+          <div className="relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm dark:bg-background dark:shadow-none">
             <Sidebar
               collapsible="none"
               side="left"
-              className="rounded-2xl border-r border-sidebar-border bg-transparent"
+              className="rounded-2xl bg-transparent"
             >
               <SidebarHeader className="border-none p-0">
                 <SessionListHeader
@@ -159,11 +189,34 @@ export default function Space() {
               </SidebarFooter>
             </Sidebar>
           </div>
-          <SidebarInset className="min-h-0 min-w-0 flex-1 rounded-r-2xl bg-transparent">
-            <div className="flex h-full flex-col p-3">
-              <div className="text-sm font-medium text-muted-foreground">会话聊天</div>
-              {/* 聊天消息与输入，待实现；右侧始终为聊天区，列表栏由底部菜单切换 */}
-            </div>
+          <SidebarInset className="min-h-0 min-w-0 flex-1 rounded-r-2xl bg-transparent overflow-hidden">
+            {selectedSession ? (
+              <ChatPane
+                chatTitle={selectedSession.title}
+                chatUserAvatar={selectedSession.participants?.[0]?.avatar ?? null}
+                chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
+                displayItems={chatDisplayItems}
+                input={chatInput}
+                onInputChange={setChatInput}
+                onSubmit={handleChatSubmit}
+                onClose={() => setSelectedChatId(null)}
+                showBack={false}
+                inputAreaHeightPx={chatInputAreaHeightPx}
+                onInputAreaHeightChange={setChatInputAreaHeightPx}
+              />
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                <div className="flex size-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">
+                  <MessageCircle className="size-7" strokeWidth={1.5} />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <p className="text-base font-medium text-foreground">还没有会话</p>
+                  <p className="text-sm text-muted-foreground">
+                    在左侧选择已有会话开始聊天
+                  </p>
+                </div>
+              </div>
+            )}
           </SidebarInset>
         </SidebarProvider>
       </Block>
