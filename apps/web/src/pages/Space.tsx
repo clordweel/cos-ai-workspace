@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { Home, MessageCircle, PanelRightClose, Pin, Plus } from 'lucide-react';
 import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
 import { ChatPane } from '@/components/chat/ChatPane';
 import { SessionListItem } from '@/components/SessionListItem';
-import { Block } from '@/components/layout/Block';
 import { PageGrid } from '@/components/layout/PageGrid';
 import {
   SessionListBottomNav,
@@ -23,13 +22,8 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
-import {
-  Frame,
-  FramePanel,
-  FrameHeader,
-  FrameTitle,
-  FrameDescription,
-} from '@/components/ui/frame';
+import { Frame, FramePanel } from '@/components/ui/frame';
+import { Toggle } from '@/components/ui/toggle';
 import {
   Sidebar,
   SidebarContent,
@@ -39,6 +33,7 @@ import {
   SidebarMenu,
   SidebarProvider,
 } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { getEffectiveWorkspaceId, setLastWorkspaceId } from '@/lib/workspaceStorage';
 
@@ -78,6 +73,11 @@ export default function Space() {
   const [chatInput, setChatInput] = useState('');
   const [chatInputAreaHeightPx, setChatInputAreaHeightPx] = useState<number | null>(null);
   const [localMessagesByChat, setLocalMessagesByChat] = useState<Record<string, Array<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: number }>>>({});
+  const [appTagsBarPinned, setAppTagsBarPinned] = useState(false);
+  const [appAreaCollapsed, setAppAreaCollapsed] = useState(false);
+  const [tagBarHovered, setTagBarHovered] = useState(false);
+  const [activeAppTab, setActiveAppTab] = useState<string>('home');
+  const isTagBarExpanded = appTagsBarPinned || tagBarHovered;
 
   const selectedSession = useMemo(
     () => (selectedChatId ? MOCK_SESSION_LIST.find((s) => s.id === selectedChatId) ?? null : null),
@@ -120,7 +120,7 @@ export default function Space() {
   }
 
   return (
-    <PageGrid className="min-h-0 flex-1 px-4">
+    <PageGrid columns="minmax(0, 990px) 1fr" className="min-h-0 flex-1 px-4">
       <Frame
         className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'session' } as React.CSSProperties}
@@ -224,7 +224,7 @@ export default function Space() {
             ) : (
               <Empty className="h-full p-6">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon" className="mb-4 [&_svg]:size-7">
+                  <EmptyMedia variant="icon" className="[&_svg]:size-7">
                     <MessageCircle strokeWidth={1.5} aria-hidden />
                   </EmptyMedia>
                   <EmptyTitle className="text-base font-medium">还没有会话</EmptyTitle>
@@ -238,20 +238,93 @@ export default function Space() {
         </SidebarProvider>
         </FramePanel>
       </Frame>
-      <Block
-        containerName="app"
-        className="flex flex-col rounded-3xl border border-border bg-zinc-100 p-3 dark:bg-zinc-800/50"
+      <Frame
+        className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
+        style={{ containerName: 'app' } as React.CSSProperties}
       >
-        <Frame className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-2xl">
-          <FrameHeader>
-            <FrameTitle>操作区</FrameTitle>
-            <FrameDescription>对应 frontend 应用区：标签、侧栏、内容区</FrameDescription>
-          </FrameHeader>
-          <FramePanel className="min-h-0 flex-1">
-            {/* 标签、侧栏、内容区等待设计 */}
-          </FramePanel>
-        </Frame>
-      </Block>
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-3 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-2xl bg-transparent">
+            <aside
+              className={cn(
+                'group flex shrink-0 flex-col overflow-hidden rounded-l-2xl bg-transparent pr-2 transition-[width] duration-200 ease-out',
+                appTagsBarPinned ? 'w-[220px]' : 'w-[52px] hover:w-[220px]'
+              )}
+              aria-label="应用标签栏"
+              onMouseEnter={() => setTagBarHovered(true)}
+              onMouseLeave={() => setTagBarHovered(false)}
+            >
+              <div
+                className={cn(
+                  'flex shrink-0 items-center gap-1 px-2 pb-2 pt-2',
+                  isTagBarExpanded ? 'justify-between' : 'justify-center'
+                )}
+              >
+                <Toggle
+                  pressed={appAreaCollapsed}
+                  onPressedChange={setAppAreaCollapsed}
+                  size="sm"
+                  className="rounded-md p-1 text-black dark:text-white"
+                  aria-label={appAreaCollapsed ? '展开应用区' : '折叠应用区'}
+                  title={appAreaCollapsed ? '展开应用区' : '折叠应用区'}
+                >
+                  <PanelRightClose className="h-4 w-4" aria-hidden />
+                </Toggle>
+                {isTagBarExpanded && (
+                  <Toggle
+                    pressed={appTagsBarPinned}
+                    onPressedChange={setAppTagsBarPinned}
+                    size="sm"
+                    className="rounded-md p-1 text-black dark:text-white"
+                    aria-label={appTagsBarPinned ? '取消固定标签栏' : '固定标签栏'}
+                    title={appTagsBarPinned ? '取消固定标签栏' : '固定标签栏'}
+                  >
+                    <Pin
+                      className={cn('h-4 w-4', appTagsBarPinned && '-rotate-45')}
+                      aria-hidden
+                    />
+                  </Toggle>
+                )}
+              </div>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                  <button
+                    type="button"
+                    onClick={() => setActiveAppTab('home')}
+                    className={cn(
+                      'flex h-8 w-full cursor-pointer items-center justify-center gap-2 rounded-md px-3 text-left text-[12px] font-medium text-black transition-colors dark:text-white',
+                      'hover:bg-zinc-200 dark:hover:bg-zinc-600/90 hover:rounded-full',
+                      isTagBarExpanded ? 'min-w-0 justify-start' : 'justify-center px-2',
+                      activeAppTab === 'home' && 'bg-zinc-100 dark:bg-zinc-800/80'
+                    )}
+                  >
+                    <Home className="h-4 w-4 shrink-0" aria-hidden />
+                    {isTagBarExpanded && <span className="truncate">首页</span>}
+                  </button>
+                </div>
+                <div className="shrink-0 border-t-2 border-border pt-1">
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex h-8 w-full cursor-pointer items-center gap-2 text-left text-[12px] text-black transition-colors dark:text-white',
+                      'hover:bg-zinc-200 dark:hover:bg-zinc-600/90',
+                      isTagBarExpanded ? 'justify-start rounded-[11px] px-3 hover:rounded-full' : 'justify-center rounded-[46px] px-2 hover:rounded-full'
+                    )}
+                  >
+                    <Plus className="h-4 w-4 shrink-0" aria-hidden />
+                    {isTagBarExpanded && <span className="truncate">创建新标签</span>}
+                  </button>
+                </div>
+              </div>
+            </aside>
+            <main
+              className="min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl border border-border bg-white dark:bg-background"
+              aria-label="应用内容区"
+            >
+              <div className="min-h-full p-4" />
+            </main>
+          </div>
+        </FramePanel>
+      </Frame>
     </PageGrid>
   );
 }
