@@ -17,6 +17,20 @@ import {
   type SessionFilter,
 } from '@/components/SessionListHeader';
 import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Frame,
+  FramePanel,
+  FrameHeader,
+  FrameTitle,
+  FrameDescription,
+} from '@/components/ui/frame';
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -107,15 +121,16 @@ export default function Space() {
 
   return (
     <PageGrid className="min-h-0 flex-1 px-4">
-      <Block
-        containerName="session"
-        className="flex flex-col rounded-3xl border border-border bg-zinc-100 pl-3 pt-3 pb-3 dark:bg-zinc-800/50"
+      <Frame
+        className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
+        style={{ containerName: 'session' } as React.CSSProperties}
       >
-        <SidebarProvider
-          className="min-h-0 flex-1 flex w-full flex-row"
-          style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
-        >
-          <div className="relative flex min-h-0 shrink-0 flex-col overflow-hidden rounded-2xl border border-border bg-white shadow-sm dark:bg-background dark:shadow-none">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-3 pt-3 pb-3 pr-0 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
+            <SidebarProvider
+              className="min-h-0 flex-1 flex w-full flex-row"
+              style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
+            >
+              <div className="relative flex min-h-0 shrink-0 flex-col rounded-2xl border border-border bg-white shadow-sm dark:bg-background dark:shadow-none">
             <Sidebar
               collapsible="none"
               side="left"
@@ -147,14 +162,16 @@ export default function Space() {
                       ))}
                     </ul>
                   ) : (
-                    <div className="flex min-h-[12rem] flex-col items-center justify-center py-8 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        {searchQuery.trim() ? '无匹配会话' : '暂无会话'}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {searchQuery.trim() ? '试试其它关键词' : ''}
-                      </p>
-                    </div>
+                    <Empty className="min-h-[12rem] justify-center py-8">
+                      <EmptyHeader>
+                        <EmptyTitle className="text-sm font-medium">
+                          {searchQuery.trim() ? '无匹配会话' : '暂无会话'}
+                        </EmptyTitle>
+                        <EmptyDescription className="text-xs mt-1">
+                          {searchQuery.trim() ? '试试其它关键词' : '在左侧选择已有会话开始聊天'}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
                   )}
                 </div>
               ) : (
@@ -205,29 +222,35 @@ export default function Space() {
                 onInputAreaHeightChange={setChatInputAreaHeightPx}
               />
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
-                <div className="flex size-14 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">
-                  <MessageCircle className="size-7" strokeWidth={1.5} />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <p className="text-base font-medium text-foreground">还没有会话</p>
-                  <p className="text-sm text-muted-foreground">
+              <Empty className="h-full p-6">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon" className="mb-4 [&_svg]:size-7">
+                    <MessageCircle strokeWidth={1.5} aria-hidden />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-base font-medium">还没有会话</EmptyTitle>
+                  <EmptyDescription className="text-sm">
                     在左侧选择已有会话开始聊天
-                  </p>
-                </div>
-              </div>
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
           </SidebarInset>
         </SidebarProvider>
-      </Block>
+        </FramePanel>
+      </Frame>
       <Block
         containerName="app"
         className="flex flex-col rounded-3xl border border-border bg-zinc-100 p-3 dark:bg-zinc-800/50"
       >
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white p-3 dark:bg-background">
-          <div className="text-sm font-medium text-muted-foreground">操作区</div>
-          {/* 对应 frontend 应用区：标签、侧栏、内容区等待设计 */}
-        </div>
+        <Frame className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-2xl">
+          <FrameHeader>
+            <FrameTitle>操作区</FrameTitle>
+            <FrameDescription>对应 frontend 应用区：标签、侧栏、内容区</FrameDescription>
+          </FrameHeader>
+          <FramePanel className="min-h-0 flex-1">
+            {/* 标签、侧栏、内容区等待设计 */}
+          </FramePanel>
+        </Frame>
       </Block>
     </PageGrid>
   );

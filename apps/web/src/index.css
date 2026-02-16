@@ -130,9 +130,16 @@
   width: 4px;
 }
 .session-list-scroll::-webkit-scrollbar-button {
-  display: none;
-  height: 0;
-  width: 0;
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+  visibility: hidden !important;
+}
+.session-list-scroll::-webkit-scrollbar-button:vertical:start,
+.session-list-scroll::-webkit-scrollbar-button:vertical:end {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 .session-list-scroll::-webkit-scrollbar-track {
   background: transparent;

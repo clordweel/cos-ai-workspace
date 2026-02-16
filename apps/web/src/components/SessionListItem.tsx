@@ -55,7 +55,6 @@ export function SessionListItem({
       {dateLabel && (
         <span className="shrink-0 text-[11px] opacity-80">{dateLabel}</span>
       )}
-      <span className="text-xs opacity-70">›</span>
     </li>
   );
 }

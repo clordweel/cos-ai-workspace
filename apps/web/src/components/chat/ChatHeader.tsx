@@ -39,8 +39,8 @@ export function ChatHeader({
       {/* 顶栏内容层：背景透明，遮罩渐变由 ChatPane 单独层提供，保证可点击 */}
       <div
         className={cn(
-          'flex h-12 shrink-0 items-center justify-between gap-2 px-3',
-          'bg-transparent border-b border-zinc-200/40 dark:border-zinc-700/40'
+'flex h-12 shrink-0 items-center justify-between gap-2 px-3',
+        'bg-transparent'
         )}
       >
       <div className="flex min-w-0 flex-1 items-center gap-2">
