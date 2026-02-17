@@ -38,14 +38,13 @@ export function ChatHeader({
 
   return (
     <header
-      className={cn('absolute left-0 right-0 top-0 z-20 flex flex-col', className)}
+      className={cn('absolute left-3 right-3 top-0 z-20 flex flex-col', className)}
       aria-label="会话标题"
     >
-      {/* 顶栏内容层：背景透明，遮罩渐变由 ChatPane 单独层提供，保证可点击 */}
+      {/* 顶栏：边框、圆角、背景毛玻璃 */}
       <div
         className={cn(
-          'flex h-12 shrink-0 items-center justify-end gap-2 px-3',
-          'bg-transparent'
+          'flex h-12 shrink-0 items-center justify-end gap-2 rounded-xl border border-border bg-white/70 px-3 backdrop-blur-md dark:bg-zinc-900/70'
         )}
       >
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>

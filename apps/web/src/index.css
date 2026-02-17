@@ -235,6 +235,98 @@
   background-color: rgb(82 82 91);
 }
 
+/* 输入框编辑器：极细滚动条 */
+.chat-input-editor-scroll {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(212 212 216) transparent;
+}
+.chat-input-editor-scroll::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+.chat-input-editor-scroll::-webkit-scrollbar-button {
+  display: none;
+  height: 0;
+  width: 0;
+}
+.chat-input-editor-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-input-editor-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(212 212 216);
+  border-radius: 2px;
+}
+.dark .chat-input-editor-scroll {
+  scrollbar-color: rgb(82 82 91) transparent;
+}
+.dark .chat-input-editor-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(82 82 91);
+}
+
+/* 发送按钮：等待发送时流光边框（与 frontend ChatInputPanel.vue 一致） */
+.send-btn-wrap {
+  position: relative;
+}
+.send-btn-ready {
+  background: transparent;
+  overflow: hidden;
+}
+.send-btn-ready::before {
+  content: '';
+  position: absolute;
+  inset: -100%;
+  background: conic-gradient(
+    from 0deg,
+    #ffffff 0deg 60deg,
+    #0ea5e9 60deg,
+    #3b82f6,
+    #2563eb,
+    #6366f1,
+    #06b6d4,
+    #0284c7,
+    #0ea5e9
+  );
+  filter: blur(2px);
+  animation: send-btn-flow 2.5s linear infinite;
+}
+.send-btn-ready .send-btn-inner {
+  position: relative;
+  z-index: 1;
+}
+@keyframes send-btn-flow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* react-mentions 输入框与 @ 高亮（与 frontend 提及体验一致） */
+.chat-mentions-input {
+  font-size: 0.875rem;
+  color: var(--foreground);
+}
+.chat-mentions-input textarea {
+  color: inherit;
+}
+.chat-mention-highlight {
+  background: rgb(191 219 254 / 0.4);
+  border-radius: 0.25rem;
+  padding: 0 0.125rem;
+}
+.dark .chat-mention-highlight {
+  background: rgb(59 130 246 / 0.25);
+}
+
+/* Lexical 聊天输入：提及节点与下拉菜单 */
+.chat-lexical-mention {
+  background: rgb(191 219 254 / 0.4);
+  border-radius: 0.25rem;
+  padding: 0 0.125rem;
+}
+.dark .chat-lexical-mention {
+  background: rgb(59 130 246 / 0.25);
+}
+
 /*
   ---break---
 */

@@ -6,6 +6,7 @@ import { ChatHeader } from '@/components/chat/ChatHeader';
 import { ChatInputPanel } from '@/components/chat/ChatInputPanel';
 import { ChatMessageBubble, type ChatMessageItem } from '@/components/chat/ChatMessageBubble';
 import { cn } from '@/lib/utils';
+import type { MentionItem } from '@/hooks/useContactsAndBots';
 
 export type ChatDisplayItem =
   | { type: 'date'; label: string }
@@ -26,6 +27,8 @@ export interface ChatPaneProps {
   onInputChange: (value: string) => void;
   /** 发送消息 */
   onSubmit?: () => void;
+  /** @ 提及菜单项（联系人 + AI 助手），与 frontend UEditorMentionMenu 一致 */
+  mentionItems?: MentionItem[];
   /** 关闭会话（顶栏菜单） */
   onClose?: () => void;
   /** 是否展示顶栏返回按钮 */
@@ -52,6 +55,7 @@ export function ChatPane({
   input,
   onInputChange,
   onSubmit,
+  mentionItems,
   onClose,
   showBack = false,
   currentUserAvatar,
@@ -108,7 +112,7 @@ export function ChatPane({
           className="chat-messages-scroll h-full overflow-x-hidden overflow-y-auto"
           style={{ paddingTop: '6rem', paddingBottom: `${inputHeight}px` }}
         >
-          <div className="flex min-h-full w-full min-w-0 flex-col gap-0.5 pl-4 pr-2">
+          <div className="flex min-h-full w-full min-w-0 flex-col gap-0.5 pl-4 pr-5">
               {displayItems.map((item, idx) =>
                 item.type === 'date' ? (
                   <div
@@ -134,7 +138,7 @@ export function ChatPane({
         {showScrollToBottom && (
           <button
             type="button"
-            className="absolute left-1/2 top-20 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-md text-zinc-600 transition-opacity hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
+            className="absolute left-1/2 top-14 z-20 flex h-8 w-8 -translate-x-1/2 items-center justify-center rounded-full border border-zinc-200 bg-white shadow-md text-zinc-600 transition-opacity hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"
             aria-label="回到底部"
             onClick={() => scrollToBottom()}
           >
@@ -142,18 +146,6 @@ export function ChatPane({
           </button>
         )}
       </div>
-      {/* 顶部渐变遮罩：使用 FramePanel 背景色变量，与会话区一致 */}
-      <div
-        className="absolute left-0 right-0 top-0 z-10 h-24 select-none pointer-events-none bg-gradient-to-b from-[var(--session-frame-panel-bg)] via-[var(--session-frame-panel-bg)] to-transparent"
-        style={{ pointerEvents: 'none' }}
-        aria-hidden
-      />
-      {/* 底部渐变遮罩：使用 FramePanel 背景色变量 */}
-      <div
-        className="absolute left-0 right-0 bottom-0 z-10 h-32 select-none pointer-events-none bg-gradient-to-b from-transparent via-[var(--session-frame-panel-bg)] to-[var(--session-frame-panel-bg)]"
-        style={{ pointerEvents: 'none' }}
-        aria-hidden
-      />
       <ChatHeader
         title={chatTitle}
         userAvatar={chatUserAvatar}
@@ -163,13 +155,15 @@ export function ChatPane({
         showBack={showBack}
         onClose={onClose}
       />
-      <ChatInputPanel
-        value={input}
-        onChange={onInputChange}
-        onSubmit={onSubmit}
-        placeholder="说点什么？"
-        onHeightChange={onInputAreaHeightChange}
-      />
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <ChatInputPanel
+          value={input}
+          onChange={onInputChange}
+          onSubmit={onSubmit}
+          mentionItems={mentionItems}
+          onHeightChange={onInputAreaHeightChange}
+        />
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Archive, MessagesSquare, Settings, User } from 'lucide-react';
+import { Archive, MessagesSquare, User, Users } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -11,9 +11,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
-export type ListViewTab = 'me' | 'active' | 'favorites' | 'settings';
+export type ListViewTab = 'active' | 'contacts' | 'favorites' | 'me';
 
-const TAB_ORDER: ListViewTab[] = ['me', 'active', 'favorites', 'settings'];
+const TAB_ORDER: ListViewTab[] = ['active', 'contacts', 'favorites', 'me'];
 
 /** 与 frontend SessionListBottomNav.vue 一致：静止为短横条，过渡时伸长再滑动 */
 const INDICATOR_TRANSITION_MS = 250;
@@ -155,9 +155,51 @@ export function SessionListBottomNav({
         type="button"
         className={cn(
           'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
+          value === 'active' ? activeClass : inactiveClass
+        )}
+        aria-label="活动聊天"
+        onClick={() => onChange('active')}
+      >
+        <MessagesSquare
+          className={cn('h-4 w-4 shrink-0', value === 'active' && 'drop-shadow-sm')}
+        />
+      </button>
+      <button
+        ref={tab1Ref}
+        type="button"
+        className={cn(
+          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
+          value === 'contacts' ? activeClass : inactiveClass
+        )}
+        aria-label="联系人"
+        onClick={() => onChange('contacts')}
+      >
+        <Users
+          className={cn('h-4 w-4 shrink-0', value === 'contacts' && 'drop-shadow-sm')}
+        />
+      </button>
+      <button
+        ref={tab2Ref}
+        type="button"
+        className={cn(
+          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
+          value === 'favorites' ? activeClass : inactiveClass
+        )}
+        aria-label="收藏归档"
+        onClick={() => onChange('favorites')}
+      >
+        <Archive
+          className={cn('h-4 w-4 shrink-0', value === 'favorites' && 'drop-shadow-sm')}
+        />
+      </button>
+      <button
+        ref={tab3Ref}
+        type="button"
+        className={cn(
+          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
           value === 'me' ? activeClass : inactiveClass
         )}
-        aria-label="用户中心"
+        aria-label="个人中心"
         onClick={() => onChange('me')}
       >
         {userAvatar != null || userName != null ? (
@@ -186,48 +228,6 @@ export function SessionListBottomNav({
             <User className={cn(value === 'me' ? 'h-5 w-5' : 'h-4 w-4', value === 'me' && 'drop-shadow-sm')} />
           </span>
         )}
-      </button>
-      <button
-        ref={tab1Ref}
-        type="button"
-        className={cn(
-          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
-          value === 'active' ? activeClass : inactiveClass
-        )}
-        aria-label="活动聊天"
-        onClick={() => onChange('active')}
-      >
-        <MessagesSquare
-          className={cn('h-4 w-4 shrink-0', value === 'active' && 'drop-shadow-sm')}
-        />
-      </button>
-      <button
-        ref={tab2Ref}
-        type="button"
-        className={cn(
-          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
-          value === 'favorites' ? activeClass : inactiveClass
-        )}
-        aria-label="收藏归档"
-        onClick={() => onChange('favorites')}
-      >
-        <Archive
-          className={cn('h-4 w-4 shrink-0', value === 'favorites' && 'drop-shadow-sm')}
-        />
-      </button>
-      <button
-        ref={tab3Ref}
-        type="button"
-        className={cn(
-          'session-list-tab relative flex h-8 w-10 flex-col items-center justify-center gap-0 rounded-xl transition-all duration-200 hover:scale-105 active:scale-95',
-          value === 'settings' ? activeClass : inactiveClass
-        )}
-        aria-label="设置"
-        onClick={() => onChange('settings')}
-      >
-        <Settings
-          className={cn('h-4 w-4 shrink-0', value === 'settings' && 'drop-shadow-sm')}
-        />
       </button>
       {/* 滑动指示器：与 frontend 一致 — 静止短条(w-3)、过渡伸长(w-6)再滑动 */}
       {indicatorReady && (
