@@ -20,6 +20,9 @@ export interface AuthMePayload {
   matrix_device_id?: string;
 }
 
+/** 单次进行中的 /api/auth/me 请求，避免 Strict Mode 双重挂载导致重复请求 */
+let authMeInFlight: Promise<boolean> | null = null;
+
 export function useAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -30,23 +33,17 @@ export function useAuth() {
   const [matrixUserId, setMatrixUserId] = useState('');
   const [matrixDeviceId, setMatrixDeviceId] = useState('');
   const [preferences, setPreferences] = useState<Record<string, unknown>>({});
-
-  const fetchUser = useCallback(async (): Promise<boolean> => {
-    setAuthLoading(true);
-    try {
-      const res = await fetch('/api/auth/me', { credentials: 'include' });
-      const data: AuthMePayload = await res.json().catch(() => ({}));
-      if (res.ok && data.ok && data.user) {
-        setIsAuthenticated(true);
-        setUser(data.user as AuthUser);
-        setUserId(typeof data.userId === 'string' ? data.userId : '');
-        setMatrixSyncToken(typeof data.matrixSyncToken === 'string' ? data.matrixSyncToken : '');
-        setMatrixBaseUrl(typeof data.matrix_base_url === 'string' ? data.matrix_base_url : '');
-        setMatrixUserId(typeof data.matrix_user_id === 'string' ? data.matrix_user_id : '');
-        setMatrixDeviceId(typeof data.matrix_device_id === 'string' ? data.matrix_device_id : '');
-        setPreferences(typeof data.preferences === 'object' && data.preferences !== null ? data.preferences : {});
-        return true;
-      }
+  const applyPayload = useCallback((data: AuthMePayload, resOk: boolean): void => {
+    if (resOk && data.ok && data.user) {
+      setIsAuthenticated(true);
+      setUser(data.user as AuthUser);
+      setUserId(typeof data.userId === 'string' ? data.userId : '');
+      setMatrixSyncToken(typeof data.matrixSyncToken === 'string' ? data.matrixSyncToken : '');
+      setMatrixBaseUrl(typeof data.matrix_base_url === 'string' ? data.matrix_base_url : '');
+      setMatrixUserId(typeof data.matrix_user_id === 'string' ? data.matrix_user_id : '');
+      setMatrixDeviceId(typeof data.matrix_device_id === 'string' ? data.matrix_device_id : '');
+      setPreferences(typeof data.preferences === 'object' && data.preferences !== null ? data.preferences : {});
+    } else {
       setIsAuthenticated(false);
       setUser(null);
       setUserId('');
@@ -55,21 +52,29 @@ export function useAuth() {
       setMatrixUserId('');
       setMatrixDeviceId('');
       setPreferences({});
-      return false;
-    } catch {
-      setIsAuthenticated(false);
-      setUser(null);
-      setUserId('');
-      setMatrixSyncToken('');
-      setMatrixBaseUrl('');
-      setMatrixUserId('');
-      setMatrixDeviceId('');
-      setPreferences({});
-      return false;
-    } finally {
-      setAuthLoading(false);
     }
   }, []);
+
+  const fetchUser = useCallback(async (): Promise<boolean> => {
+    if (authMeInFlight) return authMeInFlight;
+    setAuthLoading(true);
+    authMeInFlight = (async () => {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        const data: AuthMePayload = await res.json().catch(() => ({}));
+        const ok = res.ok && !!data.ok && !!data.user;
+        applyPayload(data, res.ok);
+        return ok;
+      } catch {
+        applyPayload({ ok: false }, false);
+        return false;
+      } finally {
+        setAuthLoading(false);
+        authMeInFlight = null;
+      }
+    })();
+    return authMeInFlight;
+  }, [applyPayload]);
 
   useEffect(() => {
     fetchUser();
