@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { ArrowDown } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { ChatHeader, type ChatHeaderParticipant } from '@/components/chat/ChatHeader';
@@ -42,6 +43,8 @@ export interface ChatPaneProps {
   participants?: ChatHeaderParticipant[];
   /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
   enterToSend?: boolean;
+  /** 会话区字体缩放（仅作用于聊天消息与输入框），与设置页字体档位对应 */
+  sessionAreaFontScale?: number;
   /** 输入区高度（px），未测前用 8.75rem 约 140px */
   inputAreaHeightPx?: number | null;
   /** 输入区高度变化回调 */
@@ -69,6 +72,7 @@ export function ChatPane({
   currentUserName,
   participants,
   enterToSend = true,
+  sessionAreaFontScale = 1,
   inputAreaHeightPx = null,
   onInputAreaHeightChange,
   messageContextMenuHandlers,
@@ -114,7 +118,10 @@ export function ChatPane({
   }, [displayItems.length, scrollToBottom]);
 
   return (
-    <div className={cn('relative flex min-h-0 flex-1 flex-col overflow-hidden', className)}>
+    <div
+      className={cn('relative flex min-h-0 flex-1 flex-col overflow-hidden', className)}
+      style={{ '--chat-text-scale': sessionAreaFontScale } as React.CSSProperties}
+    >
       {/* 滚动区占满聊天区容器高度，内容用 padding 避开上/下栏 */}
       <div className="absolute inset-0">
         <div

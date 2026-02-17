@@ -214,7 +214,7 @@ function BubbleMessageTile({
                   引用消息
                 </div>
               )}
-              <p className="whitespace-pre-wrap break-words">{message.content}</p>
+              <p className="chat-session-content-text whitespace-pre-wrap break-words">{message.content}</p>
               {message.editedAt != null && message.editedBy?.label && (
                 <p className="mt-0.5 text-[10px] opacity-80">
                   已编辑 · {message.editedBy.label}

@@ -426,4 +426,12 @@
     @apply bg-background text-foreground;
     position: relative; /* iOS Safari 26+ compatibility for Coss/Base UI backdrops */
   }
+  /* 会话区字体缩放：仅聊天消息与输入框使用，由 ChatPane 设置 --chat-text-scale */
+  .chat-session-content-text {
+    font-size: calc(1rem * var(--chat-text-scale, 1)) !important;
+  }
+  /* 输入框内 Lexical 文本节点带 text-xs，强制子元素继承以跟随缩放 */
+  .chat-session-content-text * {
+    font-size: inherit !important;
+  }
 }

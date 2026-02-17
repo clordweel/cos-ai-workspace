@@ -75,7 +75,7 @@ export function ChatLexicalEditor({
         <div className="chat-input-editor-scroll relative flex min-h-0 flex-1 flex-col overflow-y-auto">
           <RichTextPlugin
             contentEditable={
-              <div className="min-h-0 flex-1 min-w-0 overflow-y-auto" style={{ display: 'block' }}>
+              <div className="chat-session-content-text min-h-0 flex-1 min-w-0 overflow-y-auto" style={{ display: 'block' }}>
                 <ContentEditable
                   className="min-h-[2.5rem] w-full resize-none rounded-lg border-0 bg-transparent px-[2px] py-0 outline-none placeholder:text-muted-foreground disabled:opacity-50 [&_.lexical-editor]:outline-none"
                   aria-placeholder={placeholder}

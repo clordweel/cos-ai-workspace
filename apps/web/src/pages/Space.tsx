@@ -68,7 +68,7 @@ export default function Space() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated, reAuthWithPopup, logout } = useAuth();
-  const { uiFontSizeStep, setUIFontSizeStep, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
+  const { uiFontSizeStep, setUIFontSizeStep, sessionAreaFontScale, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
   const [enterToSend, setEnterToSend] = useState(true);
 
   useEffect(() => {
@@ -430,6 +430,7 @@ export default function Space() {
                 onClose={() => setSelectedChatId(null)}
                 showBack={false}
                 enterToSend={enterToSend}
+                sessionAreaFontScale={sessionAreaFontScale}
                 inputAreaHeightPx={chatInputAreaHeightPx}
                 onInputAreaHeightChange={setChatInputAreaHeightPx}
               />
