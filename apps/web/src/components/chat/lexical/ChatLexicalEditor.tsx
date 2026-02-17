@@ -37,6 +37,8 @@ export interface ChatLexicalEditorProps {
   onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
+  enterToSend?: boolean;
   mentionItems: MentionItem[];
   /** 工具栏右侧插槽（如发送按钮），与工具按钮同一栏 */
   toolbarExtra?: ReactNode;
@@ -53,6 +55,7 @@ export function ChatLexicalEditor({
   onSubmit,
   placeholder = '说点什么？输入 @ 可提及联系人或机器人',
   disabled = false,
+  enterToSend = true,
   mentionItems,
   toolbarExtra,
   className,
@@ -72,14 +75,16 @@ export function ChatLexicalEditor({
         <div className="chat-input-editor-scroll relative flex min-h-0 flex-1 flex-col overflow-y-auto">
           <RichTextPlugin
             contentEditable={
-              <ContentEditable
-                className="min-h-[2.5rem] w-full resize-none rounded-lg border-0 bg-transparent px-0 py-0 outline-none placeholder:text-muted-foreground disabled:opacity-50 [&_.lexical-editor]:outline-none"
-                aria-placeholder={placeholder}
-                aria-disabled={disabled}
-              />
+              <div className="min-h-0 flex-1 min-w-0 overflow-y-auto" style={{ display: 'block' }}>
+                <ContentEditable
+                  className="min-h-[2.5rem] w-full resize-none rounded-lg border-0 bg-transparent px-[2px] py-0 outline-none placeholder:text-muted-foreground disabled:opacity-50 [&_.lexical-editor]:outline-none"
+                  aria-placeholder={placeholder}
+                  aria-disabled={disabled}
+                />
+              </div>
             }
             placeholder={
-              <span className="pointer-events-none absolute left-0 top-0 text-xs text-muted-foreground leading-[24px]">
+              <span className="pointer-events-none absolute left-[2px] right-[2px] top-0 text-xs text-muted-foreground leading-[24px]">
                 {placeholder}
               </span>
             }
@@ -100,7 +105,7 @@ export function ChatLexicalEditor({
             onChange(plain);
           }}
         />
-        <EnterSubmitPlugin onSubmit={onSubmit} disabled={disabled} />
+        <EnterSubmitPlugin onSubmit={onSubmit} disabled={disabled} enterToSend={enterToSend} />
         <EditablePlugin disabled={disabled} />
         <SyncClearPlugin value={value} />
         {mentionItems.length > 0 && <ChatMentionsPlugin mentionItems={mentionItems} />}
@@ -113,24 +118,32 @@ export function ChatLexicalEditor({
 function EnterSubmitPlugin({
   onSubmit,
   disabled,
+  enterToSend,
 }: {
   onSubmit?: () => void;
   disabled: boolean;
+  enterToSend: boolean;
 }) {
   const [editor] = useLexicalComposerContext();
   useEffect(() => {
     return editor.registerCommand<KeyboardEvent | null>(
       KEY_ENTER_COMMAND,
       (event) => {
-        if (event?.shiftKey || disabled) return false;
+        if (disabled) return false;
         const plain = getPlainTextWithMentions(editor);
         if (!plain.trim()) return false;
+        if (enterToSend) {
+          if (event?.shiftKey) return false;
+          onSubmit?.();
+          return true;
+        }
+        if (!event?.ctrlKey) return false;
         onSubmit?.();
         return true;
       },
       COMMAND_PRIORITY_LOW
     );
-  }, [editor, onSubmit, disabled]);
+  }, [editor, onSubmit, disabled, enterToSend]);
   return null;
 }
 

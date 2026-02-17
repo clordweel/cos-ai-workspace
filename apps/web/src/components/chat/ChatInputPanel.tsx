@@ -17,6 +17,8 @@ export interface ChatInputPanelProps {
   onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
+  /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
+  enterToSend?: boolean;
   /** @ 提及菜单项（联系人 + AI 助手），与 frontend UEditorMentionMenu 一致；Lexical 始终启用，无项时仅无候选 */
   mentionItems?: MentionItem[];
   /** 输入区高度变化时上报（px），用于聊天区底部留白 */
@@ -33,6 +35,7 @@ export function ChatInputPanel({
   onSubmit,
   placeholder,
   disabled = false,
+  enterToSend = true,
   mentionItems = [],
   onHeightChange,
   className,
@@ -101,11 +104,12 @@ export function ChatInputPanel({
               onSubmit={onSubmit}
               placeholder={resolvedPlaceholder}
               disabled={disabled}
+              enterToSend={enterToSend}
               mentionItems={mentionItems}
               toolbarExtra={
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap" aria-hidden>
-                    Shift + Enter 换行
+                    {enterToSend ? 'Shift + Enter 换行' : 'Ctrl + Enter 发送'}
                   </span>
                   <div
                     className={cn(

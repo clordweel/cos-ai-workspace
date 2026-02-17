@@ -55,7 +55,7 @@ export function SessionListHeader({
   return (
     <header
       className={cn(
-        'flex h-12 shrink-0 items-center justify-between gap-1 border-b border-border px-2',
+        'flex h-[40px] shrink-0 items-center justify-between gap-1 px-2',
         className
       )}
       role="banner"

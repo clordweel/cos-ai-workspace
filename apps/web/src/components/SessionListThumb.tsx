@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, Users } from 'lucide-react';
+import { Sparkle, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type SessionParticipant = {
@@ -36,7 +36,7 @@ export function SessionListThumb({
             className="h-full w-full object-cover"
           />
         ) : first?.kind === 'bot' ? (
-          <Bot className="h-4 w-4" />
+          <Sparkle className="h-4 w-4" />
         ) : (
           <span className="text-xs font-medium">{firstChar}</span>
         )}

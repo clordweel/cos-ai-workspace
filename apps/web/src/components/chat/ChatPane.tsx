@@ -2,9 +2,10 @@
 
 import { ArrowDown } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { ChatHeader } from '@/components/chat/ChatHeader';
+import { ChatHeader, type ChatHeaderParticipant } from '@/components/chat/ChatHeader';
 import { ChatInputPanel } from '@/components/chat/ChatInputPanel';
-import { ChatMessageBubble, type ChatMessageItem } from '@/components/chat/ChatMessageBubble';
+import { MessageTile, type MessageTileContextMenuHandlers } from '@/components/chat/MessageTile';
+import type { ChatMessageItem } from '@/components/chat/chatMessageTypes';
 import { cn } from '@/lib/utils';
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 
@@ -37,10 +38,16 @@ export interface ChatPaneProps {
   currentUserAvatar?: string | null;
   /** 当前用户名称（顶栏头像 fallback） */
   currentUserName?: string | null;
+  /** 参与会话者（排除“我”），顶栏左侧堆叠头像 */
+  participants?: ChatHeaderParticipant[];
+  /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
+  enterToSend?: boolean;
   /** 输入区高度（px），未测前用 8.75rem 约 140px */
   inputAreaHeightPx?: number | null;
   /** 输入区高度变化回调 */
   onInputAreaHeightChange?: (heightPx: number) => void;
+  /** 消息气泡右键菜单回调（回复/复制/删除/编辑/重试/撤回） */
+  messageContextMenuHandlers?: MessageTileContextMenuHandlers;
   className?: string;
 }
 
@@ -60,8 +67,11 @@ export function ChatPane({
   showBack = false,
   currentUserAvatar,
   currentUserName,
+  participants,
+  enterToSend = true,
   inputAreaHeightPx = null,
   onInputAreaHeightChange,
+  messageContextMenuHandlers,
   className,
 }: ChatPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -110,9 +120,16 @@ export function ChatPane({
         <div
           ref={scrollRef}
           className="chat-messages-scroll h-full overflow-x-hidden overflow-y-auto"
-          style={{ paddingTop: '6rem', paddingBottom: `${inputHeight}px` }}
+          style={{ paddingTop: '2.5rem', paddingBottom: `${inputHeight}px` }}
         >
-          <div className="flex min-h-full w-full min-w-0 flex-col gap-0.5 pl-4 pr-5">
+          <div className="relative flex w-full min-w-0 flex-col gap-0.5 pl-4 pr-4">
+              {/* 时间轴：右侧竖线，伪元素遮盖实现上下渐隐 */}
+              <div
+                className="absolute right-[6px] top-0 h-full min-h-full w-px overflow-visible before:pointer-events-none before:absolute before:left-0 before:right-0 before:top-0 before:h-8 before:content-[''] before:bg-gradient-to-b before:from-[var(--session-frame-panel-bg)] before:to-transparent after:pointer-events-none after:absolute after:left-0 after:right-0 after:bottom-0 after:h-8 after:content-[''] after:bg-gradient-to-t after:from-[var(--session-frame-panel-bg)] after:to-transparent"
+                aria-hidden
+              >
+                <div className="h-full min-h-full w-px bg-zinc-200 dark:bg-zinc-700" />
+              </div>
               {displayItems.map((item, idx) =>
                 item.type === 'date' ? (
                   <div
@@ -130,10 +147,18 @@ export function ChatPane({
                     </span>
                   </div>
                 ) : (
-                  <ChatMessageBubble key={item.message.id} message={item.message} />
+                  <MessageTile
+                    key={item.message.id}
+                    message={item.message}
+                    currentUserAvatar={currentUserAvatar}
+                    currentUserName={currentUserName}
+                    contextMenuHandlers={messageContextMenuHandlers}
+                  />
                 )
               )}
-            </div>
+          </div>
+          {/* 底部空白区：滚动到底时最后一条消息可显示在中间区域 */}
+          <div className="min-h-[25rem] shrink-0" aria-hidden />
         </div>
         {showScrollToBottom && (
           <button
@@ -150,6 +175,7 @@ export function ChatPane({
         title={chatTitle}
         userAvatar={chatUserAvatar}
         userName={chatUserName}
+        participants={participants}
         currentUserAvatar={currentUserAvatar}
         currentUserName={currentUserName}
         showBack={showBack}
@@ -160,6 +186,7 @@ export function ChatPane({
           value={input}
           onChange={onInputChange}
           onSubmit={onSubmit}
+          enterToSend={enterToSend}
           mentionItems={mentionItems}
           onHeightChange={onInputAreaHeightChange}
         />

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Archive, LogOut, MessageCircle, RefreshCw, User, Users } from 'lucide-react';
+import { Archive, LogOut, MessageCircle, RefreshCw, Settings, User } from 'lucide-react';
 import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
@@ -35,24 +35,30 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectPopup,
+  SelectItem,
+} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useUISettings } from '@/hooks/useUISettings';
 import { useAppTabs } from '@/hooks/useAppTabs';
 import { useContactsAndBots } from '@/hooks/useContactsAndBots';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId } from '@/lib/workspaceStorage';
-
-function formatSessionDate(ts: number): string {
-  const d = new Date(ts);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return '今天';
-  if (d.toDateString() === yesterday.toDateString()) return '昨天';
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
-}
+import { formatSessionDate } from '@/lib/time';
 
 /**
  * 工作区页：/space 进入上次工作空间（无则默认公开工作区）并重定向到 /space/:id；
@@ -62,6 +68,8 @@ export default function Space() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const { user, isAuthenticated, reAuthWithPopup, logout } = useAuth();
+  const { uiFontSizeStep, setUIFontSizeStep, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
+  const [enterToSend, setEnterToSend] = useState(true);
 
   useEffect(() => {
     if (id != null && id.length > 0) {
@@ -140,11 +148,25 @@ export default function Space() {
     [selectedChatId]
   );
 
+  /** 参与会话者（排除当前用户），供顶栏左侧头像展示 */
+  const participantsExcludingMe = useMemo(() => {
+    const list = selectedSession?.participants ?? [];
+    return list
+      .filter((p) => {
+        const isMe =
+          (user?.name && p.name === user.name) ||
+          (user?.email && p.name === user.email) ||
+          (user?.avatar && (p as { avatar?: string }).avatar === user.avatar);
+        return !isMe;
+      })
+      .map((p) => ({ id: undefined as string | undefined, name: p.name, avatar: p.avatar ?? null }));
+  }, [selectedSession?.participants, user?.name, user?.email, user?.avatar]);
+
   const chatDisplayItems = useMemo(() => {
     if (!selectedChatId) return [];
     const fromMock = getMockMessagesForSession(selectedChatId);
     const local = localMessagesByChat[selectedChatId] ?? [];
-    const combined = [...fromMock, ...local].sort((a, b) => a.createdAt - b.createdAt);
+    const combined = [...fromMock, ...local].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
     return buildChatDisplayItems(combined);
   }, [selectedChatId, localMessagesByChat]);
 
@@ -234,20 +256,6 @@ export default function Space() {
                 </div>
               ) : (
                 <SidebarContent className="min-h-0 flex-1 overflow-hidden">
-                  {listViewTab === 'contacts' && (
-                    <SidebarMenu className="flex h-full flex-col">
-                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
-                        <Empty className="min-h-[12rem] justify-center py-8">
-                          <EmptyHeader>
-                            <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
-                              <Users strokeWidth={1.5} aria-hidden />
-                            </EmptyMedia>
-                            <EmptyTitle className="text-sm font-medium">暂无联系人</EmptyTitle>
-                          </EmptyHeader>
-                        </Empty>
-                      </div>
-                    </SidebarMenu>
-                  )}
                   {listViewTab === 'favorites' && (
                     <SidebarMenu className="flex h-full flex-col">
                       <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
@@ -336,6 +344,63 @@ export default function Space() {
                       </div>
                     </SidebarMenu>
                   )}
+                  {listViewTab === 'settings' && (
+                    <SidebarMenu className="flex h-full flex-col">
+                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 text-[12px]">
+                        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          会话设置
+                        </h2>
+                        <Accordion defaultValue={['font-size', 'send-newline']} className="mb-2">
+                          <AccordionItem value="font-size">
+                            <AccordionTrigger className="text-[12px]">界面字体大小</AccordionTrigger>
+                            <AccordionContent>
+                              <p className="mb-3 text-[11px] text-muted-foreground">
+                                仅调节聊天与输入框的字号。
+                              </p>
+                              <div className="mb-2 flex items-center justify-between gap-3">
+                                <span className="text-[11px] text-zinc-600 dark:text-zinc-300">当前档位</span>
+                                <span className="tabular-nums text-[11px] font-medium text-zinc-700 dark:text-zinc-200">
+                                  {uiFontSizeStep}
+                                </span>
+                              </div>
+                              <Slider
+                                value={[uiFontSizeStep]}
+                                min={FONT_STEP_MIN}
+                                max={FONT_STEP_MAX}
+                                step={1}
+                                className="mx-auto w-full max-w-[12rem]"
+                                onValueChange={(v) => setUIFontSizeStep(Array.isArray(v) ? v[0] : v)}
+                              />
+                            </AccordionContent>
+                          </AccordionItem>
+                          <AccordionItem value="send-newline">
+                            <AccordionTrigger className="text-[12px]">发送与换行</AccordionTrigger>
+                            <AccordionContent>
+                              <p className="mb-3 text-[11px] text-muted-foreground">
+                                Enter 换行时，使用 Ctrl+Enter 发送。
+                              </p>
+                              <Select
+                                value={enterToSend ? 'enter' : 'enterNewline'}
+                                onValueChange={(v) => setEnterToSend(v === 'enter')}
+                                items={[
+                                  { value: 'enter', label: 'Enter 发送' },
+                                  { value: 'enterNewline', label: 'Enter 换行' },
+                                ]}
+                              >
+                                <SelectTrigger size="sm" className="w-full max-w-[12rem]" aria-label="发送与换行">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectPopup>
+                                  <SelectItem value="enter">Enter 发送</SelectItem>
+                                  <SelectItem value="enterNewline">Enter 换行</SelectItem>
+                                </SelectPopup>
+                              </Select>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </div>
+                    </SidebarMenu>
+                  )}
                 </SidebarContent>
               )}
               <SidebarFooter className="relative shrink-0 p-0">
@@ -356,6 +421,7 @@ export default function Space() {
                 chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
                 currentUserAvatar={user?.avatar}
                 currentUserName={user?.name ?? user?.email}
+                participants={participantsExcludingMe}
                 displayItems={chatDisplayItems}
                 input={chatInput}
                 onInputChange={setChatInput}
@@ -363,6 +429,7 @@ export default function Space() {
                 mentionItems={mentionItems}
                 onClose={() => setSelectedChatId(null)}
                 showBack={false}
+                enterToSend={enterToSend}
                 inputAreaHeightPx={chatInputAreaHeightPx}
                 onInputAreaHeightChange={setChatInputAreaHeightPx}
               />
