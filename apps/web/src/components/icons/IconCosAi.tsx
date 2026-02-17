@@ -11,13 +11,14 @@ const PATHS = [
   'M208.289 0.585938L200.93 34.9453L190.172 34.9453L197.531 0.585938L208.289 0.585938Z',
 ];
 
-/** Logo 字标，与 frontend IconCosAi.vue 同源；支持 playTrigger 点击播放路径描边动画 */
+/** Logo 字标，与 frontend IconCosAi.vue 同源；支持 playTrigger 点击播放路径描边动画；loop 时循环播放 */
 export function IconCosAi({
   width = 208,
   height = 36,
   color = 'currentColor',
   className,
   playTrigger,
+  loop = false,
   ...props
 }: SVGProps<SVGSVGElement> & {
   width?: number;
@@ -25,6 +26,8 @@ export function IconCosAi({
   color?: string;
   /** 变化时播放路径描边动画（如页脚点击传入递增数字） */
   playTrigger?: number;
+  /** 为 true 时动画循环播放（如 loading 屏文字 logo） */
+  loop?: boolean;
 }) {
   const [playing, setPlaying] = useState(false);
 
@@ -32,12 +35,15 @@ export function IconCosAi({
     if (playTrigger === undefined || playTrigger === 0) return;
     setPlaying(false);
     const raf = requestAnimationFrame(() => setPlaying(true));
+    if (loop) {
+      return () => cancelAnimationFrame(raf);
+    }
     const t = setTimeout(() => setPlaying(false), 3200);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(t);
     };
-  }, [playTrigger]);
+  }, [playTrigger, loop]);
 
   return (
     <svg
@@ -46,7 +52,12 @@ export function IconCosAi({
       fill="none"
       width={width}
       height={height}
-      className={cn('logo-path-draw', playing && 'playing', className)}
+      className={cn(
+        'logo-path-draw',
+        playing && 'playing',
+        loop && 'logo-path-draw-loop',
+        className
+      )}
       style={{ overflow: 'visible' }}
       aria-hidden
       {...props}

@@ -62,6 +62,19 @@
   }
 }
 
+/* 首屏加载遮罩：短淡入（与 frontend workspace.vue .app-loading-fade 一致） */
+@keyframes app-loading-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.app-loading-overlay {
+  animation: app-loading-fade-in 0.12s ease forwards;
+}
+
 /*
   ---break---
 */
@@ -140,6 +153,52 @@
 .logo-path-draw.playing path.logo-path-idx-3 { animation-delay: 0.36s; }
 .logo-path-draw.playing path.logo-path-idx-4 { animation-delay: 0.48s; }
 .logo-path-draw.playing path.logo-path-idx-5 { animation-delay: 0.6s; }
+/* 文字 logo 循环播放（如 loading 屏）：与 frontend IconCosAi icon-cosai-draw 一致，0%/100% 一致 + 反向描边过渡，无缝循环 */
+@keyframes path-draw-fill-loop {
+  0%,
+  100% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+    stroke-opacity: 1;
+  }
+  22% {
+    stroke-dashoffset: 0;
+    fill-opacity: 0;
+    stroke-opacity: 1;
+  }
+  35% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
+  55% {
+    stroke-dashoffset: 0;
+    fill-opacity: 1;
+    stroke-opacity: 0;
+  }
+  72% {
+    stroke-dashoffset: 0.5;
+    fill-opacity: 0.85;
+    stroke-opacity: 1;
+  }
+  88% {
+    stroke-dashoffset: 1;
+    fill-opacity: 0;
+    stroke-opacity: 1;
+  }
+}
+.logo-path-draw.playing.logo-path-draw-loop path {
+  stroke-width: 1.2;
+  animation: path-draw-fill-loop 3.2s ease-in-out infinite;
+}
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-line {
+  animation-delay: 0.3s;
+}
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-idx-1 { animation-delay: 0.12s; }
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-idx-2 { animation-delay: 0.24s; }
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-idx-3 { animation-delay: 0.36s; }
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-idx-4 { animation-delay: 0.48s; }
+.logo-path-draw.playing.logo-path-draw-loop path.logo-path-idx-5 { animation-delay: 0.6s; }
 
 /* 消息列表：极细滚动条 */
 .session-list-scroll {

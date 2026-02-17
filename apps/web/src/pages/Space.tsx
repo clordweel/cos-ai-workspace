@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Archive, LogOut, MessageCircle, RefreshCw, Settings, User } from 'lucide-react';
 import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
@@ -57,16 +57,17 @@ import { useContactsAndBots } from '@/hooks/useContactsAndBots';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
-import { getEffectiveWorkspaceId, setLastWorkspaceId } from '@/lib/workspaceStorage';
+import { getEffectiveWorkspaceId, setLastWorkspaceId, createNewWorkspaceId } from '@/lib/workspaceStorage';
 import { formatSessionDate } from '@/lib/time';
 
 /**
- * 工作区页：/space 进入上次工作空间（无则默认公开工作区）并重定向到 /space/:id；
+ * 工作区页：/space 进入上次工作空间（无则默认公开工作区 public）并重定向到 /space/:id；
  * /space/:id 为主界面框架：会话区 + 操作区（对应 frontend 应用区），具体布局与容器查询后续设计。
  */
 export default function Space() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated, reAuthWithPopup, logout } = useAuth();
   const { uiFontSizeStep, setUIFontSizeStep, sessionAreaFontScale, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
   const [enterToSend, setEnterToSend] = useState(true);
@@ -76,9 +77,15 @@ export default function Space() {
       setLastWorkspaceId(id);
       return;
     }
+    if (searchParams.get('create') === '1') {
+      const newWorkspaceId = createNewWorkspaceId();
+      setLastWorkspaceId(newWorkspaceId);
+      navigate(`/space/${newWorkspaceId}`, { replace: true });
+      return;
+    }
     const targetId = getEffectiveWorkspaceId();
     navigate(`/space/${targetId}`, { replace: true });
-  }, [id, navigate]);
+  }, [id, navigate, searchParams]);
 
   const [listViewTab, setListViewTab] = useState<ListViewTab>('active');
   const [searchOpen, setSearchOpen] = useState(false);

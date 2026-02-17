@@ -18,3 +18,8 @@ export function setLastWorkspaceId(id: string): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(STORAGE_KEY, id);
 }
+
+/** 生成新工作空间 id（顶栏「快速创建新工作空间」使用），格式 ws-{timestamp} */
+export function createNewWorkspaceId(): string {
+  return `ws-${Date.now()}`;
+}

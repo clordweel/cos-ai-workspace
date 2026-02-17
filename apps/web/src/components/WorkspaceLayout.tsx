@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { LayoutGrid, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { PageFooter } from '@/components/PageFooter';
+import { IconCos } from '@/components/icons/IconCos';
+import { IconCosAi } from '@/components/icons/IconCosAi';
 import {
   Command,
   CommandDialog,
@@ -20,19 +22,56 @@ import {
 } from '@/components/ui/command';
 
 const COMMAND_ITEMS = [
-  { value: 'home', label: '返回首页' },
-  { value: 'workspace', label: '打开工作区' },
+  { value: 'workspace', label: '工作空间管理' },
   { value: 'theme', label: '切换主题' },
 ] as const;
 
+/** 至少播完一轮图标路径动画（与 frontend 一致）后才允许退出 */
+const ICON_CYCLE_MS = 3200;
+/** 前端资源加载完毕（window load）后退出；若超时未触发则兜底退出 */
+const LOADING_MAX_MS = 8000;
+
 /**
- * 工作台布局壳：顶栏含命令面板、返回首页（非首页时显示）、主题切换，主区为子内容，底栏为页脚
+ * 工作台布局壳：顶栏含工作空间管理（左）、命令面板（中）、主题切换（右），主区为子内容，底栏为页脚；参考 Element 左侧工具栏
+ * 首屏 loading：资源加载完毕且至少动画播放一遍后退出
  */
 export default function WorkspaceLayout({ children }: { children: React.ReactNode }) {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
-  const isHome = pathname === '/' || pathname === '';
   const [commandOpen, setCommandOpen] = useState(false);
+  const [loadComplete, setLoadComplete] = useState(false);
+  const [animationCycleDone, setAnimationCycleDone] = useState(false);
+  const [loadingPlayTrigger, setLoadingPlayTrigger] = useState(0);
+
+  const showLoadingOverlay = !(loadComplete && animationCycleDone);
+  const prevOverlayRef = useRef(false);
+
+  useEffect(() => {
+    if (showLoadingOverlay && !prevOverlayRef.current) setLoadingPlayTrigger((t) => t + 1);
+    prevOverlayRef.current = showLoadingOverlay;
+  }, [showLoadingOverlay]);
+
+  // 条件一：至少动画播放一遍（3.2s）
+  useEffect(() => {
+    const t = setTimeout(() => setAnimationCycleDone(true), ICON_CYCLE_MS);
+    return () => clearTimeout(t);
+  }, []);
+
+  // 条件二：前端资源加载完毕（window load）；已 complete 则立即满足，并设最大等待兜底
+  useEffect(() => {
+    const onLoad = () => setLoadComplete(true);
+    if (document.readyState === 'complete') {
+      setLoadComplete(true);
+      return;
+    }
+    window.addEventListener('load', onLoad);
+    const fallback = setTimeout(() => {
+      setLoadComplete(true);
+    }, LOADING_MAX_MS);
+    return () => {
+      window.removeEventListener('load', onLoad);
+      clearTimeout(fallback);
+    };
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -48,7 +87,6 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
   const handleCommandSelect = useCallback(
     (value: string | null) => {
       setCommandOpen(false);
-      if (value === 'home') navigate('/');
       if (value === 'workspace') navigate('/space');
       if (value === 'theme') {
         document.querySelector<HTMLButtonElement>('button[aria-label="切换主题"]')?.click();
@@ -59,18 +97,52 @@ export default function WorkspaceLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-screen min-h-0 flex-col bg-white text-foreground dark:bg-background">
+      {/* 刷新/首屏加载过场：鉴权完成且至少播完一轮图标路径动画后再进入主界面（与 frontend 一致） */}
+      {showLoadingOverlay && (
+        <div
+          className="app-loading-overlay fixed inset-0 z-[100] flex flex-col items-center justify-center gap-6 bg-zinc-50/80 text-zinc-600 backdrop-blur-sm dark:bg-zinc-900/80 dark:text-zinc-400"
+          aria-live="polite"
+          aria-busy="true"
+          role="status"
+        >
+          <div className="flex w-[140px] flex-col items-center justify-center gap-5 opacity-100">
+            <IconCos
+              size={100}
+              color="currentColor"
+              className="shrink-0 text-zinc-700 dark:text-zinc-200"
+              playTrigger={loadingPlayTrigger}
+            />
+            <IconCosAi
+              width={120}
+              height={20}
+              color="currentColor"
+              className="shrink-0 text-zinc-800 dark:text-zinc-100"
+              playTrigger={loadingPlayTrigger}
+              loop
+            />
+          </div>
+        </div>
+      )}
       <header className="flex shrink-0 items-center justify-between gap-2 bg-transparent px-3 py-2">
-        <div className="flex min-w-0 flex-1 items-center justify-start">
-          {!isHome && (
-            <Link
-              to="/"
-              className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800 dark:hover:text-foreground"
-              aria-label="返回首页"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
-              <span>返回首页</span>
-            </Link>
-          )}
+        <div className="flex min-w-0 flex-1 items-center justify-start gap-0.5">
+          <button
+            type="button"
+            onClick={() => navigate('/space')}
+            className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800 dark:hover:text-foreground"
+            aria-label="工作空间管理"
+          >
+            <LayoutGrid className="h-4 w-4 shrink-0" aria-hidden />
+            <span className="hidden sm:inline">工作空间管理</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/space?create=1')}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-800 dark:hover:text-foreground"
+            aria-label="快速创建新工作空间"
+            title="快速创建新工作空间"
+          >
+            <Plus className="h-4 w-4" aria-hidden />
+          </button>
         </div>
         <div className="flex min-w-0 flex-1 items-center justify-center">
           <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
