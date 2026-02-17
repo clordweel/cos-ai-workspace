@@ -17,7 +17,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessageItem }) {
           'max-w-[85%] rounded-xl px-4 py-2.5 text-xs',
           isUser
             ? 'rounded-tr-none bg-primary text-primary-foreground'
-            : 'rounded-tl-none bg-zinc-100 dark:bg-zinc-700/80 text-foreground dark:text-zinc-100'
+            : 'rounded-tl-none bg-[var(--session-frame-panel-bg)] text-foreground'
         )}
       >
         <p className="whitespace-pre-wrap break-words">{message.content}</p>

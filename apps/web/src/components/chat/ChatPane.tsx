@@ -30,6 +30,10 @@ export interface ChatPaneProps {
   onClose?: () => void;
   /** 是否展示顶栏返回按钮 */
   showBack?: boolean;
+  /** 当前用户头像（顶栏菜单左侧） */
+  currentUserAvatar?: string | null;
+  /** 当前用户名称（顶栏头像 fallback） */
+  currentUserName?: string | null;
   /** 输入区高度（px），未测前用 8.75rem 约 140px */
   inputAreaHeightPx?: number | null;
   /** 输入区高度变化回调 */
@@ -50,6 +54,8 @@ export function ChatPane({
   onSubmit,
   onClose,
   showBack = false,
+  currentUserAvatar,
+  currentUserName,
   inputAreaHeightPx = null,
   onInputAreaHeightChange,
   className,
@@ -115,7 +121,7 @@ export function ChatPane({
                       className="absolute inset-x-0 top-1/2 h-[0.5px] -translate-y-1/2 bg-gradient-to-r from-transparent via-zinc-300 to-transparent dark:via-zinc-600"
                       aria-hidden
                     />
-                    <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-zinc-100 px-2 text-[11px] text-zinc-500 dark:bg-zinc-700 dark:text-zinc-400">
+                    <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-[var(--session-frame-panel-bg)] px-2 text-[11px] text-muted-foreground">
                       {item.label}
                     </span>
                   </div>
@@ -136,15 +142,15 @@ export function ChatPane({
           </button>
         )}
       </div>
-      {/* 顶部渐变遮罩：单独层、更浓，鼠标穿透不阻挡滚动区交互 */}
+      {/* 顶部渐变遮罩：使用 FramePanel 背景色变量，与会话区一致 */}
       <div
-        className="absolute left-0 right-0 top-0 z-10 h-24 select-none pointer-events-none bg-gradient-to-b from-zinc-100 via-zinc-100/95 to-transparent dark:from-zinc-800 dark:via-zinc-800/95 dark:to-transparent"
+        className="absolute left-0 right-0 top-0 z-10 h-24 select-none pointer-events-none bg-gradient-to-b from-[var(--session-frame-panel-bg)] via-[var(--session-frame-panel-bg)] to-transparent"
         style={{ pointerEvents: 'none' }}
         aria-hidden
       />
-      {/* 底部渐变遮罩：单独层、加强效果，鼠标穿透 */}
+      {/* 底部渐变遮罩：使用 FramePanel 背景色变量 */}
       <div
-        className="absolute left-0 right-0 bottom-0 z-10 h-32 select-none pointer-events-none bg-gradient-to-b from-transparent via-zinc-100/85 to-zinc-100 dark:via-zinc-800/85 dark:to-zinc-800"
+        className="absolute left-0 right-0 bottom-0 z-10 h-32 select-none pointer-events-none bg-gradient-to-b from-transparent via-[var(--session-frame-panel-bg)] to-[var(--session-frame-panel-bg)]"
         style={{ pointerEvents: 'none' }}
         aria-hidden
       />
@@ -152,6 +158,8 @@ export function ChatPane({
         title={chatTitle}
         userAvatar={chatUserAvatar}
         userName={chatUserName}
+        currentUserAvatar={currentUserAvatar}
+        currentUserName={currentUserName}
         showBack={showBack}
         onClose={onClose}
       />

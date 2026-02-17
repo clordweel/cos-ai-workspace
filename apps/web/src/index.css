@@ -265,6 +265,8 @@
   --success-foreground: var(--color-emerald-700);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-700);
+  /* 会话区 FramePanel 背景（与渐变遮罩共用） */
+  --session-frame-panel-bg: var(--color-zinc-100);
 }
 
 /*
@@ -297,6 +299,8 @@
   --success-foreground: var(--color-emerald-400);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-400);
+  /* 会话区 FramePanel 背景（与渐变遮罩共用）；深色为 zinc-800/50 的等价不透明色 */
+  --session-frame-panel-bg: color-mix(in srgb, var(--color-zinc-800) 50%, var(--color-zinc-950));
 }
 
 /*

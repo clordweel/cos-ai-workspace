@@ -1,9 +1,8 @@
 'use client';
 
-import { ChevronLeft, Menu } from 'lucide-react';
+import { MoreVertical, User } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +15,10 @@ export interface ChatHeaderProps {
   title: string;
   userAvatar?: string | null;
   userName?: string | null;
+  /** 当前用户头像（顶栏菜单左侧） */
+  currentUserAvatar?: string | null;
+  /** 当前用户名称（头像 fallback 首字） */
+  currentUserName?: string | null;
   showBack?: boolean;
   onClose?: () => void;
   className?: string;
@@ -25,6 +28,8 @@ export function ChatHeader({
   title,
   userAvatar,
   userName,
+  currentUserAvatar,
+  currentUserName,
   showBack = false,
   onClose,
   className,
@@ -39,46 +44,38 @@ export function ChatHeader({
       {/* 顶栏内容层：背景透明，遮罩渐变由 ChatPane 单独层提供，保证可点击 */}
       <div
         className={cn(
-'flex h-12 shrink-0 items-center justify-between gap-2 px-3',
-        'bg-transparent'
+          'flex h-12 shrink-0 items-center justify-end gap-2 px-3',
+          'bg-transparent'
         )}
       >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {showBack && (
-          <Link
-            to="/space"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-700"
-            aria-label="返回会话列表"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Link>
-        )}
-        <button
-          type="button"
-          className="flex min-w-0 flex-1 items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
-          aria-label={title}
-          title={title}
-        >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-primary-100 dark:border-zinc-800 dark:bg-primary-900/50 text-xs font-medium text-foreground">
-            {userAvatar ? (
-              <img src={userAvatar} alt={userName || title} className="h-full w-full object-cover" />
-            ) : (
-              (userName || title).trim().slice(0, 1) || '?'
-            )}
-          </span>
-          <span className="min-w-0 truncate text-sm font-medium text-foreground">{title}</span>
-        </button>
-      </div>
       <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 rounded-lg text-muted-foreground hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-700"
-            aria-label={`会话菜单：${title}`}
+          <button
+            type="button"
+            className="flex shrink-0 items-center gap-0 overflow-hidden rounded-lg text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
+            aria-label={`聊天会话菜单：${title}`}
           >
-            <Menu className="h-4 w-4" />
-          </Button>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-l-lg">
+              <MoreVertical className="h-3.5 w-3.5" />
+            </span>
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white dark:border-zinc-800">
+              <Avatar className="h-6 w-6">
+                {currentUserAvatar && <AvatarImage src={currentUserAvatar} alt="" />}
+                <AvatarFallback
+                  className={cn(
+                    'text-[10px] font-medium',
+                    !currentUserAvatar && !currentUserName && 'bg-muted'
+                  )}
+                >
+                  {(currentUserAvatar || currentUserName) ? (
+                    currentUserName?.trim().slice(0, 1)?.toUpperCase() ?? '?'
+                  ) : (
+                    <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                  )}
+                </AvatarFallback>
+              </Avatar>
+            </span>
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" side="bottom" sideOffset={4} className="min-w-[10rem]">
           <DropdownMenuItem

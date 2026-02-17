@@ -178,7 +178,7 @@ onClick={(e) => {
           >
             {user ? (
               <>
-                <Avatar className="h-5 w-5 shrink-0 ring-2 ring-white">
+                <Avatar className="h-5 w-5 shrink-0 ring-2 ring-white dark:ring-zinc-800">
                   {user.avatar ? <AvatarImage src={user.avatar} alt="" /> : null}
                   <AvatarFallback className="text-[10px]">{user.name?.slice(0, 1) ?? '?'}</AvatarFallback>
                 </Avatar>

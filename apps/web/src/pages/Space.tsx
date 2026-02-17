@@ -40,6 +40,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAppTabs } from '@/hooks/useAppTabs';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
+import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId } from '@/lib/workspaceStorage';
 
 function formatSessionDate(ts: number): string {
@@ -103,6 +104,15 @@ export default function Space() {
     openView('profile');
   }, [openView]);
 
+  /** 进入工作区时恢复上次打开的会话 */
+  useEffect(() => {
+    if (id == null || id.length === 0) return;
+    const stored = getLastChatId(id);
+    if (stored && MOCK_SESSION_LIST.some((s) => s.id === stored)) {
+      setSelectedChatId(stored);
+    }
+  }, [id]);
+
   const prevAuthenticatedRef = useRef(false);
   /** 仅在「在 profile 标签内刚完成认证」时关闭应用区并切回首页 */
   useEffect(() => {
@@ -113,6 +123,14 @@ export default function Space() {
       setAppAreaCollapsed(true);
     }
   }, [currentView, isAuthenticated, closeAllTabs]);
+
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      setSelectedChatId(sessionId);
+      if (id != null && id.length > 0) setLastChatId(id, sessionId);
+    },
+    [id]
+  );
 
   const selectedSession = useMemo(
     () => (selectedChatId ? MOCK_SESSION_LIST.find((s) => s.id === selectedChatId) ?? null : null),
@@ -160,7 +178,7 @@ export default function Space() {
         className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'session' } as React.CSSProperties}
       >
-        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-3 pt-3 pb-3 pr-0 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-3 pt-3 pb-3 pr-0 border-0 shadow-none before:shadow-none bg-[var(--session-frame-panel-bg)]">
             <SidebarProvider
               className="min-h-0 flex-1 flex w-full flex-row"
               style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
@@ -194,7 +212,7 @@ export default function Space() {
                           isActive={session.id === selectedChatId}
                           dateLabel={formatSessionDate(session.updatedAt)}
                           unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
-                          onClick={() => setSelectedChatId(session.id)}
+                          onClick={() => handleSelectSession(session.id)}
                         />
                       ))}
                     </ul>
@@ -333,6 +351,8 @@ export default function Space() {
                 chatTitle={selectedSession.title}
                 chatUserAvatar={selectedSession.participants?.[0]?.avatar ?? null}
                 chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
+                currentUserAvatar={user?.avatar}
+                currentUserName={user?.name ?? user?.email}
                 displayItems={chatDisplayItems}
                 input={chatInput}
                 onInputChange={setChatInput}
