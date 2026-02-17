@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Home, MessageCircle, PanelRightClose, Pin, Plus } from 'lucide-react';
+import { Archive, Home, MessageCircle, PanelRightClose, Pin, Plus, User, Users } from 'lucide-react';
 import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
@@ -33,6 +33,7 @@ import {
   SidebarMenu,
   SidebarProvider,
 } from '@/components/ui/sidebar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { getEffectiveWorkspaceId, setLastWorkspaceId } from '@/lib/workspaceStorage';
@@ -136,16 +137,18 @@ export default function Space() {
               side="left"
               className="rounded-2xl bg-transparent"
             >
-              <SidebarHeader className="border-none p-0">
-                <SessionListHeader
-                  searchOpen={searchOpen}
-                  searchQuery={searchQuery}
-                  filter={sessionFilter}
-                  onSearchOpenChange={setSearchOpen}
-                  onSearchQueryChange={setSearchQuery}
-                  onFilterChange={setSessionFilter}
-                />
-              </SidebarHeader>
+              {listViewTab === 'active' && (
+                <SidebarHeader className="border-none p-0">
+                  <SessionListHeader
+                    searchOpen={searchOpen}
+                    searchQuery={searchQuery}
+                    filter={sessionFilter}
+                    onSearchOpenChange={setSearchOpen}
+                    onSearchQueryChange={setSearchQuery}
+                    onFilterChange={setSessionFilter}
+                  />
+                </SidebarHeader>
+              )}
               {listViewTab === 'active' ? (
                 <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
                   {filteredSessions.length > 0 ? (
@@ -178,20 +181,67 @@ export default function Space() {
                 <SidebarContent className="min-h-0 flex-1 overflow-hidden">
                   {listViewTab === 'contacts' && (
                     <SidebarMenu className="flex h-full flex-col">
-                      <div className="px-2 py-3 text-sm text-muted-foreground">联系人</div>
-                      {/* 联系人列表待实现 */}
+                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+                        <Empty className="min-h-[12rem] justify-center py-8">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
+                              <Users strokeWidth={1.5} aria-hidden />
+                            </EmptyMedia>
+                            <EmptyTitle className="text-sm font-medium">暂无联系人</EmptyTitle>
+                          </EmptyHeader>
+                        </Empty>
+                      </div>
                     </SidebarMenu>
                   )}
                   {listViewTab === 'favorites' && (
                     <SidebarMenu className="flex h-full flex-col">
-                      <div className="px-2 py-3 text-sm text-muted-foreground">收藏列表</div>
-                      {/* 收藏待实现 */}
+                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+                        <Empty className="min-h-[12rem] justify-center py-8">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
+                              <Archive strokeWidth={1.5} aria-hidden />
+                            </EmptyMedia>
+                            <EmptyTitle className="text-sm font-medium">暂无收藏</EmptyTitle>
+                          </EmptyHeader>
+                        </Empty>
+                      </div>
                     </SidebarMenu>
                   )}
                   {listViewTab === 'me' && (
                     <SidebarMenu className="flex h-full flex-col">
-                      <div className="px-2 py-3 text-sm text-muted-foreground">个人中心</div>
-                      {/* 个人中心待实现 */}
+                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+                        {user ? (
+                          <div className="flex flex-col items-center gap-3 px-3 py-6">
+                            <Avatar className="h-16 w-16">
+                              {user.avatar ? (
+                                <AvatarImage src={user.avatar} alt={user.name} />
+                              ) : null}
+                              <AvatarFallback className="text-lg">
+                                {user.name?.slice(0, 1) ?? '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex min-w-0 flex-col items-center gap-0.5 text-center">
+                              <span className="truncate text-sm font-medium text-foreground">
+                                {user.name}
+                              </span>
+                              {user.email ? (
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {user.email}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
+                          <Empty className="min-h-[12rem] justify-center py-8">
+                            <EmptyHeader>
+                              <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
+                                <User strokeWidth={1.5} aria-hidden />
+                              </EmptyMedia>
+                              <EmptyTitle className="text-sm font-medium">未登录</EmptyTitle>
+                            </EmptyHeader>
+                          </Empty>
+                        )}
+                      </div>
                     </SidebarMenu>
                   )}
                 </SidebarContent>
@@ -224,7 +274,7 @@ export default function Space() {
             ) : (
               <Empty className="h-full p-6">
                 <EmptyHeader>
-                  <EmptyMedia variant="icon" className="[&_svg]:size-7">
+                  <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
                     <MessageCircle strokeWidth={1.5} aria-hidden />
                   </EmptyMedia>
                   <EmptyTitle className="text-base font-medium">还没有会话</EmptyTitle>
