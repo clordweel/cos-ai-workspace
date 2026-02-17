@@ -80,11 +80,64 @@ export function useAuth() {
     fetchUser();
   }, [fetchUser]);
 
+  /** Hash 路由下须用 #/logto，用 path /logto 会落到首页 */
   const login = useCallback(() => {
     if (typeof window !== 'undefined') {
-      window.location.href = `${window.location.origin}/logto`;
+      window.location.href = `${window.location.origin}/#/logto`;
     }
   }, []);
+
+  /**
+   * 弹窗内完成 Logto 登录，主窗口不跳转。
+   * 打开 #/logto 弹窗，回调后中间层重定向到 /space?auth=ok，弹窗检测到后 postMessage 并关闭，主窗口刷新用户状态。
+   * @returns Promise 在弹窗内登录成功并刷新用户后 resolve；弹窗被用户关闭未登录时 reject
+   */
+  const loginWithPopup = useCallback((): Promise<void> => {
+    return openLogtoPopupAndWait(`${window.location.origin}/#/logto`, fetchUser);
+  }, [fetchUser]);
+
+  /**
+   * 重新授权：弹窗内以 prompt=login 打开 Logto，可更换为其他账号。
+   * @returns Promise 在弹窗内登录成功并刷新用户后 resolve；弹窗被用户关闭未登录时 reject
+   */
+  const reAuthWithPopup = useCallback((): Promise<void> => {
+    return openLogtoPopupAndWait(`${window.location.origin}/#/logto?prompt=login`, fetchUser);
+  }, [fetchUser]);
+
+  const openLogtoPopupAndWait = useCallback((logtoUrl: string, onDone: () => Promise<unknown>): Promise<void> => {
+    if (typeof window === 'undefined') {
+      return Promise.reject(new Error('Not in browser'));
+    }
+    const origin = window.location.origin;
+    const width = 420;
+    const height = 740;
+    const left = Math.round((window.screen.width - width) / 2);
+    const top = Math.round((window.screen.height - height) / 2);
+    const popup = window.open(
+      logtoUrl,
+      'logto-auth',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+    );
+    if (!popup) {
+      return Promise.reject(new Error('弹窗被阻止，请允许当前站点弹出窗口后重试'));
+    }
+    return new Promise((resolve, reject) => {
+        const onMessage = (e: MessageEvent) => {
+        if (e.origin !== origin || e.data?.type !== 'logto-auth-done') return;
+        window.removeEventListener('message', onMessage);
+        clearInterval(timer);
+        onDone().then(() => resolve());
+      };
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          window.removeEventListener('message', onMessage);
+          clearInterval(timer);
+          reject(new Error('登录已取消'));
+        }
+      }, 300);
+      window.addEventListener('message', onMessage);
+    });
+  }, [fetchUser]);
 
   const updatePreferences = useCallback(
     async (patch: Record<string, unknown>): Promise<{ ok: boolean; error?: string }> => {
@@ -108,6 +161,15 @@ export function useAuth() {
     []
   );
 
+  /** 注销：请求服务端清除会话与 Cookie，并清空本地认证状态 */
+  const logout = useCallback(async (): Promise<void> => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } finally {
+      applyPayload({ ok: false }, false);
+    }
+  }, [applyPayload]);
+
   return {
     isAuthenticated,
     user,
@@ -115,6 +177,9 @@ export function useAuth() {
     authLoading,
     fetchUser,
     login,
+    loginWithPopup,
+    reAuthWithPopup,
+    logout,
     matrixSyncToken,
     matrixBaseUrl,
     matrixUserId,

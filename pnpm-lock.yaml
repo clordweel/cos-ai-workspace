@@ -45,6 +45,9 @@ importers:
       '@base-ui/react':
         specifier: ^1.2.0
         version: 1.2.0(@types/react@18.3.28)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@cosai/logto-auth':
+        specifier: workspace:*
+        version: link:../../packages/logto-auth
       '@cosai/mock':
         specifier: workspace:*
         version: link:../../packages/mock
@@ -172,6 +175,9 @@ importers:
 
   frontend:
     dependencies:
+      '@cosai/logto-auth':
+        specifier: workspace:*
+        version: link:../packages/logto-auth
       '@cosai/mock':
         specifier: workspace:*
         version: link:../packages/mock
@@ -315,6 +321,15 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/logto-auth:
+    devDependencies:
+      '@cosai/tsconfig-base':
+        specifier: workspace:*
+        version: link:../tsconfig-base
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

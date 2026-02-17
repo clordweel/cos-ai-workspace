@@ -1,0 +1,25 @@
+{
+  "name": "@cosai/logto-auth",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Logto 认证 URL 构建逻辑，与 frontend 一致，供 apps/web 等复用",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "pnpm run build"
+  },
+  "devDependencies": {
+    "@cosai/tsconfig-base": "workspace:*",
+    "typescript": "^5.7.2"
+  }
+}

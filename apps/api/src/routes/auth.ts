@@ -3,7 +3,7 @@
  */
 import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
-import { getSessionFromCookie, getStableUserId, getCookieName } from '../services/sessionStore.js';
+import { getSessionFromCookie, getStableUserId, getCookieName, deleteSession } from '../services/sessionStore.js';
 import { getLogtoAuthUrl, handleLogtoCallback } from '../services/logto.js';
 import { ensureMatrixUser } from '../services/matrixUserSync.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
@@ -51,8 +51,75 @@ function redirectToFront(redirectUri: string | undefined, path: string): string 
   return `${fallback}${path.startsWith('/') ? path : '/' + path}`;
 }
 
+/** Logto 代理：转发到 Logto 并在响应中放宽 CSP、重写 Location，便于 iframe 嵌入 */
+async function handleLogtoProxy(
+  req: { method: string; url: string; headers: { [key: string]: string | string[] | undefined }; protocol: string; hostname: string; port?: string | number },
+  reply: import('fastify').FastifyReply,
+  body?: string | Buffer
+): Promise<void> {
+  const logtoOrigin = config.logto.endpoint.replace(/\/$/, '');
+  if (!logtoOrigin) {
+    return reply.code(503).send({ ok: false, error: '未配置 Logto' });
+  }
+  const pathAndQuery = req.url.replace(/^\/api\/logto-proxy\/?/, '/') || '/';
+  const targetUrl = `${logtoOrigin}${pathAndQuery}`;
+  const proxyBase = `${getRedirectUriBase(req)}/api/logto-proxy`;
+  const frontOrigin = config.frontendOrigin.replace(/\/$/, '') || proxyBase.replace(/\/api\/logto-proxy$/, '');
+  const relaxedCsp = `frame-ancestors 'self' ${frontOrigin} *`;
+
+  const headers: Record<string, string> = {};
+  for (const [k, v] of Object.entries(req.headers)) {
+    if (!v || k.toLowerCase() === 'host') continue;
+    headers[k] = Array.isArray(v) ? v.join(', ') : v;
+  }
+  headers.host = new URL(logtoOrigin).host;
+
+  const fetchBody = req.method !== 'GET' && req.method !== 'HEAD' ? (body ?? undefined) : undefined;
+  const res = await fetch(targetUrl, {
+    method: req.method,
+    headers,
+    body: fetchBody,
+    redirect: 'manual',
+  });
+
+  for (const [k, v] of res.headers.entries()) {
+    const lower = k.toLowerCase();
+    if (lower === 'content-security-policy') continue;
+    if (lower === 'location' && v && v.startsWith(logtoOrigin)) {
+      reply.header('Location', v.replace(logtoOrigin, proxyBase));
+      continue;
+    }
+    reply.header(k, v);
+  }
+  reply.header('Content-Security-Policy', relaxedCsp);
+  reply.status(res.status).send(res.body);
+}
+
 export async function authRoutes(app: FastifyInstance): Promise<void> {
   const cookieName = getCookieName();
+
+  /** Logto 反向代理：放宽 CSP、重写 Location，供 iframe 嵌入授权页 */
+  app.all('/api/logto-proxy/*', async (req, reply) => {
+    let body: string | Buffer | undefined;
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body != null) {
+      if (typeof req.body === 'string') body = req.body;
+      else if (Buffer.isBuffer(req.body)) body = req.body;
+      else body = new URLSearchParams(req.body as Record<string, string>).toString();
+    }
+    await handleLogtoProxy(req, reply, body);
+  });
+
+  /** 供前端（apps/web 等）按 @cosai/logto-auth 构建授权 URL 的公开配置 */
+  app.get('/api/auth/logto/config', async (_req, reply) => {
+    const { endpoint, appId } = config.logto;
+    if (!endpoint || !appId) {
+      return reply.code(503).send({ ok: false, error: '未配置 Logto' });
+    }
+    const appOrigin = config.frontendOrigin.replace(/\/$/, '') || config.publicOrigin || '';
+    /** iframe 嵌入时用此 base 构建授权 URL，请求经本服务代理并放宽 CSP */
+    const logtoProxyBase = appOrigin ? `${appOrigin}/api/logto-proxy` : '';
+    return reply.send({ ok: true, endpoint, appId, appOrigin, logtoProxyBase });
+  });
 
   /** 阶段 2：前端 /logto 请求此 URL 后重定向到 Logto；redirect_uri 为前端 /logto-callback */
   app.get('/api/auth/logto/url', async (req, reply) => {
@@ -76,17 +143,29 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         ? query.redirect_uri.trim()
         : `${base}/api/auth/logto/callback`;
     if (!code) {
-      return reply.redirect(redirectToFront(query.redirect_uri, '/space?auth_error=missing_code'), 302);
+      return reply.redirect(redirectToFront(query.redirect_uri, '/#/space?auth_error=missing_code'), 302);
     }
     const result = await handleLogtoCallback(code, redirectUri);
     if (!result.ok) {
-      return reply.redirect(redirectToFront(query.redirect_uri, `/space?auth_error=${encodeURIComponent(result.error)}`), 302);
+      return reply.redirect(redirectToFront(query.redirect_uri, `/#/space?auth_error=${encodeURIComponent(result.error)}`), 302);
     }
     const frontOrigin =
       frontOriginFromRedirectUri(query.redirect_uri) ?? config.frontendOrigin.replace(/\/$/, '');
+    /** 前端为 HashRouter 时需带 hash，以便路由匹配且 auth=ok 可被读取 */
     return reply
       .setCookie(cookieName, result.sessionId, { ...COOKIE_OPTS, domain: undefined })
-      .redirect(`${frontOrigin}/space?auth=ok`, 302);
+      .redirect(`${frontOrigin}/#/space?auth=ok`, 302);
+  });
+
+  /** 注销：删除服务端会话并清除 Cookie */
+  app.post('/api/auth/logout', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (session) {
+      deleteSession(session.sessionId);
+    }
+    return reply
+      .clearCookie(cookieName, { path: '/', domain: undefined })
+      .send({ ok: true });
   });
 
   app.get('/api/auth/me', async (req, reply) => {

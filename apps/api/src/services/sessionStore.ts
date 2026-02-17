@@ -80,3 +80,8 @@ export async function updateSession(
   Object.assign(data, patch);
   store.set(sessionId, data);
 }
+
+/** 注销：删除会话，供 /api/auth/logout 使用 */
+export function deleteSession(sessionId: string): void {
+  store.delete(sessionId);
+}

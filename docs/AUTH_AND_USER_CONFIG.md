@@ -10,6 +10,8 @@
 ## Logto 侧
 
 - 应用配置：`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`LOGTO_APP_SECRET`（OAuth 回调、换 token）。
+- **若出现「auth.xxx 拒绝连接」**：表示浏览器或后端无法连上 `LOGTO_ENDPOINT`。请检查：① 使用 **https**（自建可 http）；② 本机可访问，例如 `curl -sI https://你的LOGTO_ENDPOINT`；③ Logto 服务已启动且监听 0.0.0.0 或对应网卡；④ 防火墙、反向代理或 VPN 已放行该地址。
+- **若出现「Framing 'https://...' violates Content Security Policy directive: frame-ancestors」**：表示 Logto 服务端 CSP 的 `frame-ancestors` 不允许当前前端源嵌入。可选方案：① **代理放宽 CSP**（推荐）：API 层提供 `/api/logto-proxy/*` 反向代理到 Logto，在响应中重写 `Content-Security-Policy` 与 `Location`，前端从 `GET /api/auth/logto/config` 取 `logtoProxyBase`，用该 base 构建授权 URL 并在应用区内 iframe 嵌入；② **弹窗/新标签**：无代理时认证面板使用弹窗或「在新标签页打开」；③ 自建 Logto 时可在服务端将前端地址加入 `frame-ancestors`。
 - **用户偏好（customData）**：优先用 Logto **Account API**（`/api/my-account`）+ 用户 token 读写；若返回「Account center is not enabled」或 403，则回退到 **Management API**（需配置 M2M）。因此：**若未在控制台启用 Account center**，须配置 `LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`，偏好才能同步；若已启用 Account center 且 scope 含 `custom_data`，则无需 M2M。
 - **修改 Logto 密码**：需 **Management API**，须配置独立的 M2M 应用（`LOGTO_M2M_APP_ID`、`LOGTO_M2M_APP_SECRET`）；不配置则「修改密码」功能不可用。
 - **customData 结构约定**：  

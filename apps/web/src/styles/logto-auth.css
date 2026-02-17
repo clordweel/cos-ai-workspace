@@ -1,0 +1,94 @@
+/**
+ * Logto 认证相关页面样式（coss 设计风格）
+ * 与 docs/UI_DESIGN_SYSTEM.md 一致：zinc 背景、圆角卡片、统一边框与排版。
+ *
+ * 设计令牌：
+ * - 页面背景：bg-zinc-50 / dark:bg-zinc-900
+ * - 卡片背景：bg-white / dark:bg-zinc-800，border border-zinc-200 / dark:border-zinc-600
+ * - 标题：text-lg font-semibold text-zinc-800 / dark:text-zinc-200
+ * - 正文/说明：text-sm text-zinc-500 / dark:text-zinc-400
+ * - 错误：text-sm text-red-600 / dark:text-red-400
+ * - 圆角：卡片 rounded-xl 或 rounded-2xl，按钮 rounded-md
+ * - 阴影：卡片 shadow-sm
+ */
+
+/* 整页认证布局：全屏背景、内容居中，与 AuthPanel / WorkspaceEntry 视觉一致 */
+.logto-auth-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: var(--color-zinc-50, #fafafa);
+}
+
+:is(.dark *) .logto-auth-page {
+  background-color: var(--color-zinc-900, #18181b);
+}
+
+/* 认证卡片：与 AuthPanel 卡片统一 */
+.logto-auth-card {
+  width: 100%;
+  max-width: 24rem;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border-width: 1px;
+  border-color: var(--color-zinc-200, #e4e4e7);
+  background-color: var(--color-white, #fff);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+:is(.dark *) .logto-auth-card {
+  border-color: var(--color-zinc-600, #52525b);
+  background-color: var(--color-zinc-800, #27272a);
+}
+
+.logto-auth-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--color-zinc-800, #27272a);
+  text-align: center;
+}
+
+:is(.dark *) .logto-auth-title {
+  color: var(--color-zinc-200, #e4e4e7);
+}
+
+.logto-auth-description {
+  margin-top: 0.375rem;
+  font-size: 0.875rem;
+  color: var(--color-zinc-500, #71717a);
+  text-align: center;
+}
+
+:is(.dark *) .logto-auth-description {
+  color: var(--color-zinc-400, #a1a1aa);
+}
+
+.logto-auth-error {
+  font-size: 0.875rem;
+  color: var(--color-red-600, #dc2626);
+  text-align: center;
+}
+
+:is(.dark *) .logto-auth-error {
+  color: var(--color-red-400, #f87171);
+}
+
+.logto-auth-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.logto-auth-actions-inline {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}

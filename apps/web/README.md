@@ -23,6 +23,10 @@ pnpm run preview
 - 若由**前端承载回调**（Redirect URI 指向前端）：在 Logto 应用里配置 Redirect URI 为 `http://localhost:3001/#/logto-callback`（生产环境替换为实际域名）。前端会从 hash 中解析 `code` 并交给中间层换 token。
 - 若由**中间层承载回调**（默认）：Redirect URI 为中间层地址（如 `http://localhost:3000/api/auth/logto/callback`），登录成功后中间层会 302 到前端 `/space?auth=ok`；前端会检测并跳转到 `#/space`。
 
+**登录页报「认证服务不可用（404）」时**：说明前端请求不到 `/api/auth/logto/config`。  
+1. **推荐**：启动中间层，并在 `.env` 中设置 `WEBPACK_PROXY_TARGET` 指向中间层（如 `http://localhost:3000`），然后重启 `pnpm run dev`。  
+2. **仅跑前端时**：在 `.env` 中设置 `LOGTO_ENDPOINT`、`LOGTO_APP_ID`（见 `.env.example`），重新执行 `pnpm run dev` 或 `pnpm run build`；登录跳转可用，但回调换 token 仍需中间层。
+
 ## 反向代理部署
 
 同域代理时，将 `/` 指向前端（如 3001）即可，Hash 路由不依赖服务端路径。详见仓库根目录 `docs/REVERSE_PROXY_SINGLE_DOMAIN.md`。

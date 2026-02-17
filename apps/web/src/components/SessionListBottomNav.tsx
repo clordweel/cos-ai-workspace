@@ -206,12 +206,12 @@ export function SessionListBottomNav({
           <Avatar
             className={cn(
               'shrink-0 ring-1 ring-zinc-200/60 dark:ring-zinc-500/40',
-              value === 'me' ? 'rounded-xl' : 'h-6 w-6 rounded-full'
+              value === 'me' ? '!rounded-xl' : 'h-6 w-6 rounded-full'
             )}
             style={value === 'me' ? { width: 'inherit', height: 'inherit' } : undefined}
           >
             {userAvatar && <AvatarImage src={userAvatar} alt="" />}
-            <AvatarFallback className={value === 'me' ? 'text-xs font-medium' : 'text-[10px] font-medium'}>
+            <AvatarFallback className={cn(value === 'me' ? '!rounded-xl text-xs font-medium' : 'text-[10px] font-medium')}>
               {userName?.trim()?.[0]?.toUpperCase() ?? '?'}
             </AvatarFallback>
           </Avatar>

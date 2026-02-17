@@ -1,4 +1,5 @@
 const path = require('path');
+const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = (_, { mode }) => ({
@@ -31,6 +32,12 @@ module.exports = (_, { mode }) => ({
   plugins: [
     new HtmlWebpackPlugin({
       template: './public/index.html',
+    }),
+    // 中间层不可用时，Logto 页可依赖环境变量构建授权 URL（回调仍需中间层）
+    new webpack.DefinePlugin({
+      'process.env.LOGTO_ENDPOINT': JSON.stringify(process.env.LOGTO_ENDPOINT || ''),
+      'process.env.LOGTO_APP_ID': JSON.stringify(process.env.LOGTO_APP_ID || ''),
+      'process.env.APP_ORIGIN': JSON.stringify(process.env.APP_ORIGIN || ''),
     }),
   ],
   devServer: {
