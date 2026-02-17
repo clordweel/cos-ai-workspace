@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Archive, LogOut, MessageCircle, RefreshCw, User, Users } from 'lucide-react';
+import { Archive, LogOut, MessageCircle, RefreshCw, Settings, User } from 'lucide-react';
 import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
 import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
@@ -38,6 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppTabs } from '@/hooks/useAppTabs';
+import { useContactsAndBots } from '@/hooks/useContactsAndBots';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
@@ -98,6 +99,8 @@ export default function Space() {
   } = useAppTabs({
     onOpenPanel: useCallback(() => setAppAreaCollapsed(false), []),
   });
+
+  const { mentionItems } = useContactsAndBots();
 
   /** 在右侧应用区打开用户/认证视图（供个人中心空态按钮调用） */
   const openUserAppPanel = useCallback(() => {
@@ -231,20 +234,6 @@ export default function Space() {
                 </div>
               ) : (
                 <SidebarContent className="min-h-0 flex-1 overflow-hidden">
-                  {listViewTab === 'contacts' && (
-                    <SidebarMenu className="flex h-full flex-col">
-                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
-                        <Empty className="min-h-[12rem] justify-center py-8">
-                          <EmptyHeader>
-                            <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
-                              <Users strokeWidth={1.5} aria-hidden />
-                            </EmptyMedia>
-                            <EmptyTitle className="text-sm font-medium">暂无联系人</EmptyTitle>
-                          </EmptyHeader>
-                        </Empty>
-                      </div>
-                    </SidebarMenu>
-                  )}
                   {listViewTab === 'favorites' && (
                     <SidebarMenu className="flex h-full flex-col">
                       <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
@@ -333,6 +322,33 @@ export default function Space() {
                       </div>
                     </SidebarMenu>
                   )}
+                  {listViewTab === 'settings' && (
+                    <SidebarMenu className="flex h-full flex-col">
+                      <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+                        <Empty className="min-h-[12rem] justify-center py-8">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon" className="size-16 p-3 text-zinc-300 dark:text-zinc-600 [&_svg]:!size-10">
+                              <Settings strokeWidth={1.5} aria-hidden />
+                            </EmptyMedia>
+                            <EmptyTitle className="text-sm font-medium">设置</EmptyTitle>
+                            <EmptyDescription className="text-xs mt-1">
+                              在右侧应用区打开设置
+                            </EmptyDescription>
+                          </EmptyHeader>
+                          <EmptyContent>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openView('settings')}
+                            >
+                              打开设置
+                            </Button>
+                          </EmptyContent>
+                        </Empty>
+                      </div>
+                    </SidebarMenu>
+                  )}
                 </SidebarContent>
               )}
               <SidebarFooter className="relative shrink-0 p-0">
@@ -357,6 +373,7 @@ export default function Space() {
                 input={chatInput}
                 onInputChange={setChatInput}
                 onSubmit={handleChatSubmit}
+                mentionItems={mentionItems}
                 onClose={() => setSelectedChatId(null)}
                 showBack={false}
                 inputAreaHeightPx={chatInputAreaHeightPx}
