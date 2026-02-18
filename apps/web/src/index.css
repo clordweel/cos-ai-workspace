@@ -8,6 +8,8 @@
   /* 默认全局字体（与 frontend app.vue / tailwind.css 一致） */
   --font-sans: "HarmonyOS Sans SC", HarmonyOSHans-Regular, HarmonyOSHans-fallback,
     "PingFang SC", "Microsoft YaHei", Arial, Helvetica, sans-serif;
+  /* 深色模式会话/应用区背景：不透明，介于 zinc-800 与 zinc-900 之间 */
+  --color-zinc-850: #1f1f22;
   /* zinc 主色为黑色：主阶 500–950 为黑/深灰，浅阶 50–400 为灰阶过渡 */
   --color-primary-50: #fafafa;
   --color-primary-100: #f4f4f5;
@@ -469,8 +471,8 @@
   --success-foreground: var(--color-emerald-400);
   --warning: var(--color-amber-500);
   --warning-foreground: var(--color-amber-400);
-  /* 会话区 FramePanel 背景（与渐变遮罩共用）；深色为 zinc-800/50 的等价不透明色 */
-  --session-frame-panel-bg: color-mix(in srgb, var(--color-zinc-800) 50%, var(--color-zinc-950));
+  /* 会话区 FramePanel 背景（与渐变遮罩共用）；深色为不透明 zinc-850 */
+  --session-frame-panel-bg: var(--color-zinc-850);
 }
 
 /*

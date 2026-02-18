@@ -1,8 +1,11 @@
 const path = require('path');
 const webpack = require('webpack');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const ReactRefreshPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 
-module.exports = (_, { mode }) => ({
+module.exports = (_, { mode }) => {
+  const dev = mode === 'development';
+  return {
   entry: './src/index.tsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -25,7 +28,16 @@ module.exports = (_, { mode }) => ({
   },
   module: {
     rules: [
-      { test: /\.tsx?$/, use: { loader: 'ts-loader', options: { transpileOnly: true } }, exclude: /node_modules/ },
+      {
+        test: /\.tsx?$/,
+        exclude: /node_modules/,
+        use: dev
+          ? [
+              { loader: require.resolve('babel-loader'), options: { plugins: [require.resolve('react-refresh/babel')] } },
+              { loader: 'ts-loader', options: { transpileOnly: true } },
+            ]
+          : { loader: 'ts-loader', options: { transpileOnly: true } },
+      },
       { test: /\.css$/, use: ['style-loader', 'css-loader', 'postcss-loader'] },
     ],
   },
@@ -39,10 +51,12 @@ module.exports = (_, { mode }) => ({
       'process.env.LOGTO_APP_ID': JSON.stringify(process.env.LOGTO_APP_ID || ''),
       'process.env.APP_ORIGIN': JSON.stringify(process.env.APP_ORIGIN || ''),
     }),
+    ...(dev ? [new ReactRefreshPlugin()] : []),
   ],
   devServer: {
     port: 3001,
     host: '0.0.0.0',
+    hot: true,
     // SPA 路由：/space、/space/:id（含 Matrix room id 如 !xxx%3Ahost）等均返回 index.html
     historyApiFallback: {
       index: '/index.html',
@@ -58,4 +72,5 @@ module.exports = (_, { mode }) => ({
       },
     ],
   },
-});
+};
+};

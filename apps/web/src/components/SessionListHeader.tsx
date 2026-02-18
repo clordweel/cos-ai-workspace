@@ -51,7 +51,7 @@ export function SessionListHeader({
     >
       {/* 搜索框：居左，框内左侧为搜索图标 */}
       <div className="flex min-w-0 flex-1 items-center justify-start">
-        <div className="flex w-48 shrink-0 items-center overflow-hidden rounded-full bg-muted">
+        <div className="flex h-7 w-48 shrink-0 items-center overflow-hidden rounded-xl bg-muted">
           <span className="pointer-events-none flex shrink-0 items-center justify-center pl-3 text-muted-foreground" aria-hidden>
             <Search className="h-3.5 w-3.5" />
           </span>
@@ -60,7 +60,7 @@ export function SessionListHeader({
             value={searchQuery}
             placeholder="搜索会话"
             aria-label="搜索会话"
-            className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2 pl-2 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+            className="min-w-0 flex-1 rounded-xl border-0 bg-transparent py-1.5 pl-2 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
             onChange={(e) => onSearchQueryChange?.(e.target.value)}
           />
         </div>

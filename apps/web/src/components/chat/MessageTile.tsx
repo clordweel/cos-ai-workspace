@@ -25,11 +25,11 @@ import type {
 } from './chatMessageTypes';
 import { Check, CheckCheck, AlertCircle, Loader2, Reply, Copy, Trash2, Pencil, RefreshCw, Undo2, ThumbsUp, ThumbsDown, MoreVertical, Sparkle, User, Cog } from 'lucide-react';
 
-/** Element 风格系统消息：居中、无头像、弱化样式 */
+/** Element 风格系统消息：居中、无头像、背景色跟随聊天区 */
 function SystemMessageTile({ content }: { content: string }) {
   return (
     <div className="flex w-full justify-center py-1" role="listitem">
-      <span className="rounded-md bg-zinc-100 px-2 py-1 text-[11px] text-muted-foreground dark:bg-zinc-800">
+      <span className="rounded-md bg-[var(--session-frame-panel-bg)] px-2 py-1 text-[11px] text-muted-foreground">
         {content}
       </span>
     </div>

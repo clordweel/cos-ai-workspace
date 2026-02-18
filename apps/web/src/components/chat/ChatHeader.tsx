@@ -95,7 +95,7 @@ export function ChatHeader({
       {/* 顶栏：边框、圆角 full、背景毛玻璃 */}
       <div
         className={cn(
-          'flex h-[40px] shrink-0 items-center justify-between gap-2 rounded-2xl border border-border bg-white/70 px-[6px] backdrop-blur-md dark:bg-zinc-900/70'
+          'flex h-[40px] shrink-0 items-center justify-between gap-2 rounded-2xl border-2 border-border bg-white/70 px-[6px] backdrop-blur-md dark:bg-zinc-900/70'
         )}
       >
         {/* 左侧：参与会话者头像（排除“我”），与 frontend 一致 */}

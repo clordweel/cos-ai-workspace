@@ -86,7 +86,7 @@ export function ChatInputPanel({
     >
       <button
         type="button"
-        className="chat-input-resize-handle absolute left-1/2 top-[1px] z-10 flex -translate-x-1/2 -translate-y-full cursor-n-resize items-center justify-center rounded-t-md rounded-b-none border border-zinc-200 border-b-0 bg-white py-px px-3 text-black transition-colors hover:bg-zinc-50 hover:text-black dark:border-zinc-600 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 dark:hover:text-zinc-900 pointer-events-auto"
+        className="chat-input-resize-handle absolute left-1/2 top-0 z-10 flex -translate-x-1/2 -translate-y-full cursor-n-resize items-center justify-center rounded-t-md rounded-b-none bg-border py-px px-3 text-zinc-600 dark:text-zinc-200 transition-colors pointer-events-auto"
         aria-label="拖拽调整输入框高度"
         onMouseDown={onResizeStart}
       >
@@ -97,7 +97,7 @@ export function ChatInputPanel({
         style={{ height: editHeightPx, minHeight: editHeightPx }}
       >
         <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="flex flex-1 min-h-0 flex-col rounded-xl border border-border bg-white/70 px-2 py-2 overflow-hidden backdrop-blur-md dark:bg-zinc-900/70">
+          <div className="flex flex-1 min-h-0 flex-col rounded-xl border-2 border-border bg-white/70 px-2 py-2 overflow-hidden backdrop-blur-md dark:bg-zinc-900/70">
             <ChatLexicalEditor
               value={value}
               onChange={onChange}

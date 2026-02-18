@@ -271,12 +271,12 @@ export default function Space() {
         className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'session' } as React.CSSProperties}
       >
-        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-2 pt-2 pb-2 pr-0 border-0 shadow-none before:shadow-none bg-[var(--session-frame-panel-bg)]">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-2 pt-2 pb-2 pr-0 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-850">
             <SidebarProvider
               className="min-h-0 flex-1 flex w-full flex-row"
               style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
             >
-              <div className="relative flex min-h-0 shrink-0 flex-col rounded-2xl border border-border bg-white dark:bg-background">
+              <div className="relative flex min-h-0 shrink-0 flex-col rounded-2xl border-2 border-border bg-white dark:bg-background">
             <Sidebar
               collapsible="none"
               side="left"
@@ -548,7 +548,7 @@ export default function Space() {
         className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'app' } as React.CSSProperties}
       >
-        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-2 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-2 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-850">
           <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-2xl bg-transparent">
             <AppTagsBar
               tabs={tabs}

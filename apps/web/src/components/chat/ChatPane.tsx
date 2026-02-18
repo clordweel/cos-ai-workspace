@@ -149,7 +149,7 @@ export function ChatPane({
                       className="absolute inset-x-0 top-1/2 h-[0.5px] -translate-y-1/2 bg-gradient-to-r from-transparent via-zinc-300 to-transparent dark:via-zinc-600"
                       aria-hidden
                     />
-                    <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-[var(--session-frame-panel-bg)] px-2 text-[11px] text-muted-foreground">
+                    <span className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap bg-zinc-100 px-2 text-[11px] text-muted-foreground dark:bg-zinc-850">
                       {item.label}
                     </span>
                   </div>
