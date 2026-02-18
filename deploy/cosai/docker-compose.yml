@@ -1,0 +1,50 @@
+# CosAI web + api 测试部署（优先使用远端已有 Redis/DB，通过环境变量引用）
+# 从仓库根目录执行： docker compose -f deploy/cosai/docker-compose.yml --project-directory . up -d
+# 构建： docker compose -f deploy/cosai/docker-compose.yml --project-directory . build
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: deploy/cosai/Dockerfile.web
+    image: cosai-web:latest
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3001}:80"
+    environment:
+      - APP_ORIGIN=${APP_ORIGIN:-http://localhost:3001}
+    # 可选：使用宿主机 Redis（若 api 将来接入会话存储）
+    # env_file: .env
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/cosai/Dockerfile.api
+    image: cosai-api:latest
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=production
+      - API_PORT=3000
+      - API_PUBLIC_ORIGIN=${API_PUBLIC_ORIGIN:-http://localhost:3000}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:3001}
+      - LOGTO_ENDPOINT=${LOGTO_ENDPOINT:-}
+      - LOGTO_APP_ID=${LOGTO_APP_ID:-}
+      - LOGTO_APP_SECRET=${LOGTO_APP_SECRET:-}
+      - LOGTO_M2M_APP_ID=${LOGTO_M2M_APP_ID:-}
+      - LOGTO_M2M_APP_SECRET=${LOGTO_M2M_APP_SECRET:-}
+      - CHAT_PROVIDER=${CHAT_PROVIDER:-mock}
+      - MATRIX_BASE_URL=${MATRIX_BASE_URL:-}
+      - MATRIX_SERVER_NAME=${MATRIX_SERVER_NAME:-}
+      - MATRIX_USER_ID=${MATRIX_USER_ID:-}
+      - MATRIX_ACCESS_TOKEN=${MATRIX_ACCESS_TOKEN:-}
+      - MATRIX_PASSWORD=${MATRIX_PASSWORD:-}
+      - MATRIX_BOT_USER_ID=${MATRIX_BOT_USER_ID:-}
+      - MATRIX_BOT_ACCESS_TOKEN=${MATRIX_BOT_ACCESS_TOKEN:-}
+      # 若使用宿主机 Redis/DB，在此增加并传入宿主机 IP
+      - REDIS_URL=${REDIS_URL:-}
+      - DATABASE_URL=${DATABASE_URL:-}
+    env_file:
+      - path: .env
+        required: false

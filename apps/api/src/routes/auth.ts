@@ -74,11 +74,14 @@ async function handleLogtoProxy(
   }
   headers.host = new URL(logtoOrigin).host;
 
-  const fetchBody = req.method !== 'GET' && req.method !== 'HEAD' ? (body ?? undefined) : undefined;
+  let fetchBody: string | Uint8Array | undefined;
+  if (req.method !== 'GET' && req.method !== 'HEAD' && body != null) {
+    fetchBody = typeof body === 'string' ? body : new Uint8Array(body);
+  }
   const res = await fetch(targetUrl, {
     method: req.method,
     headers,
-    body: fetchBody,
+    body: fetchBody as BodyInit | null | undefined,
     redirect: 'manual',
   });
 

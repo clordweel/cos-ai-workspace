@@ -1,0 +1,30 @@
+# apps/api 后端镜像：在 monorepo 内构建，Node 运行
+# 构建时需从仓库根目录： docker build -f deploy/cosai/Dockerfile.api .
+
+FROM node:22-alpine AS builder
+RUN corepack enable && corepack prepare pnpm@latest --activate
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
+COPY packages/ ./packages/
+COPY frontend/package.json ./frontend/
+COPY middleware/package.json ./middleware/
+RUN mkdir -p apps/web/src apps/web/public frontend/src middleware/src
+
+COPY apps/api ./apps/api
+
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @cosai/api run build
+
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+# pnpm：根 node_modules（.pnpm 等）+ apps/api 的 node_modules（fastify 等）
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+EXPOSE 3000
+CMD ["node", "apps/api/dist/src/index.js"]
