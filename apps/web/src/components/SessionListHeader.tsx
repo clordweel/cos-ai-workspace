@@ -1,7 +1,6 @@
 'use client';
 
-import { Filter, Search } from 'lucide-react';
-import { useRef, useEffect } from 'react';
+import { MessageSquarePlus, Search, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   DropdownMenu,
@@ -12,98 +11,63 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-export type SessionFilter = 'all' | 'unread' | 'pinned' | 'recent';
+/** 会话类型筛选：全部 / 私聊 / 群组 */
+export type SessionFilter = 'all' | 'private' | 'group';
 
 const FILTER_LABELS: Record<SessionFilter, string> = {
-  all: '全部会话',
-  unread: '未读',
-  pinned: '置顶',
-  recent: '最近使用',
+  all: '全部',
+  private: '私聊',
+  group: '群组',
 };
 
 export interface SessionListHeaderProps {
-  /** 搜索框是否展开 */
-  searchOpen?: boolean;
   /** 搜索关键词，受控 */
   searchQuery?: string;
-  /** 筛选条件，受控 */
+  /** 会话类型筛选，受控 */
   filter?: SessionFilter;
-  onSearchOpenChange?: (open: boolean) => void;
   onSearchQueryChange?: (value: string) => void;
   onFilterChange?: (value: SessionFilter) => void;
+  /** 创建会话（顶栏右侧按钮） */
+  onNewChat?: () => void;
   className?: string;
 }
 
 export function SessionListHeader({
-  searchOpen = false,
   searchQuery = '',
   filter = 'all',
-  onSearchOpenChange,
   onSearchQueryChange,
   onFilterChange,
+  onNewChat,
   className,
 }: SessionListHeaderProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (searchOpen) {
-      const t = setTimeout(() => inputRef.current?.focus(), 220);
-      return () => clearTimeout(t);
-    }
-  }, [searchOpen]);
-
   return (
     <header
       className={cn(
-        'flex h-[40px] shrink-0 items-center justify-between gap-1 px-2',
+        'flex h-[40px] shrink-0 items-center justify-between gap-2 px-2',
         className
       )}
       role="banner"
       aria-label="会话列表"
     >
-      <div className="min-w-0 flex-1 flex items-center justify-end gap-1">
-        {/* 搜索：绝对定位 + 仅 transform 动画，不触发布局重排 */}
-        <div className="relative flex shrink-0 items-center justify-end">
-          <div
-            className={cn(
-              'absolute right-10 top-1/2 w-48 -translate-y-1/2 overflow-hidden rounded-full transition-colors duration-200',
-              searchOpen ? 'bg-muted' : 'pointer-events-none bg-transparent'
-            )}
-          >
-            <div
-              className={cn(
-                'flex w-48 overflow-hidden rounded-full transition-transform duration-200 ease-[cubic-bezier(0.33,1,0.68,1)]',
-                searchOpen ? 'translate-x-0' : 'translate-x-full'
-              )}
-            >
-              <input
-                ref={inputRef}
-                type="text"
-                value={searchQuery}
-                placeholder="搜索会话"
-                aria-label="搜索会话"
-                className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2 pl-4 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
-                onChange={(e) => onSearchQueryChange?.(e.target.value)}
-              />
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={cn(
-              'shrink-0 rounded-full ml-0.5 mr-0.5 h-8 w-8 text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700',
-              searchOpen && 'h-7 w-7'
-            )}
-            title={searchOpen ? '收起搜索' : '搜索'}
-            aria-label="搜索"
-            onClick={() => onSearchOpenChange?.(!searchOpen)}
-          >
-            <Search className={cn('shrink-0 transition-[width,height] duration-200', searchOpen ? 'h-3.5 w-3.5' : 'h-4 w-4')} />
-          </Button>
+      {/* 搜索框：居左，框内左侧为搜索图标 */}
+      <div className="flex min-w-0 flex-1 items-center justify-start">
+        <div className="flex w-48 shrink-0 items-center overflow-hidden rounded-full bg-muted">
+          <span className="pointer-events-none flex shrink-0 items-center justify-center pl-3 text-muted-foreground" aria-hidden>
+            <Search className="h-3.5 w-3.5" />
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            placeholder="搜索会话"
+            aria-label="搜索会话"
+            className="min-w-0 flex-1 rounded-full border-0 bg-transparent py-2 pl-2 pr-4 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
+            onChange={(e) => onSearchQueryChange?.(e.target.value)}
+          />
         </div>
+      </div>
 
-        {/* 筛选下拉 */}
+      {/* 右侧：筛选 + 创建会话 */}
+      <div className="flex shrink-0 items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -111,13 +75,13 @@ export function SessionListHeader({
               variant="ghost"
               size="icon"
               className="h-8 w-8 shrink-0 rounded-lg text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700"
-              title="筛选会话"
-              aria-label="筛选会话"
+              title="筛选会话类型"
+              aria-label="筛选会话类型"
             >
-              <Filter className="h-4 w-4" />
+              <SlidersHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[8rem]">
+          <DropdownMenuContent align="end" className="min-w-[7rem]">
             <DropdownMenuRadioGroup
               value={filter}
               onValueChange={(v) => onFilterChange?.(v as SessionFilter)}
@@ -130,6 +94,17 @@ export function SessionListHeader({
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 rounded-lg text-foreground hover:bg-zinc-100 dark:hover:bg-zinc-700"
+          title="创建会话"
+          aria-label="创建会话"
+          onClick={() => onNewChat?.()}
+        >
+          <MessageSquarePlus className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );

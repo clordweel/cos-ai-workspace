@@ -65,7 +65,7 @@ export function AppTagsBar({
     <aside
       className={cn(
         'group flex shrink-0 flex-col overflow-hidden rounded-l-2xl bg-transparent transition-[width] duration-200 ease-out',
-        'pr-3', /* 右侧留出间距，与主内容区隔开，避免滚动条贴边 */
+        'pr-2', /* 右侧留出间距，与主内容区隔开，避免滚动条贴边 */
         appTagsBarPinned ? 'w-[220px]' : 'w-[52px] hover:w-[220px]'
       )}
       aria-label="应用标签栏"
@@ -102,7 +102,7 @@ export function AppTagsBar({
         )}
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="app-tags-bar-scroll -mr-3 min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-0.5">
+        <div className="app-tags-bar-scroll -mr-2 min-h-0 flex-1 overflow-y-auto overscroll-contain space-y-0.5">
           {tabs.map((tab) => {
             const Icon = VIEW_ICONS[tab.view];
             const isActive = tab.id === activeTabId;

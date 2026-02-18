@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 import { ChatLexicalEditor } from '@/components/chat/lexical/ChatLexicalEditor';
 
-/** 最小高度 100px，需容纳容器 padding、编辑器、底部工具栏 */
-const MIN_EDIT_HEIGHT_PX = 100;
-const MAX_EDIT_HEIGHT_PX = 280;
-const DEFAULT_EDIT_HEIGHT_PX = 100;
+/** 最小高度 150px（抬高一倍后再调低 1/4），需容纳容器 padding、编辑器、底部工具栏 */
+const MIN_EDIT_HEIGHT_PX = 150;
+const MAX_EDIT_HEIGHT_PX = 420;
+const DEFAULT_EDIT_HEIGHT_PX = 150;
 
 export interface ChatInputPanelProps {
   value: string;
@@ -93,7 +93,7 @@ export function ChatInputPanel({
         <GripHorizontal className="h-2 w-2" aria-hidden />
       </button>
       <div
-        className="flex shrink-0 flex-col px-3 pointer-events-auto overflow-hidden"
+        className="flex shrink-0 flex-col px-2.5 pointer-events-auto overflow-hidden"
         style={{ height: editHeightPx, minHeight: editHeightPx }}
       >
         <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col overflow-hidden">

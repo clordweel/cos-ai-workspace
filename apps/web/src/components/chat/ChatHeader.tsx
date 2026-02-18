@@ -89,7 +89,7 @@ export function ChatHeader({
 
   return (
     <header
-      className={cn('absolute left-[12px] right-[12px] top-0 z-20 flex flex-col', className)}
+      className={cn('absolute left-2.5 right-2.5 top-0 z-20 flex flex-col', className)}
       aria-label="会话标题"
     >
       {/* 顶栏：边框、圆角 full、背景毛玻璃 */}

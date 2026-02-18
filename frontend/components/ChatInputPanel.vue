@@ -416,9 +416,10 @@ const mentionMenuItems = computed(() => {
 /** Enter 提交、Shift+Enter 换行的 TipTap 扩展 */
 const chatEnterExtensions = [ChatEnterSubmit.configure({ onSubmit: () => emit('submit') })]
 
-const MIN_EDIT_HEIGHT = 72
-const MAX_EDIT_HEIGHT = 280
-const DEFAULT_EDIT_HEIGHT = 72
+/** 最小高度抬高一倍后再调低 1/4：144 → 108 */
+const MIN_EDIT_HEIGHT = 108
+const MAX_EDIT_HEIGHT = 420
+const DEFAULT_EDIT_HEIGHT = 108
 
 const editorWrapRef = ref<HTMLElement | null>(null)
 /** 从 UEditor slot 同步的 editor 实例，供底部工具栏使用 */

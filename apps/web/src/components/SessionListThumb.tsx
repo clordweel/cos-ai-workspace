@@ -47,7 +47,7 @@ export function SessionListThumb({
   return (
     <span
       className={cn(
-        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
+        'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-zinc-600 dark:text-zinc-300',
         className
       )}
     >

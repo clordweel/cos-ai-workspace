@@ -5,6 +5,8 @@ import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSession
 import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
 import { ChatPane } from '@/components/chat/ChatPane';
+import { CreateSessionDialog } from '@/components/CreateSessionDialog';
+import { SessionCategory } from '@/components/SessionCategory';
 import { SessionListItem } from '@/components/SessionListItem';
 import { PageGrid } from '@/components/layout/PageGrid';
 import {
@@ -88,9 +90,12 @@ export default function Space() {
   }, [id, navigate, searchParams]);
 
   const [listViewTab, setListViewTab] = useState<ListViewTab>('active');
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sessionFilter, setSessionFilter] = useState<SessionFilter>('all');
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
+  const [createSessionDialogOpen, setCreateSessionDialogOpen] = useState(false);
+  const [customSessions, setCustomSessions] = useState<MockSessionItem[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatInputAreaHeightPx, setChatInputAreaHeightPx] = useState<number | null>(null);
@@ -115,14 +120,14 @@ export default function Space() {
     onOpenPanel: useCallback(() => setAppAreaCollapsed(false), []),
   });
 
-  const { mentionItems } = useContactsAndBots();
+  const { contacts, mentionItems } = useContactsAndBots();
 
   /** 在右侧应用区打开用户/认证视图（供个人中心空态按钮调用） */
   const openUserAppPanel = useCallback(() => {
     openView('profile');
   }, [openView]);
 
-  /** 进入工作区时恢复上次打开的会话 */
+  /** 进入工作区时恢复上次打开的会话（仅恢复 mock 列表中的 id，自定义会话不持久化） */
   useEffect(() => {
     if (id == null || id.length === 0) return;
     const stored = getLastChatId(id);
@@ -150,9 +155,14 @@ export default function Space() {
     [id]
   );
 
+  const sessionsList = useMemo(
+    () => [...MOCK_SESSION_LIST, ...customSessions],
+    [customSessions]
+  );
+
   const selectedSession = useMemo(
-    () => (selectedChatId ? MOCK_SESSION_LIST.find((s) => s.id === selectedChatId) ?? null : null),
-    [selectedChatId]
+    () => (selectedChatId ? sessionsList.find((s) => s.id === selectedChatId) ?? null : null),
+    [selectedChatId, sessionsList]
   );
 
   /** 参与会话者（排除当前用户），供顶栏左侧头像展示 */
@@ -189,16 +199,67 @@ export default function Space() {
   }, [selectedChatId, chatInput]);
 
   const filteredSessions = useMemo((): MockSessionItem[] => {
-    let list = MOCK_SESSION_LIST;
+    let list = sessionsList;
+    if (sessionFilter !== 'all') {
+      list = list.filter((s) => s.type === sessionFilter);
+    }
     const q = searchQuery.trim().toLowerCase();
-    if (q) {
-      list = list.filter((s) => s.title.toLowerCase().includes(q));
+    if (!q) return list;
+    return list.filter((s) => s.title.toLowerCase().includes(q));
+  }, [sessionsList, searchQuery, sessionFilter]);
+
+  const { pinnedSessions, activeSessions } = useMemo(() => {
+    const pinned: MockSessionItem[] = [];
+    const active: MockSessionItem[] = [];
+    const idSet = new Set(pinnedIds);
+    for (const s of filteredSessions) {
+      if (idSet.has(s.id)) pinned.push(s);
+      else active.push(s);
     }
-    if (sessionFilter === 'recent') {
-      list = [...list].sort((a, b) => b.updatedAt - a.updatedAt);
-    }
-    return list;
-  }, [searchQuery, sessionFilter]);
+    return { pinnedSessions: pinned, activeSessions: active };
+  }, [filteredSessions, pinnedIds]);
+
+  const handleTogglePin = useCallback((sessionId: string) => {
+    setPinnedIds((prev) =>
+      prev.includes(sessionId) ? prev.filter((id) => id !== sessionId) : [...prev, sessionId]
+    );
+  }, []);
+
+  const handleCreateSession = useCallback(
+    (result: { mode: 'solo' } | { mode: 'contacts'; contactIds: string[] }) => {
+      const now = Date.now();
+      if (result.mode === 'solo') {
+        const newSession: MockSessionItem = {
+          id: `solo-${now}`,
+          title: '我的笔记',
+          type: 'private',
+          participants: [],
+          updatedAt: now,
+        };
+        setCustomSessions((prev) => [...prev, newSession]);
+        setSelectedChatId(newSession.id);
+        if (id) setLastChatId(id, newSession.id);
+        return;
+      }
+      const selected = result.contactIds
+        .map((cid) => contacts.find((c) => c.id === cid))
+        .filter(Boolean) as { id: string; name: string; avatar?: string }[];
+      if (selected.length === 0) return;
+      const participants = selected.map((c) => ({ name: c.name, avatar: c.avatar }));
+      const isGroup = selected.length > 1;
+      const newSession: MockSessionItem = {
+        id: `${isGroup ? 'group' : 'private'}-${now}`,
+        title: selected.map((c) => c.name).join('、'),
+        type: isGroup ? 'group' : 'private',
+        participants,
+        updatedAt: now,
+      };
+      setCustomSessions((prev) => [...prev, newSession]);
+      setSelectedChatId(newSession.id);
+      if (id) setLastChatId(id, newSession.id);
+    },
+    [contacts, id]
+  );
 
   if (id == null || id.length === 0) {
     return null;
@@ -210,7 +271,7 @@ export default function Space() {
         className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'session' } as React.CSSProperties}
       >
-        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-3 pt-3 pb-3 pr-0 border-0 shadow-none before:shadow-none bg-[var(--session-frame-panel-bg)]">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-2 pt-2 pb-2 pr-0 border-0 shadow-none before:shadow-none bg-[var(--session-frame-panel-bg)]">
             <SidebarProvider
               className="min-h-0 flex-1 flex w-full flex-row"
               style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
@@ -224,30 +285,55 @@ export default function Space() {
               {listViewTab === 'active' && (
                 <SidebarHeader className="border-none p-0">
                   <SessionListHeader
-                    searchOpen={searchOpen}
                     searchQuery={searchQuery}
                     filter={sessionFilter}
-                    onSearchOpenChange={setSearchOpen}
                     onSearchQueryChange={setSearchQuery}
                     onFilterChange={setSessionFilter}
+                    onNewChat={() => setCreateSessionDialogOpen(true)}
                   />
                 </SidebarHeader>
               )}
               {listViewTab === 'active' ? (
                 <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
                   {filteredSessions.length > 0 ? (
-                    <ul className="divide-y divide-zinc-100 dark:divide-zinc-700">
-                      {filteredSessions.map((session) => (
-                        <SessionListItem
-                          key={session.id}
-                          item={session}
-                          isActive={session.id === selectedChatId}
-                          dateLabel={formatSessionDate(session.updatedAt)}
-                          unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
-                          onClick={() => handleSelectSession(session.id)}
-                        />
-                      ))}
-                    </ul>
+                    <div className="flex flex-col min-h-0 min-w-0">
+                      {pinnedSessions.length > 0 && (
+                        <SessionCategory
+                          title="置顶"
+                          count={pinnedSessions.length}
+                          collapsed={pinnedCollapsed}
+                          onCollapsedChange={setPinnedCollapsed}
+                          accent
+                        >
+                          {pinnedSessions.map((session) => (
+                            <SessionListItem
+                              key={session.id}
+                              item={session}
+                              isActive={session.id === selectedChatId}
+                              isPinned
+                              dateLabel={formatSessionDate(session.updatedAt)}
+                              unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
+                              onClick={() => handleSelectSession(session.id)}
+                              onTogglePin={() => handleTogglePin(session.id)}
+                            />
+                          ))}
+                        </SessionCategory>
+                      )}
+                      <ul className="divide-y divide-zinc-100 dark:divide-zinc-700">
+                        {activeSessions.map((session) => (
+                          <SessionListItem
+                            key={session.id}
+                            item={session}
+                            isActive={session.id === selectedChatId}
+                            isPinned={pinnedIds.includes(session.id)}
+                            dateLabel={formatSessionDate(session.updatedAt)}
+                            unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
+                            onClick={() => handleSelectSession(session.id)}
+                            onTogglePin={() => handleTogglePin(session.id)}
+                          />
+                        ))}
+                      </ul>
+                    </div>
                   ) : (
                     <Empty className="min-h-[12rem] justify-center py-8">
                       <EmptyHeader>
@@ -354,19 +440,19 @@ export default function Space() {
                   {listViewTab === 'settings' && (
                     <SidebarMenu className="flex h-full flex-col">
                       <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5 text-[12px]">
-                        <h2 className="mb-2 px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wider text-muted-foreground">
                           会话设置
                         </h2>
                         <Accordion defaultValue={['font-size', 'send-newline']} className="mb-2">
                           <AccordionItem value="font-size">
                             <AccordionTrigger className="text-[12px]">界面字体大小</AccordionTrigger>
                             <AccordionContent>
-                              <p className="mb-3 text-[11px] text-muted-foreground">
+                              <p className="mb-3 text-[12px] text-muted-foreground">
                                 仅调节聊天与输入框的字号。
                               </p>
                               <div className="mb-2 flex items-center justify-between gap-3">
-                                <span className="text-[11px] text-zinc-600 dark:text-zinc-300">当前档位</span>
-                                <span className="tabular-nums text-[11px] font-medium text-zinc-700 dark:text-zinc-200">
+                                <span className="text-[12px] text-zinc-600 dark:text-zinc-300">当前档位</span>
+                                <span className="tabular-nums text-[12px] font-medium text-zinc-700 dark:text-zinc-200">
                                   {uiFontSizeStep}
                                 </span>
                               </div>
@@ -383,7 +469,7 @@ export default function Space() {
                           <AccordionItem value="send-newline">
                             <AccordionTrigger className="text-[12px]">发送与换行</AccordionTrigger>
                             <AccordionContent>
-                              <p className="mb-3 text-[11px] text-muted-foreground">
+                              <p className="mb-3 text-[12px] text-muted-foreground">
                                 Enter 换行时，使用 Ctrl+Enter 发送。
                               </p>
                               <Select
@@ -394,10 +480,10 @@ export default function Space() {
                                   { value: 'enterNewline', label: 'Enter 换行' },
                                 ]}
                               >
-                                <SelectTrigger size="sm" className="w-full max-w-[12rem]" aria-label="发送与换行">
+                                <SelectTrigger size="sm" className="w-full max-w-[12rem] text-[12px]" aria-label="发送与换行">
                                   <SelectValue />
                                 </SelectTrigger>
-                                <SelectPopup>
+                                <SelectPopup alignItemWithTrigger={false}>
                                   <SelectItem value="enter">Enter 发送</SelectItem>
                                   <SelectItem value="enterNewline">Enter 换行</SelectItem>
                                 </SelectPopup>
@@ -462,7 +548,7 @@ export default function Space() {
         className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'app' } as React.CSSProperties}
       >
-        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-3 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
+        <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-2 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-800/50">
           <div className="flex min-h-0 min-w-0 flex-1 flex-row overflow-hidden rounded-2xl bg-transparent">
             <AppTagsBar
               tabs={tabs}
@@ -500,6 +586,12 @@ export default function Space() {
           </div>
         </FramePanel>
       </Frame>
+      <CreateSessionDialog
+        open={createSessionDialogOpen}
+        onOpenChange={setCreateSessionDialogOpen}
+        contacts={contacts}
+        onConfirm={handleCreateSession}
+      />
     </PageGrid>
   );
 }

@@ -33,10 +33,8 @@
     </button>
     <div class="flex min-w-0 flex-1 items-center justify-end gap-1">
       <SessionSearchBar
-        :open="searchBarOpen"
         :model-value="searchQuery"
         @update:model-value="$emit('update:searchQuery', $event)"
-        @toggle="$emit('search')"
       />
       <button
         type="button"
@@ -61,7 +59,6 @@ import { useAuth } from '~/composables/useAuth'
 const props = withDefaults(
   defineProps<{
     appDrawerOpen?: boolean
-    searchBarOpen?: boolean
     searchQuery?: string
     /** 创建会话中（禁用按钮并显示 loading） */
     creatingSession?: boolean
@@ -70,12 +67,11 @@ const props = withDefaults(
     /** 可选：用户头像 URL，未传则用用户名首字或默认图标 */
     userAvatar?: string
   }>(),
-  { appDrawerOpen: false, searchBarOpen: false, creatingSession: false, createSessionError: null }
+  { appDrawerOpen: false, creatingSession: false, createSessionError: null }
 )
 
 const emit = defineEmits<{
   'new-chat': []
-  search: []
   app: []
   'update:searchQuery': [value: string]
 }>()

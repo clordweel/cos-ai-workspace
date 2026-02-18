@@ -34,13 +34,11 @@
         <SessionListHeader
           class="shrink-0 z-10"
           :app-drawer-open="showAppList"
-          :search-bar-open="showSearchBar"
           :search-query="searchQuery"
           :creating-session="creatingSession"
           :create-session-error="createSessionError"
           @update:search-query="emit('update:searchQuery', $event)"
           @new-chat="onNewChat"
-          @search="emit('search')"
           @app="emit('app')"
         />
         <div class="flex-1 min-h-0 relative z-0 min-w-0 overflow-hidden">
@@ -112,7 +110,6 @@ const props = defineProps<{
   pinnedIds: string[]
   searchQuery: string
   showAppList: boolean
-  showSearchBar: boolean
   appDrawerHeightRem: number
   drawerCommonApps: DrawerAppItem[]
   drawerFavoriteApps: DrawerAppItem[]
@@ -181,7 +178,6 @@ const emit = defineEmits<{
   rename: [id: string]
   delete: [id: string]
   'new-chat': []
-  search: []
   app: []
   more: []
   'drawer-select': [app: DrawerAppItem]

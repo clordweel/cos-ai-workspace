@@ -30,7 +30,6 @@
         :pinned-ids="pinnedIds"
         :search-query="searchQuery"
         :show-app-list="showAppList"
-        :show-search-bar="showSearchBar"
         :app-drawer-height-rem="appDrawerHeightRem"
         :drawer-common-apps="drawerCommonApps"
         :drawer-favorite-apps="drawerFavoriteApps"
@@ -52,7 +51,6 @@
         @rename="onSessionRename"
         @delete="onSessionDelete"
         @new-chat="openCreateSessionDialog"
-        @search="toggleSearchBar"
         @app="toggleAppList"
         @more="onDrawerMore"
         @drawer-select="onDrawerAppClick"
@@ -213,7 +211,6 @@ const {
   pinnedIds,
   searchQuery,
   showAppList,
-  showSearchBar,
   appDrawerHeightRem,
   drawerCommonApps,
   drawerFavoriteApps,
@@ -238,7 +235,6 @@ const {
   closeRenameDialog,
   confirmRename,
   startNewChat,
-  toggleSearchBar,
   toggleAppList,
   onDrawerMore,
   onDrawerAppClick,
