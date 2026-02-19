@@ -33,6 +33,10 @@ export interface ChatPaneProps {
   mentionItems?: MentionItem[];
   /** 关闭会话（顶栏菜单） */
   onClose?: () => void;
+  /** 打开成员面板（顶栏成员/菜单） */
+  onOpenMembers?: () => void;
+  /** 离开会话（Matrix；提供时顶栏菜单显示「离开会话」） */
+  onLeave?: () => void;
   /** 是否展示顶栏返回按钮 */
   showBack?: boolean;
   /** 当前用户头像（顶栏菜单左侧） */
@@ -51,6 +55,10 @@ export interface ChatPaneProps {
   onInputAreaHeightChange?: (heightPx: number) => void;
   /** 消息气泡右键菜单回调（回复/复制/删除/编辑/重试/撤回） */
   messageContextMenuHandlers?: MessageTileContextMenuHandlers;
+  /** 当前房间正在输入的用户 ID 列表（Element 风格，展示「X 正在输入…」） */
+  typingUserIds?: string[];
+  /** 将 MXID 转为展示名（可选，默认截取 localpart） */
+  formatTypingName?: (userId: string) => string;
   className?: string;
 }
 
@@ -67,6 +75,8 @@ export function ChatPane({
   onSubmit,
   mentionItems,
   onClose,
+  onOpenMembers,
+  onLeave,
   showBack = false,
   currentUserAvatar,
   currentUserName,
@@ -76,6 +86,8 @@ export function ChatPane({
   inputAreaHeightPx = null,
   onInputAreaHeightChange,
   messageContextMenuHandlers,
+  typingUserIds = [],
+  formatTypingName = (userId: string) => (userId.includes(':') ? userId.slice(0, userId.indexOf(':')) : userId),
   className,
 }: ChatPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -165,7 +177,15 @@ export function ChatPane({
               )}
           </div>
           {/* 底部空白区：滚动到底时最后一条消息可显示在中间区域 */}
-          <div className="min-h-[25rem] shrink-0" aria-hidden />
+          <div className="min-h-[12rem] shrink-0" aria-hidden />
+          {typingUserIds.length > 0 && (
+            <div className="flex items-center gap-1.5 px-4 py-1.5 text-xs text-muted-foreground" role="status">
+              <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-primary" aria-hidden />
+              {typingUserIds.length === 1
+                ? `${formatTypingName(typingUserIds[0])} 正在输入…`
+                : `${typingUserIds.map(formatTypingName).join('、')} 正在输入…`}
+            </div>
+          )}
         </div>
         {showScrollToBottom && (
           <button
@@ -187,6 +207,8 @@ export function ChatPane({
         currentUserName={currentUserName}
         showBack={showBack}
         onClose={onClose}
+        onOpenMembers={onOpenMembers}
+        onLeave={onLeave}
       />
       <div className="absolute bottom-0 left-0 right-0 z-20">
         <ChatInputPanel

@@ -5,7 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import { config } from '../config.js';
 import { getSessionFromCookie, getStableUserId, getCookieName, deleteSession } from '../services/sessionStore.js';
 import { getLogtoAuthUrl, handleLogtoCallback } from '../services/logto.js';
-import { ensureMatrixUser } from '../services/matrixUserSync.js';
+import { ensureMatrixUser, listSynapseUsers } from '../services/matrixUserSync.js';
 import { ensureMatrixTokenForSession } from '../services/matrixSessionToken.js';
 import {
   getPreferencesFromCustomData,
@@ -164,11 +164,28 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
   app.post('/api/auth/logout', async (req, reply) => {
     const session = await getSessionFromCookie(req.headers.cookie);
     if (session) {
-      deleteSession(session.sessionId);
+      await deleteSession(session.sessionId);
     }
     return reply
       .clearCookie(cookieName, { path: '/', domain: undefined })
       .send({ ok: true });
+  });
+
+  /** 联系人列表：CHAT_PROVIDER=matrix 时返回 Synapse 用户，否则返回空数组；需登录 */
+  app.get('/api/contacts', async (req, reply) => {
+    const session = await getSessionFromCookie(req.headers.cookie);
+    if (!session) {
+      return reply.code(401).send({ error: '请先登录' });
+    }
+    if (config.chat?.provider !== 'matrix') {
+      return reply.send({ contacts: [] });
+    }
+    const result = await listSynapseUsers();
+    if (!result.ok) {
+      req.log.warn({ err: result.error, statusCode: result.statusCode }, 'listSynapseUsers 失败');
+      return reply.send({ contacts: [] });
+    }
+    return reply.send({ contacts: result.contacts });
   });
 
   app.get('/api/auth/me', async (req, reply) => {
@@ -210,8 +227,8 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
         payload.preferences = getPreferencesFromCustomData(customData);
       }
     }
-    if (config.chat.provider === 'matrix' && config.matrix.baseUrl) {
-      payload.matrix_base_url = config.matrix.baseUrl;
+    if (config.chat.provider === 'matrix' && (config.matrix.baseUrl || config.matrix.publicBaseUrl)) {
+      payload.matrix_base_url = config.matrix.publicBaseUrl || config.matrix.baseUrl;
       if (session.logtoSub) {
         const ensureOut = await ensureMatrixUser(
           session.logtoSub,

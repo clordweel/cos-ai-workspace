@@ -54,6 +54,8 @@ export interface ChatHeaderProps {
   onArchive?: () => void;
   /** 删除会话 */
   onDelete?: () => void;
+  /** 离开会话（Matrix：离开房间；提供时菜单显示「离开会话」并调用此回调） */
+  onLeave?: () => void;
   className?: string;
 }
 
@@ -77,6 +79,7 @@ export function ChatHeader({
   onExportMarkdown,
   onArchive,
   onDelete,
+  onLeave,
   className,
 }: ChatHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -212,17 +215,23 @@ export function ChatHeader({
             </DropdownMenuSubContent>
           </DropdownMenuSub>
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="gap-2 text-[12px]" onSelect={() => { closeMenu(); onArchive?.(); }}>
-            <Archive className="h-3.5 w-3.5 shrink-0 opacity-70" />
-            归档会话
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="gap-2 text-[12px] text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 focus:text-red-600 dark:focus:text-red-400 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/20 data-[highlighted]:text-red-600 dark:data-[highlighted]:text-red-400"
-            onSelect={() => { closeMenu(); onDelete?.(); }}
-          >
-            <Trash2 className="h-3.5 w-3.5 shrink-0 opacity-80" />
-            删除会话
-          </DropdownMenuItem>
+          {onLeave != null ? (
+            <DropdownMenuItem
+              className="gap-2 text-[12px] text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 focus:text-red-600 dark:focus:text-red-400 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/20 data-[highlighted]:text-red-600 dark:data-[highlighted]:text-red-400"
+              onSelect={() => { closeMenu(); onLeave(); }}
+            >
+              <X className="h-3.5 w-3.5 shrink-0 opacity-80" />
+              离开会话
+            </DropdownMenuItem>
+          ) : (
+            <DropdownMenuItem
+              className="gap-2 text-[12px] text-red-600 dark:text-red-400 focus:bg-red-50 dark:focus:bg-red-900/20 focus:text-red-600 dark:focus:text-red-400 data-[highlighted]:bg-red-50 dark:data-[highlighted]:bg-red-900/20 data-[highlighted]:text-red-600 dark:data-[highlighted]:text-red-400"
+              onSelect={() => { closeMenu(); onDelete?.(); }}
+            >
+              <Trash2 className="h-3.5 w-3.5 shrink-0 opacity-80" />
+              删除会话
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
         </div>

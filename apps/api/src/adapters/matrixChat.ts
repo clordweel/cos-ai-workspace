@@ -4,23 +4,34 @@
  */
 import {
   getJoinedRooms,
+  getInvitedRooms,
   getRoomName,
   getRoomMessages,
   getRoomLastActivityTs,
   sendRoomMessage,
   createRoom,
   leaveRoom,
-  setRoomName,
+  joinRoom,
+  inviteToRoom,
+  getRoomMembers,
+  getRoomCreator,
   verifyMatrixTokenUserId,
 } from './matrixClient.js';
 import { config } from '../config.js';
 import type {
   NormalizedSession,
   NormalizedMessage,
+  NormalizedInvitedSession,
+  NormalizedRoomMember,
   ListSessionsParams,
   ListMessagesParams,
   StreamMessageParams,
   CreateSessionParams,
+  ListInvitedSessionsParams,
+  SessionMembersParams,
+  JoinSessionParams,
+  LeaveSessionParams,
+  InviteToSessionParams,
 } from './types.js';
 
 function isMatrixConfigured(): boolean {
@@ -167,6 +178,50 @@ export function createMatrixAdapter() {
         backendSessionId: room_id,
         provider: 'matrix',
       };
+    },
+
+    async listInvitedSessions(params: ListInvitedSessionsParams): Promise<NormalizedInvitedSession[]> {
+      const userToken = params.matrixAccessToken;
+      if (!userToken?.trim()) return [];
+      const invited = await getInvitedRooms(userToken);
+      return invited.map((r) => ({ roomId: r.roomId, name: r.name }));
+    },
+
+    async joinSession(params: JoinSessionParams): Promise<void> {
+      const { sessionId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token（请先登录）');
+      await joinRoom(sessionId, userToken);
+    },
+
+    async leaveSession(params: LeaveSessionParams): Promise<void> {
+      const { sessionId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token（请先登录）');
+      await leaveRoom(sessionId, userToken);
+    },
+
+    async listSessionMembers(params: SessionMembersParams): Promise<NormalizedRoomMember[]> {
+      const { sessionId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) return [];
+      const entries = await getRoomMembers(sessionId, userToken);
+      let creator: string | undefined;
+      try {
+        creator = await getRoomCreator(sessionId, userToken);
+      } catch {
+        creator = undefined;
+      }
+      return entries.map((e) => ({
+        userId: e.userId,
+        membership: e.membership,
+        displayName: e.displayName,
+        avatarUrl: e.avatarUrl,
+        isOwner: creator !== undefined && e.userId === creator,
+      }));
+    },
+
+    async inviteToSession(params: InviteToSessionParams): Promise<void> {
+      const { sessionId, inviteeUserId, matrixAccessToken: userToken } = params;
+      if (!userToken?.trim()) throw new Error('需要 Matrix 用户 token（请先登录）');
+      await inviteToRoom(sessionId, inviteeUserId, userToken);
     },
   };
 }

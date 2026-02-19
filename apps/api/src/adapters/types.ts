@@ -57,3 +57,49 @@ export interface CreateSessionParams {
   matrixAccessToken?: string;
   currentUserMxid?: string;
 }
+
+/** 待接受邀请的会话（Element 风格：邀请列表） */
+export interface NormalizedInvitedSession {
+  roomId: string;
+  name?: string;
+}
+
+export interface ListInvitedSessionsParams {
+  userId: string;
+  matrixAccessToken?: string;
+}
+
+/** 房间成员（与 Matrix RoomMemberEntry 对齐） */
+export interface NormalizedRoomMember {
+  userId: string;
+  membership: 'join' | 'invite';
+  displayName?: string;
+  avatarUrl?: string;
+  isOwner?: boolean;
+}
+
+export interface SessionMembersParams {
+  sessionId: string;
+  userId: string;
+  matrixAccessToken?: string;
+  currentUserMxid?: string;
+}
+
+export interface JoinSessionParams {
+  sessionId: string;
+  userId: string;
+  matrixAccessToken?: string;
+}
+
+export interface LeaveSessionParams {
+  sessionId: string;
+  userId: string;
+  matrixAccessToken?: string;
+}
+
+export interface InviteToSessionParams {
+  sessionId: string;
+  inviteeUserId: string;
+  userId: string;
+  matrixAccessToken?: string;
+}

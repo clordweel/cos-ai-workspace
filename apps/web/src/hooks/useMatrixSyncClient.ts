@@ -41,6 +41,7 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
   const { matrixSyncToken, matrixBaseUrl, matrixUserId, matrixDeviceId, ensureSession } = options;
   const [syncClient, setSyncClient] = useState<sdk.MatrixClient | null>(null);
   const [syncReady, setSyncReady] = useState(false);
+  const [currentRoomTypingUserIds, setCurrentRoomTypingUserIds] = useState<string[]>([]);
   const currentRoomIdRef = useRef<string | undefined>(undefined);
   const timelineRefreshBoundRooms = useRef<Set<string>>(new Set());
 
@@ -50,7 +51,20 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
 
   const setCurrentRoomId = useCallback((roomId: string | undefined) => {
     currentRoomIdRef.current = roomId;
-  }, []);
+    if (!syncClient || !roomId) {
+      setCurrentRoomTypingUserIds([]);
+      return;
+    }
+    const room = syncClient.getRoom(roomId);
+    if (!room) {
+      setCurrentRoomTypingUserIds([]);
+      return;
+    }
+    const state = (room as { currentState?: { getMembers?: () => { userId: string; typing?: boolean }[] } }).currentState;
+    const members = state?.getMembers?.() ?? [];
+    const typing = members.filter((m) => m.typing && m.userId !== matrixUserId).map((m) => m.userId);
+    setCurrentRoomTypingUserIds(typing);
+  }, [syncClient, matrixUserId]);
 
   const stopSyncClient = useCallback(() => {
     if (syncClient) {
@@ -143,6 +157,26 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
         const name = (room?.name ?? '').trim();
         if (roomId && name) ensureSession?.(roomId, name);
       });
+
+      const updateTypingForRoom = (roomId: string) => {
+        const room = c.getRoom?.(roomId);
+        if (!room) return;
+        const state = (room as { currentState?: { getMembers?: () => { userId: string; typing?: boolean }[] } }).currentState;
+        const members = state?.getMembers?.() ?? [];
+        const typing = members.filter((m) => m.typing && m.userId !== matrixUserId).map((m) => m.userId);
+        if (roomId === currentRoomIdRef.current) {
+          setCurrentRoomTypingUserIds(typing);
+        }
+      };
+
+      try {
+        c.on('RoomMember.typing' as sdk.RoomMemberEvent, (_event: unknown, member: { roomId?: string; userId?: string }) => {
+          const roomId = member?.roomId;
+          if (roomId) updateTypingForRoom(roomId);
+        });
+      } catch {
+        /* SDK 版本可能无 RoomMemberEvent 枚举 */
+      }
 
       c.on(
         sdk.ClientEvent.Event,
@@ -246,6 +280,9 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
     [syncClient]
   );
 
+  /** 当前房间正在输入的用户 ID 列表（Element 风格，排除自己） */
+  const typingUserIds = currentRoomTypingUserIds;
+
   return {
     syncClient,
     syncReady,
@@ -256,6 +293,7 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
     fillMessagesFromSyncTimeline,
     sendTyping,
     sendReadReceipt,
+    typingUserIds,
   };
 }
 

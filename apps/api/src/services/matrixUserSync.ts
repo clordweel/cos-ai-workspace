@@ -58,6 +58,72 @@ export function isMatrixConfigured(): boolean {
   );
 }
 
+/** 联系人项，与 middleware 及前端 Contact 一致 */
+export interface SynapseContact {
+  id: string;
+  name: string;
+  avatar?: string;
+}
+
+/**
+ * 列出 Synapse 中未停用的用户，供 GET /api/contacts 使用。
+ * Admin API GET /_synapse/admin/v2/users，排除 deactivated，分页至多 500 条。
+ */
+export async function listSynapseUsers(): Promise<
+  { ok: true; contacts: SynapseContact[] } | { ok: false; error: string; statusCode?: number }
+> {
+  if (!isMatrixConfigured()) {
+    return { ok: true, contacts: [] };
+  }
+  let token: string;
+  try {
+    token = await getMatrixAccessToken();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: `Matrix 认证失败: ${msg}` };
+  }
+  const contacts: SynapseContact[] = [];
+  const limit = 100;
+  const maxTotal = 500;
+  let from: string | number = 0;
+  const baseUrl = config.matrix.baseUrl.replace(/\/$/, '');
+  for (;;) {
+    const url = `${baseUrl}${ADMIN_PATH}?from=${from}&limit=${limit}&deactivated=false`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const data = (await res.json().catch(() => ({}))) as {
+      users?: Array<{
+        name?: string;
+        displayname?: string | null;
+        avatar_url?: string | null;
+        deactivated?: number;
+      }>;
+      next_token?: string;
+    };
+    if (!res.ok) {
+      const errMsg = (data as { error?: string }).error || res.statusText || 'Synapse 用户列表请求失败';
+      return { ok: false, error: errMsg, statusCode: res.status };
+    }
+    const users = data.users ?? [];
+    for (const u of users) {
+      if (u.deactivated) continue;
+      const mxid = u.name?.trim();
+      if (!mxid) continue;
+      const localpart = mxid.includes(':') ? mxid.slice(1).split(':')[0] : mxid;
+      const displayName = u.displayname?.trim() || localpart;
+      contacts.push({
+        id: mxid,
+        name: displayName,
+        avatar: u.avatar_url ?? undefined,
+      });
+    }
+    if (contacts.length >= maxTotal) break;
+    const next = data.next_token;
+    if (next === undefined || next === null || next === '') break;
+    from = next;
+  }
+  return { ok: true, contacts };
+}
+
 export interface SyncMatrixUserResult {
   ok: true;
   matrixUserId: string;

@@ -4,12 +4,19 @@
 import type {
   NormalizedSession,
   NormalizedMessage,
+  NormalizedInvitedSession,
+  NormalizedRoomMember,
   SSESend,
   SSEFlush,
   ListSessionsParams,
   ListMessagesParams,
   StreamMessageParams,
   CreateSessionParams,
+  ListInvitedSessionsParams,
+  SessionMembersParams,
+  JoinSessionParams,
+  LeaveSessionParams,
+  InviteToSessionParams,
 } from './types.js';
 
 interface UserData {
@@ -146,6 +153,26 @@ export function getMockChatAdapter() {
         message_id: assistantMsg.backendMessageId,
       });
       flush();
+    },
+
+    async listInvitedSessions(_params: ListInvitedSessionsParams): Promise<NormalizedInvitedSession[]> {
+      return [];
+    },
+
+    async joinSession(_params: JoinSessionParams): Promise<void> {
+      // mock 无邀请态，无需实现
+    },
+
+    async leaveSession(_params: LeaveSessionParams): Promise<void> {
+      // mock 可选：从 getUserData 移除该会话
+    },
+
+    async listSessionMembers(_params: SessionMembersParams): Promise<NormalizedRoomMember[]> {
+      return [];
+    },
+
+    async inviteToSession(_params: InviteToSessionParams): Promise<void> {
+      // mock 无多用户邀请
     },
   };
 }

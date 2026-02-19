@@ -53,6 +53,7 @@ packages:
 - **引用共享包**：在 frontend、middleware 或 apps/* 的 `package.json` 中可添加依赖，例如  
   `"@cosai/tsconfig-base": "workspace:*"`，用于继承 `packages/tsconfig-base` 的配置。
 - **根脚本**：已增加 `dev:api`、`dev:web`、`build:api`、`build:web`；原 `dev:frontend`、`dev:middleware` 不变。
+- **环境变量**：根目录 `.env` 与 `apps/api`、`apps/web` 的 `.env` **彻底隔离**。apps/api 与 apps/web 仅加载各自目录下的 `.env`，不读取根目录 `.env`；根目录 `.env` 供 middleware、frontend (Nuxt)、根目录脚本等使用。部署/开发时需分别在根目录与各 app 目录配置对应变量，见各目录 `.env.example`。
 - **CI/文档**：若 CI 或文档中有「前端路径」「中间层路径」的假设，仍以 `frontend`、`middleware` 为准；新应用以 `apps/<name>` 为准。
 
 ---

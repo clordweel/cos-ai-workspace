@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { getAuthParam } from '@/lib/authParam';
 
 export interface AuthUser {
   name: string;
@@ -76,7 +77,9 @@ export function useAuth() {
     return authMeInFlight;
   }, [applyPayload]);
 
+  // 认证回调落地 auth=ok 时由 Space 做延迟拉取，避免 Cookie 未生效就请求导致一直未登录
   useEffect(() => {
+    if (typeof window !== 'undefined' && getAuthParam() === 'ok') return;
     fetchUser();
   }, [fetchUser]);
 
@@ -122,13 +125,19 @@ export function useAuth() {
       return Promise.reject(new Error('弹窗被阻止，请允许当前站点弹出窗口后重试'));
     }
     return new Promise((resolve, reject) => {
-        const onMessage = (e: MessageEvent) => {
+      const onMessage = (e: MessageEvent) => {
         if (e.origin !== origin || e.data?.type !== 'logto-auth-done') return;
         window.removeEventListener('message', onMessage);
         clearInterval(timer);
-        onDone().then(() => resolve());
+        // 短延迟再拉用户，确保弹窗内 302 的 Set-Cookie 已落盘，主窗口 /me 能带上 Cookie
+        setTimeout(() => {
+          onDone().then(() => resolve());
+        }, 200);
       };
+      // 前 2s 不因弹窗关闭而 reject，给弹窗完成重定向并 postMessage 的时间
+      const startCheckClosed = Date.now() + 2000;
       const timer = setInterval(() => {
+        if (Date.now() < startCheckClosed) return;
         if (popup.closed) {
           window.removeEventListener('message', onMessage);
           clearInterval(timer);

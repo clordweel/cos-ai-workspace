@@ -23,6 +23,13 @@ alwaysApply: true
 - **`.env` 文件**：需要更新时**直接执行**，无需向用户确认后再改。
 - 中间层负责 CORS 及 `Access-Control-Allow-*` 等头部，确保前后端通信无跨域错误。
 
+## 环境变量 (.env) 规范
+- **根 .env 与 apps 下 .env 彻底隔离**：**apps/api** 与 **apps/web** 仅加载各自目录下的 `.env`，不读取根目录 `.env`；根目录 `.env` 供 **middleware**、**frontend (Nuxt)**、根目录脚本等使用。
+- **apps/api**：配置加载逻辑只读 `apps/api/.env`（见 `apps/api/src/config.ts`）；所需变量全部在 `apps/api/.env.example` 中列出并注释。
+- **apps/web**：构建/开发只读 `apps/web/.env`（如 webpack 的 `path.resolve(__dirname, '.env')`）；所需变量在 `apps/web/.env.example` 中列出。
+- **新增或修改环境变量时**：在对应模块的 `.env.example` 中同步补充或更新说明，保证部署时仅凭该目录 `.env` 即可运行。
+- 详见 **`docs/MONOREPO_APPS_PACKAGES.md`** 中「环境变量」约定。
+
 ## 认证与用户配置
 - **认证与用户信息**：统一由 **Logto** 处理。前端通过 Logto 登录，中间层在回调中写 Cookie；用户姓名、邮箱、头像等来自 Logto，经 `GET /api/auth/me` 返回。
 - **用户偏好**：主题、字体档位、通知开关等存 **Logto 自定义数据（customData）**，经 Management API 读写；前端 `useUserPreferences()` 登录后从 `/api/auth/me` 的 `preferences` 加载，修改经 `PATCH /api/auth/me/preferences` 写回；未登录时使用本地 localStorage / color-mode。

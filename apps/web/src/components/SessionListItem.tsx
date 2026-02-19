@@ -1,8 +1,16 @@
 'use client';
 
 import { cn } from '@/lib/utils';
-import type { MockSessionItem } from '@/data/mockSessions';
 import { SessionListThumb } from '@/components/SessionListThumb';
+
+/** 会话列表项：兼容 API Session 与 MockSessionItem（type/participants 可选） */
+export type SessionListEntry = {
+  id: string;
+  title: string;
+  updatedAt: number;
+  type?: 'private' | 'group';
+  participants?: { name: string; avatar?: string; kind?: 'user' | 'bot' }[];
+};
 import {
   ContextMenu,
   ContextMenuContent,
@@ -13,7 +21,7 @@ import {
 import { Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 
 export interface SessionListItemProps {
-  item: MockSessionItem;
+  item: SessionListEntry;
   isActive?: boolean;
   isPinned?: boolean;
   dateLabel?: string;
@@ -59,7 +67,7 @@ export function SessionListItem({
       }}
     >
       <SessionListThumb
-        type={item.type}
+        type={item.type ?? 'private'}
         participants={item.participants}
       />
       <p className="min-w-0 flex-1 truncate text-xs font-medium text-inherit">

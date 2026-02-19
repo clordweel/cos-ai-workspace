@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Archive, LogOut, MessageCircle, RefreshCw, Settings, User } from 'lucide-react';
-import { MOCK_SESSION_LIST, getMockMessagesForSession } from '@/data/mockSessions';
-import type { MockSessionItem } from '@/data/mockSessions';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
+import type { ChatMessageItem } from '@/components/chat/chatMessageTypes';
 import { ChatPane } from '@/components/chat/ChatPane';
 import { CreateSessionDialog } from '@/components/CreateSessionDialog';
+import { InvitedSessionRow } from '@/components/InvitedSessionRow';
 import { SessionCategory } from '@/components/SessionCategory';
-import { SessionListItem } from '@/components/SessionListItem';
+import { SessionMembersSheet } from '@/components/SessionMembersSheet';
+import { SessionListItem, type SessionListEntry } from '@/components/SessionListItem';
 import { PageGrid } from '@/components/layout/PageGrid';
 import {
   SessionListBottomNav,
@@ -56,8 +57,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUISettings } from '@/hooks/useUISettings';
 import { useAppTabs } from '@/hooks/useAppTabs';
 import { useContactsAndBots } from '@/hooks/useContactsAndBots';
+import { useSessions } from '@/hooks/useSessions';
+import { useMessages } from '@/hooks/useMessages';
+import { useChatStream } from '@/hooks/useChatStream';
+import { useInvitedSessions } from '@/hooks/useInvitedSessions';
+import { useMatrixSyncClient } from '@/hooks/useMatrixSyncClient';
+import { useSessionMembers } from '@/hooks/useSessionMembers';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
+import { getAuthParam } from '@/lib/authParam';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId, createNewWorkspaceId } from '@/lib/workspaceStorage';
 import { formatSessionDate } from '@/lib/time';
@@ -70,9 +78,38 @@ export default function Space() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated, reAuthWithPopup, logout } = useAuth();
+  const { user, isAuthenticated, reAuthWithPopup, logout, matrixSyncToken, matrixBaseUrl, matrixUserId, matrixDeviceId, fetchUser } = useAuth();
   const { uiFontSizeStep, setUIFontSizeStep, sessionAreaFontScale, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
   const [enterToSend, setEnterToSend] = useState(true);
+
+  /** 认证回调后：先等 Cookie 落盘再拉用户（延迟 + 重试），成功后再清理 URL，保证个人中心立即有数据 */
+  useEffect(() => {
+    if (getAuthParam() !== 'ok') return;
+    const clearUrl = () => {
+      navigate('/space', { replace: true });
+      window.history.replaceState(null, '', `${window.location.origin}/#/space`);
+    };
+    // 首请求延迟 500ms，再 401 则 800ms、1.2s 各重试一次，避免 302 Set-Cookie 尚未生效
+    const initialDelayMs = 500;
+    const retryDelaysMs = [800, 1200];
+    let retryIdx = 0;
+    const tryFetch = (): Promise<void> => {
+      return fetchUser().then((ok) => {
+        if (ok) {
+          clearUrl();
+          return;
+        }
+        if (retryIdx < retryDelaysMs.length) {
+          const delay = retryDelaysMs[retryIdx]!;
+          retryIdx += 1;
+          return new Promise((r) => setTimeout(r, delay)).then(tryFetch);
+        }
+        clearUrl();
+      });
+    };
+    const t = setTimeout(tryFetch, initialDelayMs);
+    return () => clearTimeout(t);
+  }, [fetchUser, navigate]);
 
   useEffect(() => {
     if (id != null && id.length > 0) {
@@ -95,16 +132,48 @@ export default function Space() {
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [pinnedCollapsed, setPinnedCollapsed] = useState(false);
   const [createSessionDialogOpen, setCreateSessionDialogOpen] = useState(false);
-  const [customSessions, setCustomSessions] = useState<MockSessionItem[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [chatInputAreaHeightPx, setChatInputAreaHeightPx] = useState<number | null>(null);
-  const [localMessagesByChat, setLocalMessagesByChat] = useState<Record<string, Array<{ id: string; role: 'user' | 'assistant'; content: string; createdAt: number }>>>({});
   const [appTagsBarPinned, setAppTagsBarPinned] = useState(false);
   const [appAreaCollapsed, setAppAreaCollapsed] = useState(false);
   const [tagBarHovered, setTagBarHovered] = useState(false);
   const [reAuthLoading, setReAuthLoading] = useState(false);
+  const [streamingInProgress, setStreamingInProgress] = useState(false);
+  const [invitedAccepting, setInvitedAccepting] = useState<string | null>(null);
+  const [invitedDeclining, setInvitedDeclining] = useState<string | null>(null);
+  const [membersSheetOpen, setMembersSheetOpen] = useState(false);
   const isTagBarExpanded = appTagsBarPinned || tagBarHovered;
+
+  const { sessions, loading: sessionsLoading, error: sessionsError, fetchSessions, createSession, addOrUpdateSession } = useSessions();
+  const {
+    messages,
+    loading: messagesLoading,
+    error: messagesError,
+    fetchMessages,
+    appendStreamingContent,
+    commitStreamingMessage,
+    appendUserMessage,
+    discardStreamingMessage,
+  } = useMessages(selectedChatId ?? undefined);
+  const { streamChat } = useChatStream();
+  const { invited, fetchInvited, acceptInvite, declineInvite } = useInvitedSessions();
+  const { members, loading: membersLoading, fetchMembers } = useSessionMembers(selectedChatId ?? undefined);
+  const hasSyncToken = Boolean(matrixSyncToken && matrixBaseUrl && matrixUserId);
+  const {
+    startSyncClient,
+    setCurrentRoomId,
+    fillMessagesFromSyncTimeline,
+    sendTyping,
+    sendReadReceipt,
+    typingUserIds,
+  } = useMatrixSyncClient({
+    matrixSyncToken,
+    matrixBaseUrl,
+    matrixUserId,
+    matrixDeviceId: matrixDeviceId || undefined,
+    ensureSession: addOrUpdateSession,
+  });
 
   const {
     tabs,
@@ -127,14 +196,14 @@ export default function Space() {
     openView('profile');
   }, [openView]);
 
-  /** 进入工作区时恢复上次打开的会话（仅恢复 mock 列表中的 id，自定义会话不持久化） */
+  /** 进入工作区时恢复上次打开的会话（若该会话仍在列表中且当前未选会话） */
   useEffect(() => {
-    if (id == null || id.length === 0) return;
+    if (id == null || id.length === 0 || sessions.length === 0 || selectedChatId != null) return;
     const stored = getLastChatId(id);
-    if (stored && MOCK_SESSION_LIST.some((s) => s.id === stored)) {
+    if (stored && sessions.some((s) => s.id === stored)) {
       setSelectedChatId(stored);
     }
-  }, [id]);
+  }, [id, sessions.length, selectedChatId]);
 
   const prevAuthenticatedRef = useRef(false);
   /** 仅在「在 profile 标签内刚完成认证」时关闭应用区并切回首页 */
@@ -155,53 +224,79 @@ export default function Space() {
     [id]
   );
 
-  const sessionsList = useMemo(
-    () => [...MOCK_SESSION_LIST, ...customSessions],
-    [customSessions]
+  const sessionsList: SessionListEntry[] = useMemo(
+    () =>
+      sessions.map((s) => ({
+        id: s.id,
+        title: s.title,
+        updatedAt: s.updatedAt,
+        type: 'private' as const,
+        participants: [],
+      })),
+    [sessions]
   );
 
   const selectedSession = useMemo(
-    () => (selectedChatId ? sessionsList.find((s) => s.id === selectedChatId) ?? null : null),
-    [selectedChatId, sessionsList]
+    () => (selectedChatId ? sessions.find((s) => s.id === selectedChatId) ?? null : null),
+    [selectedChatId, sessions]
   );
 
-  /** 参与会话者（排除当前用户），供顶栏左侧头像展示 */
-  const participantsExcludingMe = useMemo(() => {
-    const list = selectedSession?.participants ?? [];
-    return list
-      .filter((p) => {
-        const isMe =
-          (user?.name && p.name === user.name) ||
-          (user?.email && p.name === user.email) ||
-          (user?.avatar && (p as { avatar?: string }).avatar === user.avatar);
-        return !isMe;
-      })
-      .map((p) => ({ id: undefined as string | undefined, name: p.name, avatar: p.avatar ?? null }));
-  }, [selectedSession?.participants, user?.name, user?.email, user?.avatar]);
+  /** 参与会话者（API 暂不返回成员列表时可留空；后续可接 GET /api/sessions/:id/members） */
+  const participantsExcludingMe = useMemo(() => [], []);
 
   const chatDisplayItems = useMemo(() => {
-    if (!selectedChatId) return [];
-    const fromMock = getMockMessagesForSession(selectedChatId);
-    const local = localMessagesByChat[selectedChatId] ?? [];
-    const combined = [...fromMock, ...local].sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
-    return buildChatDisplayItems(combined);
-  }, [selectedChatId, localMessagesByChat]);
-
-  const handleChatSubmit = useCallback(() => {
-    const text = chatInput.trim();
-    if (!text || !selectedChatId) return;
-    const msg = { id: `local-${Date.now()}`, role: 'user' as const, content: text, createdAt: Date.now() };
-    setLocalMessagesByChat((prev) => ({
-      ...prev,
-      [selectedChatId]: [...(prev[selectedChatId] ?? []), msg],
+    const items: ChatMessageItem[] = messages.map((m) => ({
+      id: m.id ?? m.backendMessageId ?? `msg-${m.createdAt ?? 0}`,
+      role: m.role,
+      content: m.content,
+      createdAt: m.createdAt,
+      thinking: m.thinking,
     }));
-    setChatInput('');
-  }, [selectedChatId, chatInput]);
+    return buildChatDisplayItems(items);
+  }, [messages]);
 
-  const filteredSessions = useMemo((): MockSessionItem[] => {
+  const handleChatSubmit = useCallback(async () => {
+    const text = chatInput.trim();
+    if (!text || streamingInProgress) return;
+    const conversationId = selectedChatId || undefined;
+    appendUserMessage(text);
+    setChatInput('');
+    setStreamingInProgress(true);
+    try {
+      const fullText = await streamChat(text, (delta) => appendStreamingContent(delta), {
+        conversationId,
+        onSessionCreated: (p) => {
+          addOrUpdateSession(p.session_id, p.session_id);
+          setSelectedChatId(p.session_id);
+          if (id) setLastChatId(id, p.session_id);
+        },
+      });
+      commitStreamingMessage(fullText);
+    } catch (e) {
+      discardStreamingMessage();
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Space] streamChat error:', e);
+      }
+    } finally {
+      setStreamingInProgress(false);
+    }
+  }, [
+    chatInput,
+    selectedChatId,
+    id,
+    streamingInProgress,
+    appendUserMessage,
+    appendStreamingContent,
+    commitStreamingMessage,
+    discardStreamingMessage,
+    streamChat,
+    addOrUpdateSession,
+  ]);
+
+  const filteredSessions = useMemo((): SessionListEntry[] => {
     let list = sessionsList;
     if (sessionFilter !== 'all') {
-      list = list.filter((s) => s.type === sessionFilter);
+      list = list.filter((s) => (s.type ?? 'private') === sessionFilter);
     }
     const q = searchQuery.trim().toLowerCase();
     if (!q) return list;
@@ -209,8 +304,8 @@ export default function Space() {
   }, [sessionsList, searchQuery, sessionFilter]);
 
   const { pinnedSessions, activeSessions } = useMemo(() => {
-    const pinned: MockSessionItem[] = [];
-    const active: MockSessionItem[] = [];
+    const pinned: SessionListEntry[] = [];
+    const active: SessionListEntry[] = [];
     const idSet = new Set(pinnedIds);
     for (const s of filteredSessions) {
       if (idSet.has(s.id)) pinned.push(s);
@@ -225,40 +320,119 @@ export default function Space() {
     );
   }, []);
 
-  const handleCreateSession = useCallback(
-    (result: { mode: 'solo' } | { mode: 'contacts'; contactIds: string[] }) => {
-      const now = Date.now();
-      if (result.mode === 'solo') {
-        const newSession: MockSessionItem = {
-          id: `solo-${now}`,
-          title: '我的笔记',
-          type: 'private',
-          participants: [],
-          updatedAt: now,
-        };
-        setCustomSessions((prev) => [...prev, newSession]);
-        setSelectedChatId(newSession.id);
-        if (id) setLastChatId(id, newSession.id);
-        return;
+  /** Matrix Sync：有 token 时启动；切换房间时设置当前房间并可选从 Sync 时间线补消息 */
+  useEffect(() => {
+    if (!hasSyncToken) return;
+    startSyncClient();
+  }, [hasSyncToken, startSyncClient]);
+
+  useEffect(() => {
+    setCurrentRoomId(selectedChatId ?? undefined);
+  }, [selectedChatId, setCurrentRoomId]);
+
+  const handleAcceptInvite = useCallback(
+    async (roomId: string) => {
+      setInvitedAccepting(roomId);
+      try {
+        const ok = await acceptInvite(roomId);
+        if (ok) {
+          fetchSessions();
+          setSelectedChatId(roomId);
+          if (id) setLastChatId(id, roomId);
+        }
+      } finally {
+        setInvitedAccepting(null);
       }
-      const selected = result.contactIds
-        .map((cid) => contacts.find((c) => c.id === cid))
-        .filter(Boolean) as { id: string; name: string; avatar?: string }[];
-      if (selected.length === 0) return;
-      const participants = selected.map((c) => ({ name: c.name, avatar: c.avatar }));
-      const isGroup = selected.length > 1;
-      const newSession: MockSessionItem = {
-        id: `${isGroup ? 'group' : 'private'}-${now}`,
-        title: selected.map((c) => c.name).join('、'),
-        type: isGroup ? 'group' : 'private',
-        participants,
-        updatedAt: now,
-      };
-      setCustomSessions((prev) => [...prev, newSession]);
-      setSelectedChatId(newSession.id);
-      if (id) setLastChatId(id, newSession.id);
     },
-    [contacts, id]
+    [acceptInvite, fetchSessions, id]
+  );
+
+  const handleDeclineInvite = useCallback(
+    async (roomId: string) => {
+      setInvitedDeclining(roomId);
+      try {
+        await declineInvite(roomId);
+      } finally {
+        setInvitedDeclining(null);
+      }
+    },
+    [declineInvite]
+  );
+
+  const handleLeaveSession = useCallback(async () => {
+    if (!selectedChatId) return;
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(selectedChatId)}/leave`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (res.ok) {
+        setSelectedChatId(null);
+        setMembersSheetOpen(false);
+        fetchSessions();
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [selectedChatId, fetchSessions]);
+
+  const handleInviteToSession = useCallback(
+    async (mxid: string): Promise<boolean> => {
+      if (!selectedChatId) return false;
+      try {
+        const res = await fetch(`/api/sessions/${encodeURIComponent(selectedChatId)}/invite`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ user_id: mxid.trim() }),
+        });
+        if (res.ok) {
+          fetchMembers();
+          return true;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    },
+    [selectedChatId, fetchMembers]
+  );
+
+  /** Matrix 正在输入：输入时发送 typing，防抖后发送 not typing */
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!selectedChatId || !hasSyncToken) return;
+    if (chatInput.trim().length > 0) {
+      sendTyping(selectedChatId, true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        sendTyping(selectedChatId, false);
+        typingTimeoutRef.current = null;
+      }, 3000);
+    } else {
+      sendTyping(selectedChatId, false);
+    }
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    };
+  }, [chatInput, selectedChatId, hasSyncToken, sendTyping]);
+
+  const handleCreateSession = useCallback(
+    async (result: { mode: 'solo' } | { mode: 'contacts'; contactIds: string[] }) => {
+      const title =
+        result.mode === 'solo'
+          ? '新会话'
+          : result.mode.contactIds
+            .map((cid) => contacts.find((c) => c.id === cid)?.name)
+            .filter(Boolean)
+            .join('、') || '新会话';
+      const created = await createSession(title);
+      if (created) {
+        setSelectedChatId(created.id);
+        if (id) setLastChatId(id, created.id);
+      }
+    },
+    [contacts, createSession, id]
   );
 
   if (id == null || id.length === 0) {
@@ -295,8 +469,31 @@ export default function Space() {
               )}
               {listViewTab === 'active' ? (
                 <div className="session-list-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
-                  {filteredSessions.length > 0 ? (
+                  {(invited.length > 0 || filteredSessions.length > 0) ? (
                     <div className="flex flex-col min-h-0 min-w-0">
+                      {invited.length > 0 && (
+                        <SessionCategory
+                          title="邀请"
+                          count={invited.length}
+                          collapsed={false}
+                          onCollapsedChange={() => {}}
+                          accent
+                        >
+                          <ul className="divide-y divide-zinc-100 dark:divide-zinc-700">
+                            {invited.map((inv) => (
+                              <InvitedSessionRow
+                                key={inv.roomId}
+                                roomId={inv.roomId}
+                                name={inv.name}
+                                onAccept={() => handleAcceptInvite(inv.roomId)}
+                                onDecline={() => handleDeclineInvite(inv.roomId)}
+                                accepting={invitedAccepting === inv.roomId}
+                                declining={invitedDeclining === inv.roomId}
+                              />
+                            ))}
+                          </ul>
+                        </SessionCategory>
+                      )}
                       {pinnedSessions.length > 0 && (
                         <SessionCategory
                           title="置顶"
@@ -312,7 +509,7 @@ export default function Space() {
                               isActive={session.id === selectedChatId}
                               isPinned
                               dateLabel={formatSessionDate(session.updatedAt)}
-                              unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
+                              unreadCount={0}
                               onClick={() => handleSelectSession(session.id)}
                               onTogglePin={() => handleTogglePin(session.id)}
                             />
@@ -327,7 +524,7 @@ export default function Space() {
                             isActive={session.id === selectedChatId}
                             isPinned={pinnedIds.includes(session.id)}
                             dateLabel={formatSessionDate(session.updatedAt)}
-                            unreadCount={session.id === 'mock-private-lisi' ? 2 : 0}
+                            unreadCount={0}
                             onClick={() => handleSelectSession(session.id)}
                             onTogglePin={() => handleTogglePin(session.id)}
                           />
@@ -338,10 +535,10 @@ export default function Space() {
                     <Empty className="min-h-[12rem] justify-center py-8">
                       <EmptyHeader>
                         <EmptyTitle className="text-sm font-medium">
-                          {searchQuery.trim() ? '无匹配会话' : '暂无会话'}
+                          {sessionsLoading ? '加载中…' : searchQuery.trim() ? '无匹配会话' : sessionsError ? '拉取失败' : '暂无会话'}
                         </EmptyTitle>
                         <EmptyDescription className="text-xs mt-1">
-                          {searchQuery.trim() ? '试试其它关键词' : '在左侧选择已有会话开始聊天'}
+                          {sessionsLoading ? '正在拉取会话列表' : searchQuery.trim() ? '试试其它关键词' : sessionsError ? sessionsError : '新建会话或从邀请中接受'}
                         </EmptyDescription>
                       </EmptyHeader>
                     </Empty>
@@ -508,25 +705,38 @@ export default function Space() {
           </div>
           <SidebarInset className="min-h-0 min-w-0 flex-1 rounded-r-2xl bg-transparent overflow-hidden">
             {selectedSession ? (
-              <ChatPane
-                chatTitle={selectedSession.title}
-                chatUserAvatar={selectedSession.participants?.[0]?.avatar ?? null}
-                chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
-                currentUserAvatar={user?.avatar}
-                currentUserName={user?.name ?? user?.email}
-                participants={participantsExcludingMe}
-                displayItems={chatDisplayItems}
-                input={chatInput}
-                onInputChange={setChatInput}
-                onSubmit={handleChatSubmit}
-                mentionItems={mentionItems}
-                onClose={() => setSelectedChatId(null)}
-                showBack={false}
-                enterToSend={enterToSend}
-                sessionAreaFontScale={sessionAreaFontScale}
-                inputAreaHeightPx={chatInputAreaHeightPx}
-                onInputAreaHeightChange={setChatInputAreaHeightPx}
-              />
+              <>
+                <ChatPane
+                  chatTitle={selectedSession.title}
+                  chatUserAvatar={selectedSession.participants?.[0]?.avatar ?? null}
+                  chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
+                  currentUserAvatar={user?.avatar}
+                  currentUserName={user?.name ?? user?.email}
+                  participants={participantsExcludingMe}
+                  displayItems={chatDisplayItems}
+                  input={chatInput}
+                  onInputChange={setChatInput}
+                  onSubmit={handleChatSubmit}
+                  mentionItems={mentionItems}
+                  onClose={() => setSelectedChatId(null)}
+                  onOpenMembers={() => setMembersSheetOpen(true)}
+                  onLeave={hasSyncToken ? handleLeaveSession : undefined}
+                  showBack={false}
+                  enterToSend={enterToSend}
+                  sessionAreaFontScale={sessionAreaFontScale}
+                  inputAreaHeightPx={chatInputAreaHeightPx}
+                  onInputAreaHeightChange={setChatInputAreaHeightPx}
+                  typingUserIds={typingUserIds}
+                />
+                <SessionMembersSheet
+                  open={membersSheetOpen}
+                  onOpenChange={setMembersSheetOpen}
+                  members={members}
+                  loading={membersLoading}
+                  sessionId={selectedChatId}
+                  onInvite={handleInviteToSession}
+                />
+              </>
             ) : (
               <Empty className="h-full p-6">
                 <EmptyHeader>
@@ -545,7 +755,7 @@ export default function Space() {
         </FramePanel>
       </Frame>
       <Frame
-        className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
+        className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-2xl border border-border p-0 @container"
         style={{ containerName: 'app' } as React.CSSProperties}
       >
         <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl p-2 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-850">
@@ -567,7 +777,7 @@ export default function Space() {
               user={user}
             />
             <main
-              className="min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl border border-border bg-white dark:bg-background"
+              className="min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl bg-white dark:bg-background"
               aria-label="应用内容区"
             >
               <AppContent
