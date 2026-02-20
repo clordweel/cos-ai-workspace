@@ -55,6 +55,17 @@
     background: color-mix(in srgb, var(--primary) 22%, transparent);
     color: inherit;
   }
+  /* 己侧消息气泡：选中时可见高亮（半透明白叠加）、保留原字色；子节点也统一生效 */
+  .chat-bubble-own::selection,
+  .chat-bubble-own *::selection {
+    background: rgba(255, 255, 255, 0.45);
+    color: inherit;
+  }
+  .chat-bubble-own::-moz-selection,
+  .chat-bubble-own *::-moz-selection {
+    background: rgba(255, 255, 255, 0.45);
+    color: inherit;
+  }
 }
 
 @layer base {
@@ -397,14 +408,17 @@
   background: rgb(59 130 246 / 0.25);
 }
 
-/* Lexical 聊天输入：提及节点与下拉菜单 */
+/* Lexical 聊天输入：提及节点（与 shadcn/coss 芯片一致：rounded-lg、muted 背景、border） */
 .chat-lexical-mention {
-  background: rgb(191 219 254 / 0.4);
-  border-radius: 0.25rem;
-  padding: 0 0.125rem;
-}
-.dark .chat-lexical-mention {
-  background: rgb(59 130 246 / 0.25);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.375rem;
+  font-weight: 500;
+  border-radius: var(--radius-lg, 0.5rem);
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+  white-space: nowrap;
 }
 
 /*
@@ -490,9 +504,16 @@
   /* 会话区字体缩放：仅聊天消息与输入框使用，由 ChatPane 设置 --chat-text-scale */
   .chat-session-content-text {
     font-size: calc(1rem * var(--chat-text-scale, 1)) !important;
+    line-height: 1.5;
   }
-  /* 输入框内 Lexical 文本节点带 text-xs，强制子元素继承以跟随缩放 */
+  /* 输入框内 Lexical 文本节点：字号与行高继承，随界面字体档位调整 */
   .chat-session-content-text * {
     font-size: inherit !important;
+    line-height: inherit !important;
+  }
+  /* 输入框占位文案：与编辑器同字号、同行高，随 --chat-text-scale 变化 */
+  .chat-input-placeholder {
+    font-size: calc(1rem * var(--chat-text-scale, 1));
+    line-height: 1.5;
   }
 }

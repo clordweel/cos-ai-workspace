@@ -31,6 +31,8 @@ export interface SessionMembersSheetProps {
   sessionId: string | undefined;
   onInvite?: (mxid: string) => Promise<boolean>;
   trigger?: React.ReactNode;
+  /** 指定挂载容器时，Sheet 仅覆盖该区域（如会话区），不占全屏 */
+  container?: HTMLElement | null;
 }
 
 function formatUserId(userId: string): string {
@@ -48,6 +50,7 @@ export function SessionMembersSheet({
   sessionId,
   onInvite,
   trigger,
+  container,
 }: SessionMembersSheetProps) {
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [inviteMxid, setInviteMxid] = useState('');
@@ -86,7 +89,7 @@ export function SessionMembersSheet({
           会话成员
         </SheetTitle>
       </SheetHeader>
-      <div className="flex flex-col gap-3 py-4">
+      <div className="flex flex-col gap-3 px-4 py-4">
         {loading ? (
           <p className="text-sm text-muted-foreground">加载中…</p>
         ) : members.length === 0 ? (
@@ -153,9 +156,7 @@ export function SessionMembersSheet({
             </p>
           )}
           <DialogFooter className="mt-4">
-            <DialogClose asChild>
-              <Button variant="ghost">取消</Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="ghost">取消</Button>} />
             <Button onClick={handleInviteSubmit} disabled={inviteSubmitting || !inviteMxid.trim()}>
               {inviteSubmitting ? '邀请中…' : '邀请'}
             </Button>
@@ -165,20 +166,21 @@ export function SessionMembersSheet({
     </>
   );
 
+  const sheetContent = (
+    <SheetContent side="right" className="w-full max-w-sm" container={container}>
+      {content}
+    </SheetContent>
+  );
   if (trigger) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="right" className="w-full max-w-sm">
-          {content}
-        </SheetContent>
+        {sheetContent}
       </Sheet>
     );
   }
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full max-w-sm">
-        {content}
-      </SheetContent>
+      {sheetContent}
     </Sheet>
   );
 }

@@ -52,6 +52,7 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useUISettings } from '@/hooks/useUISettings';
@@ -62,6 +63,7 @@ import { useMessages } from '@/hooks/useMessages';
 import { useChatStream } from '@/hooks/useChatStream';
 import { useInvitedSessions } from '@/hooks/useInvitedSessions';
 import { useMatrixSyncClient } from '@/hooks/useMatrixSyncClient';
+import { useRoomMentionItems } from '@/hooks/useRoomMentionItems';
 import { useSessionMembers } from '@/hooks/useSessionMembers';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
@@ -143,6 +145,20 @@ export default function Space() {
   const [invitedAccepting, setInvitedAccepting] = useState<string | null>(null);
   const [invitedDeclining, setInvitedDeclining] = useState<string | null>(null);
   const [membersSheetOpen, setMembersSheetOpen] = useState(false);
+  const [sessionAreaContainer, setSessionAreaContainer] = useState<HTMLDivElement | null>(null);
+  /** 删除/退出确认：{ sessionId, isCreator, error? }；打开前先请求 creator 接口；失败时保留弹窗并设 error */
+  const [deleteConfirmState, setDeleteConfirmState] = useState<{
+    sessionId: string;
+    isCreator: boolean;
+    error?: string;
+  } | null>(null);
+  const [deleteConfirmLoading, setDeleteConfirmLoading] = useState(false);
+  const [deleteConfirmSubmitting, setDeleteConfirmSubmitting] = useState(false);
+  /** 重命名会话：{ sessionId, title }；弹层在会话区内 */
+  const [renameState, setRenameState] = useState<{ sessionId: string; title: string } | null>(null);
+  const [renameInputValue, setRenameInputValue] = useState('');
+  const [renameSubmitting, setRenameSubmitting] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const isTagBarExpanded = appTagsBarPinned || tagBarHovered;
 
   const { sessions, loading: sessionsLoading, error: sessionsError, fetchSessions, createSession, addOrUpdateSession } = useSessions();
@@ -155,12 +171,15 @@ export default function Space() {
     commitStreamingMessage,
     appendUserMessage,
     discardStreamingMessage,
+    appendWaitingAssistant,
   } = useMessages(selectedChatId ?? undefined);
   const { streamChat } = useChatStream();
   const { invited, fetchInvited, acceptInvite, declineInvite } = useInvitedSessions();
   const { members, loading: membersLoading, fetchMembers } = useSessionMembers(selectedChatId ?? undefined);
   const hasSyncToken = Boolean(matrixSyncToken && matrixBaseUrl && matrixUserId);
   const {
+    syncClient,
+    syncReady,
     startSyncClient,
     setCurrentRoomId,
     fillMessagesFromSyncTimeline,
@@ -189,7 +208,10 @@ export default function Space() {
     onOpenPanel: useCallback(() => setAppAreaCollapsed(false), []),
   });
 
-  const { contacts, mentionItems } = useContactsAndBots();
+  const { contacts, bots, getMentionedBotIdsFromText } = useContactsAndBots();
+
+  /** @ 提及仅列出：机器人 + 当前房间已加入/已邀请成员（排除自己）；依赖 syncReady 以便直接进房时 sync 完成后再取成员 */
+  const mentionItems = useRoomMentionItems(syncClient, selectedChatId ?? undefined, matrixUserId ?? undefined, bots, syncReady);
 
   /** 在右侧应用区打开用户/认证视图（供个人中心空态按钮调用） */
   const openUserAppPanel = useCallback(() => {
@@ -224,47 +246,86 @@ export default function Space() {
     [id]
   );
 
-  const sessionsList: SessionListEntry[] = useMemo(
-    () =>
-      sessions.map((s) => ({
+  const sessionsList: SessionListEntry[] = useMemo(() => {
+    const seen = new Set<string>();
+    return sessions
+      .filter((s) => {
+        if (seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      })
+      .map((s) => ({
         id: s.id,
         title: s.title,
         updatedAt: s.updatedAt,
-        type: 'private' as const,
-        participants: [],
-      })),
-    [sessions]
-  );
+        type: (s.participants?.length && s.participants.length > 1 ? 'group' : 'private') as 'private' | 'group',
+        participants: s.participants ?? [],
+      }));
+  }, [sessions]);
 
   const selectedSession = useMemo(
     () => (selectedChatId ? sessions.find((s) => s.id === selectedChatId) ?? null : null),
     [selectedChatId, sessions]
   );
 
-  /** 参与会话者（API 暂不返回成员列表时可留空；后续可接 GET /api/sessions/:id/members） */
-  const participantsExcludingMe = useMemo(() => [], []);
+  /** 参与会话者（排除“我”），供顶栏堆叠头像；来自房间成员 API */
+  const participantsExcludingMe = useMemo(() => {
+    if (!members.length) return [];
+    const myId = matrixUserId ?? undefined;
+    return members
+      .filter((m) => m.userId !== myId)
+      .map((m) => ({
+        id: m.userId,
+        name: m.displayName ?? undefined,
+        avatar: m.avatarUrl ?? undefined,
+        kind: (m.userId?.toLowerCase().includes('ai-assistant') ?? false) ? ('bot' as const) : ('user' as const),
+      }));
+  }, [members, matrixUserId]);
 
   const chatDisplayItems = useMemo(() => {
-    const items: ChatMessageItem[] = messages.map((m) => ({
-      id: m.id ?? m.backendMessageId ?? `msg-${m.createdAt ?? 0}`,
-      role: m.role,
-      content: m.content,
-      createdAt: m.createdAt,
-      thinking: m.thinking,
-    }));
+    const room = selectedChatId && syncClient ? syncClient.getRoom(selectedChatId) : null;
+    const getSenderLabel = (senderId: string): string => {
+      const member = room?.getMember?.(senderId) ?? null;
+      if (!member) return senderId;
+      return (member as { name?: string }).name ?? (member as { rawDisplayName?: string }).rawDisplayName ?? senderId;
+    };
+    const items: ChatMessageItem[] = messages.map((m) => {
+      const base = {
+        id: m.id ?? m.backendMessageId ?? `msg-${m.createdAt ?? 0}`,
+        role: m.role,
+        content: m.content,
+        formattedContent: m.formattedContent,
+        createdAt: m.createdAt,
+        thinking: m.thinking,
+      };
+      if (m.role !== 'assistant') return base;
+      const isAiAssistantBot = m.senderId == null || m.senderId.toLowerCase().includes('ai-assistant');
+      const sources =
+        m.senderId != null
+          ? [
+              isAiAssistantBot
+                ? ({ type: 'bot' as const, label: getSenderLabel(m.senderId) || 'AI 助手' })
+                : ({ type: 'other_user' as const, label: getSenderLabel(m.senderId) }),
+            ]
+          : [{ type: 'bot' as const, label: 'AI 助手' }];
+      return { ...base, sources };
+    });
     return buildChatDisplayItems(items);
-  }, [messages]);
+  }, [messages, selectedChatId, syncClient]);
 
-  const handleChatSubmit = useCallback(async () => {
-    const text = chatInput.trim();
+  const handleChatSubmit = useCallback(async (submittedText?: string) => {
+    const text = (submittedText ?? chatInput).trim();
     if (!text || streamingInProgress) return;
     const conversationId = selectedChatId || undefined;
     appendUserMessage(text);
     setChatInput('');
     setStreamingInProgress(true);
+    const botIds = getMentionedBotIdsFromText(text);
+    if (botIds?.length) appendWaitingAssistant();
     try {
       const fullText = await streamChat(text, (delta) => appendStreamingContent(delta), {
         conversationId,
+        botIds: botIds.length ? botIds : undefined,
         onSessionCreated: (p) => {
           addOrUpdateSession(p.session_id, p.session_id);
           setSelectedChatId(p.session_id);
@@ -289,6 +350,7 @@ export default function Space() {
     appendStreamingContent,
     commitStreamingMessage,
     discardStreamingMessage,
+    appendWaitingAssistant,
     streamChat,
     addOrUpdateSession,
   ]);
@@ -311,8 +373,16 @@ export default function Space() {
       if (idSet.has(s.id)) pinned.push(s);
       else active.push(s);
     }
-    return { pinnedSessions: pinned, activeSessions: active };
-  }, [filteredSessions, pinnedIds]);
+    // 粘性当前房间：选中的会话固定在列表首位，其余按 updatedAt 降序，避免收到新消息时选中项跳位
+    const sortByUpdatedAt = (a: SessionListEntry, b: SessionListEntry) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+    if (selectedChatId && active.length > 1) {
+      const sticky = active.find((s) => s.id === selectedChatId);
+      const rest = active.filter((s) => s.id !== selectedChatId).sort(sortByUpdatedAt);
+      const orderedActive = sticky ? [sticky, ...rest] : [...active].sort(sortByUpdatedAt);
+      return { pinnedSessions: pinned, activeSessions: orderedActive };
+    }
+    return { pinnedSessions: pinned, activeSessions: [...active].sort(sortByUpdatedAt) };
+  }, [filteredSessions, pinnedIds, selectedChatId]);
 
   const handleTogglePin = useCallback((sessionId: string) => {
     setPinnedIds((prev) =>
@@ -376,6 +446,98 @@ export default function Space() {
     }
   }, [selectedChatId, fetchSessions]);
 
+  /** 列表项右键「删除会话」：先请求是否为创建者，再打开确认框（创建者=删除，非创建者=退出） */
+  const handleDeleteSession = useCallback(async (sessionId: string) => {
+    setDeleteConfirmLoading(true);
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(sessionId)}/creator`, {
+        credentials: 'include',
+      });
+      const data = (await res.json().catch(() => ({}))) as { isCreator?: boolean };
+      setDeleteConfirmState({ sessionId, isCreator: data.isCreator === true });
+    } catch {
+      setDeleteConfirmState({ sessionId, isCreator: false });
+    } finally {
+      setDeleteConfirmLoading(false);
+    }
+  }, []);
+
+  const handleCloseDeleteConfirm = useCallback(() => {
+    setDeleteConfirmState(null);
+  }, []);
+
+  const handleConfirmDeleteOrLeave = useCallback(async () => {
+    const state = deleteConfirmState;
+    if (!state) return;
+    setDeleteConfirmSubmitting(true);
+    setDeleteConfirmState((prev) => (prev ? { ...prev, error: undefined } : null));
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(state.sessionId)}/leave`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (res.ok) {
+        setDeleteConfirmState(null);
+        if (selectedChatId === state.sessionId) {
+          setSelectedChatId(null);
+          setMembersSheetOpen(false);
+          if (id) setLastChatId(id, null);
+        }
+        fetchSessions();
+      } else {
+        const msg = data.message || data.error || `请求失败（${res.status}）`;
+        setDeleteConfirmState((prev) => (prev ? { ...prev, error: msg } : null));
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '网络错误';
+      setDeleteConfirmState((prev) => (prev ? { ...prev, error: msg } : null));
+    } finally {
+      setDeleteConfirmSubmitting(false);
+    }
+  }, [deleteConfirmState, selectedChatId, id, fetchSessions]);
+
+  const handleOpenRename = useCallback((sessionId: string) => {
+    const session = sessions.find((s) => s.id === sessionId);
+    const title = session?.title ?? sessionId;
+    setRenameState({ sessionId, title });
+    setRenameInputValue(title);
+    setRenameError(null);
+  }, [sessions]);
+
+  const handleCloseRename = useCallback(() => {
+    setRenameState(null);
+    setRenameInputValue('');
+    setRenameError(null);
+  }, []);
+
+  const handleSubmitRename = useCallback(async () => {
+    if (!renameState) return;
+    const title = renameInputValue.trim();
+    if (!title) return;
+    setRenameSubmitting(true);
+    setRenameError(null);
+    try {
+      const res = await fetch(`/api/sessions/${encodeURIComponent(renameState.sessionId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ title }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; message?: string };
+      if (res.ok) {
+        fetchSessions();
+        handleCloseRename();
+      } else {
+        setRenameError(data.message || data.error || `请求失败（${res.status}）`);
+      }
+    } catch (e) {
+      setRenameError(e instanceof Error ? e.message : '网络错误');
+    } finally {
+      setRenameSubmitting(false);
+    }
+  }, [renameState, renameInputValue, fetchSessions, handleCloseRename]);
+
   const handleInviteToSession = useCallback(
     async (mxid: string): Promise<boolean> => {
       if (!selectedChatId) return false;
@@ -422,15 +584,26 @@ export default function Space() {
       const title =
         result.mode === 'solo'
           ? '新会话'
-          : result.mode.contactIds
+          : result.contactIds
             .map((cid) => contacts.find((c) => c.id === cid)?.name)
             .filter(Boolean)
             .join('、') || '新会话';
       const created = await createSession(title);
-      if (created) {
-        setSelectedChatId(created.id);
-        if (id) setLastChatId(id, created.id);
+      if (!created) return;
+      if (result.mode === 'contacts' && result.contactIds?.length > 0) {
+        await Promise.allSettled(
+          result.contactIds.map((contactId) =>
+            fetch(`/api/sessions/${encodeURIComponent(created.id)}/invite`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ user_id: contactId }),
+            })
+          )
+        );
       }
+      setSelectedChatId(created.id);
+      if (id) setLastChatId(id, created.id);
     },
     [contacts, createSession, id]
   );
@@ -445,8 +618,10 @@ export default function Space() {
         className="min-h-0 flex-1 flex flex-col overflow-hidden rounded-3xl border border-border p-0 @container"
         style={{ containerName: 'session' } as React.CSSProperties}
       >
+        <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden">
         <FramePanel className="min-h-0 flex-1 flex overflow-hidden rounded-2xl pl-2 pt-2 pb-2 pr-0 border-0 shadow-none before:shadow-none bg-zinc-100 dark:bg-zinc-850">
             <SidebarProvider
+              ref={setSessionAreaContainer}
               className="min-h-0 flex-1 flex w-full flex-row"
               style={{ '--sidebar-width': '18rem' } as React.CSSProperties}
             >
@@ -482,7 +657,7 @@ export default function Space() {
                           <ul className="divide-y divide-zinc-100 dark:divide-zinc-700">
                             {invited.map((inv) => (
                               <InvitedSessionRow
-                                key={inv.roomId}
+                                key={`invited-${inv.roomId}`}
                                 roomId={inv.roomId}
                                 name={inv.name}
                                 onAccept={() => handleAcceptInvite(inv.roomId)}
@@ -504,7 +679,7 @@ export default function Space() {
                         >
                           {pinnedSessions.map((session) => (
                             <SessionListItem
-                              key={session.id}
+                              key={`pinned-${session.id}`}
                               item={session}
                               isActive={session.id === selectedChatId}
                               isPinned
@@ -512,6 +687,8 @@ export default function Space() {
                               unreadCount={0}
                               onClick={() => handleSelectSession(session.id)}
                               onTogglePin={() => handleTogglePin(session.id)}
+                              onRename={() => handleOpenRename(session.id)}
+                              onDelete={() => handleDeleteSession(session.id)}
                             />
                           ))}
                         </SessionCategory>
@@ -519,7 +696,7 @@ export default function Space() {
                       <ul className="divide-y divide-zinc-100 dark:divide-zinc-700">
                         {activeSessions.map((session) => (
                           <SessionListItem
-                            key={session.id}
+                            key={`active-${session.id}`}
                             item={session}
                             isActive={session.id === selectedChatId}
                             isPinned={pinnedIds.includes(session.id)}
@@ -527,6 +704,8 @@ export default function Space() {
                             unreadCount={0}
                             onClick={() => handleSelectSession(session.id)}
                             onTogglePin={() => handleTogglePin(session.id)}
+                            onRename={() => handleOpenRename(session.id)}
+                            onDelete={() => handleDeleteSession(session.id)}
                           />
                         ))}
                       </ul>
@@ -710,6 +889,12 @@ export default function Space() {
                   chatTitle={selectedSession.title}
                   chatUserAvatar={selectedSession.participants?.[0]?.avatar ?? null}
                   chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
+                  chatUserIsAiAssistant={
+                    !selectedSession.participants?.[0]?.avatar &&
+                    (selectedSession.title === 'AI 助手' ||
+                      selectedSession.participants?.[0]?.name === 'AI 助手' ||
+                      (selectedSession.participants?.[0]?.kind === 'bot' && selectedSession.participants?.[0]?.id?.toLowerCase().includes('ai-assistant')))
+                  }
                   currentUserAvatar={user?.avatar}
                   currentUserName={user?.name ?? user?.email}
                   participants={participantsExcludingMe}
@@ -718,9 +903,13 @@ export default function Space() {
                   onInputChange={setChatInput}
                   onSubmit={handleChatSubmit}
                   mentionItems={mentionItems}
-                  onClose={() => setSelectedChatId(null)}
+                  onClose={() => {
+                    setSelectedChatId(null);
+                    if (id != null && id.length > 0) setLastChatId(id, null);
+                  }}
                   onOpenMembers={() => setMembersSheetOpen(true)}
                   onLeave={hasSyncToken ? handleLeaveSession : undefined}
+                  onRename={selectedChatId ? () => handleOpenRename(selectedChatId) : undefined}
                   showBack={false}
                   enterToSend={enterToSend}
                   sessionAreaFontScale={sessionAreaFontScale}
@@ -735,6 +924,7 @@ export default function Space() {
                   loading={membersLoading}
                   sessionId={selectedChatId}
                   onInvite={handleInviteToSession}
+                  container={sessionAreaContainer}
                 />
               </>
             ) : (
@@ -753,6 +943,101 @@ export default function Space() {
           </SidebarInset>
         </SidebarProvider>
         </FramePanel>
+        {deleteConfirmState && (
+          <div
+            className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/32 backdrop-blur-sm rounded-2xl"
+            role="dialog"
+            aria-modal
+            aria-labelledby="delete-confirm-title"
+            onClick={handleCloseDeleteConfirm}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl border bg-popover text-popover-foreground shadow-lg flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col gap-2 p-6">
+                <h2 id="delete-confirm-title" className="font-heading font-semibold text-xl leading-none">
+                  {deleteConfirmState.isCreator ? '删除会话' : '退出会话'}
+                </h2>
+                <p className="text-muted-foreground text-sm">
+                  {deleteConfirmState.isCreator
+                    ? '确定要删除该会话吗？删除后将从会话列表中移除。'
+                    : '确定要退出该会话吗？退出后将从会话列表中移除。'}
+                </p>
+                <p className="text-xs text-muted-foreground font-mono break-all" aria-label="会话 ID">
+                  会话 ID：{deleteConfirmState.sessionId}
+                  {(sessions.find((s) => s.id === deleteConfirmState.sessionId)?.title ?? null) != null && (
+                    <> · 标题：{sessions.find((s) => s.id === deleteConfirmState.sessionId)?.title}</>
+                  )}
+                </p>
+                {deleteConfirmState.error && (
+                  <p className="text-sm text-destructive font-medium" role="alert">
+                    {deleteConfirmState.error}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col-reverse gap-2 px-6 pb-6 sm:flex-row sm:justify-end border-t bg-muted/72 py-4 rounded-b-[calc(var(--radius-2xl)-1px)]">
+                <Button variant="outline" size="sm" disabled={deleteConfirmSubmitting} onClick={handleCloseDeleteConfirm}>
+                  取消
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteConfirmSubmitting}
+                  onClick={() => handleConfirmDeleteOrLeave()}
+                >
+                  {deleteConfirmSubmitting ? '处理中…' : deleteConfirmState.isCreator ? '删除' : '退出'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        {renameState && (
+          <div
+            className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/32 backdrop-blur-sm rounded-2xl"
+            role="dialog"
+            aria-modal
+            aria-labelledby="rename-confirm-title"
+            onClick={handleCloseRename}
+          >
+            <div
+              className="w-full max-w-sm rounded-2xl border bg-popover text-popover-foreground shadow-lg flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col gap-2 p-6">
+                <h2 id="rename-confirm-title" className="font-heading font-semibold text-xl leading-none">
+                  重命名会话
+                </h2>
+                <p className="text-muted-foreground text-sm">修改会话标题，其他成员可见。</p>
+                <Input
+                  value={renameInputValue}
+                  onChange={(e) => setRenameInputValue(e.target.value)}
+                  placeholder="会话标题"
+                  className="mt-1"
+                  disabled={renameSubmitting}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleSubmitRename();
+                    if (e.key === 'Escape') handleCloseRename();
+                  }}
+                />
+                {renameError && (
+                  <p className="text-sm text-destructive font-medium" role="alert">
+                    {renameError}
+                  </p>
+                )}
+              </div>
+              <div className="flex flex-col-reverse gap-2 px-6 pb-6 sm:flex-row sm:justify-end border-t bg-muted/72 py-4 rounded-b-[calc(var(--radius-2xl)-1px)]">
+                <Button variant="outline" size="sm" disabled={renameSubmitting} onClick={handleCloseRename}>
+                  取消
+                </Button>
+                <Button size="sm" disabled={renameSubmitting || !renameInputValue.trim()} onClick={() => handleSubmitRename()}>
+                  {renameSubmitting ? '保存中…' : '确定'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+        </div>
       </Frame>
       <Frame
         className="min-h-0 flex-1 flex max-w-full flex-col overflow-hidden rounded-2xl border border-border p-0 @container"

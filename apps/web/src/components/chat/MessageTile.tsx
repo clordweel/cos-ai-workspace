@@ -2,6 +2,9 @@
 
 import { cn } from '@/lib/utils';
 import { formatMessageTime } from '@/lib/time';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import DOMPurify from 'dompurify';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { AiAssistantAvatarIcon } from '@/components/icons/AiAssistantAvatarIcon';
 import {
@@ -166,14 +169,12 @@ function BubbleMessageTile({
       )}
 
       <div className={cn('flex min-w-0 max-w-[85%] flex-col', isUser ? 'items-end' : 'items-start')}>
-        {/* 对侧：名称行；时间由 listitem 为 relative 时 absolute right-0 右对齐 */}
+        {/* 对侧：名称行；仅当 sources 标明为 bot 且无 label 时兜底「AI 助手」，其余用 sources[0].label（联系人/机器人显示名由 Space 从 Matrix 解析） */}
         {!isUser && (
           <div className="flex min-h-8 w-full items-center">
-            {message.sources?.[0]?.label ? (
-              <span className="text-[11px] font-medium text-foreground">
-                {message.sources[0].label}
-              </span>
-            ) : null}
+            <span className="text-[11px] font-medium text-foreground">
+              {message.sources?.[0]?.label ?? (message.sources?.[0]?.type === 'bot' ? 'AI 助手' : '')}
+            </span>
           </div>
         )}
         {!isUser && (
@@ -205,7 +206,7 @@ function BubbleMessageTile({
               className={cn(
                 'rounded-xl text-xs',
                 isUser
-                  ? 'rounded-tr-none bg-primary text-primary-foreground px-3 py-2'
+                  ? 'chat-bubble-own rounded-tr-none bg-primary text-primary-foreground px-3 py-2'
                   : 'rounded-tl-none bg-[var(--session-frame-panel-bg)] text-foreground px-0 py-0'
               )}
             >
@@ -214,7 +215,26 @@ function BubbleMessageTile({
                   引用消息
                 </div>
               )}
-              <p className="chat-session-content-text whitespace-pre-wrap break-words">{message.content}</p>
+              {message.role === 'assistant' && message.id === '__waiting__' ? (
+                <p className="chat-session-content-text flex items-center gap-2 py-2 px-3 text-muted-foreground" role="status">
+                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                  <span>正在思考…</span>
+                </p>
+              ) : message.formattedContent ? (
+                <div
+                  className="chat-session-content-text chat-formatted-html text-xs [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:my-1.5 [&_pre]:text-xs [&_pre]:bg-zinc-100 dark:[&_pre]:bg-zinc-800 [&_pre]:rounded-md [&_pre]:p-2 [&_code]:bg-zinc-100 dark:[&_code]:bg-zinc-800 [&_code]:px-1 [&_code]:rounded [&_code]:text-[11px] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 break-words"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'a', 'blockquote'] }) }}
+                />
+              ) : message.role === 'assistant' && message.id === '__streaming__' ? (
+                <p className="chat-session-content-text whitespace-pre-wrap break-words">
+                  {message.content}
+                  <span className="inline-block h-4 w-0.5 align-middle bg-current animate-pulse ml-0.5" aria-hidden />
+                </p>
+              ) : (
+                <div className="chat-session-content-text chat-markdown text-xs [&_p]:my-1 [&_ul]:my-1 [&_ol]:my-1 [&_pre]:my-1.5 [&_pre]:text-xs [&_pre]:bg-zinc-100 dark:[&_pre]:bg-zinc-800 [&_pre]:rounded-md [&_pre]:p-2 [&_code]:bg-zinc-100 dark:[&_code]:bg-zinc-800 [&_code]:px-1 [&_code]:rounded [&_code]:text-[11px] [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4 [&_h1]:font-bold [&_h2]:font-bold [&_h3]:font-bold break-words">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>
+                </div>
+              )}
               {message.editedAt != null && message.editedBy?.label && (
                 <p className="mt-0.5 text-[10px] opacity-80">
                   已编辑 · {message.editedBy.label}

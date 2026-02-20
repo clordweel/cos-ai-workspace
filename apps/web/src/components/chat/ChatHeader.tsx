@@ -1,9 +1,11 @@
 'use client';
 
 import { Archive, Download, Link, MoreVertical, Pencil, Phone, Share2, Trash2, User, Users, Video, X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarStack } from '@/components/ui/avatar-stack';
+import type { AvatarStackItem } from '@/components/ui/avatar-stack';
+import { AiAssistantAvatarIcon } from '@/components/icons/AiAssistantAvatarIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,17 +18,20 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 
-/** 顶栏展示的参与者（排除“我”） */
+/** 顶栏展示的参与者（排除“我”）；与 AvatarStackItem 一致，用于堆叠展示 */
 export interface ChatHeaderParticipant {
   id?: string;
   name?: string | null;
   avatar?: string | null;
+  kind?: 'user' | 'bot';
 }
 
 export interface ChatHeaderProps {
   title: string;
   userAvatar?: string | null;
   userName?: string | null;
+  /** 对方为 @ai-assistant 机器人且无头像时，顶栏单头像用占位图标 */
+  userIsAiAssistant?: boolean;
   /** 参与会话者（排除当前用户），顶栏左侧堆叠头像 */
   participants?: ChatHeaderParticipant[];
   /** 当前用户头像（顶栏菜单左侧） */
@@ -65,6 +70,7 @@ export function ChatHeader({
   title,
   userAvatar,
   userName,
+  userIsAiAssistant = false,
   participants = [],
   currentUserAvatar,
   currentUserName,
@@ -83,11 +89,33 @@ export function ChatHeader({
   className,
 }: ChatHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-
   const closeMenu = () => setMenuOpen(false);
+
+  /** 堆叠头像列表：含“我”和所有成员（含机器人），与 coss 一致 */
+  const allMembers: AvatarStackItem[] = useMemo(() => {
+    const me: AvatarStackItem = {
+      id: 'me',
+      name: currentUserName ?? undefined,
+      avatar: currentUserAvatar ?? undefined,
+      kind: 'user',
+    };
+    const list: AvatarStackItem[] = [me];
+    if (participants.length > 0) {
+      list.push(...participants.map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, kind: p.kind })));
+    } else if (userAvatar ?? userName ?? userIsAiAssistant) {
+      list.push({
+        id: userIsAiAssistant ? 'ai-assistant' : 'other',
+        name: userName ?? (userIsAiAssistant ? 'AI 助手' : undefined),
+        avatar: userAvatar ?? undefined,
+        kind: userIsAiAssistant ? 'bot' : 'user',
+      });
+    }
+    return list;
+  }, [currentUserName, currentUserAvatar, participants, userAvatar, userName, userIsAiAssistant]);
+
   const participantsLabel =
-    participants.length > 0
-      ? `参与会话者（${participants.length} 人），点击查看成员`
+    allMembers.length > 0
+      ? `参与会话者（共 ${allMembers.length} 人），点击查看成员`
       : '参与会话者';
 
   return (
@@ -101,17 +129,17 @@ export function ChatHeader({
           'flex h-[40px] shrink-0 items-center justify-between gap-2 rounded-2xl border-2 border-border bg-white/70 px-[6px] backdrop-blur-md dark:bg-zinc-900/70'
         )}
       >
-        {/* 左侧：参与会话者头像（排除“我”），与 frontend 一致 */}
+        {/* 左侧：coss 堆叠头像，含“我”与所有成员（含机器人） */}
         <button
           type="button"
-          className="flex items-center rounded-full transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
+          className="flex items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
           aria-label={participantsLabel}
           title={participantsLabel}
           onClick={() => onOpenMembers?.()}
         >
-          {participants.length > 0 ? (
+          {allMembers.length > 0 ? (
             <AvatarStack
-              items={participants}
+              items={allMembers}
               max={MAX_PARTICIPANT_AVATARS}
               size="sm"
             />
@@ -120,12 +148,22 @@ export function ChatHeader({
               className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-muted dark:border-zinc-800"
               aria-hidden
             >
-              <Avatar className="h-full w-full">
-                {userAvatar ? <AvatarImage src={userAvatar} alt="" /> : null}
-                <AvatarFallback className="text-xs font-medium">
-                  {userName?.trim().slice(0, 1)?.toUpperCase() ?? <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />}
-                </AvatarFallback>
-              </Avatar>
+              {userAvatar ? (
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={userAvatar} alt="" />
+                  <AvatarFallback className="text-xs font-medium">{userName?.trim().slice(0, 1)?.toUpperCase() ?? '?'}</AvatarFallback>
+                </Avatar>
+              ) : userIsAiAssistant ? (
+                <span className="flex h-full w-full items-center justify-center">
+                  <AiAssistantAvatarIcon className="h-4 w-4" />
+                </span>
+              ) : (
+                <Avatar className="h-full w-full">
+                  <AvatarFallback className="text-xs font-medium">
+                    {userName?.trim().slice(0, 1)?.toUpperCase() ?? <User className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />}
+                  </AvatarFallback>
+                </Avatar>
+              )}
             </span>
           )}
         </button>
@@ -133,7 +171,7 @@ export function ChatHeader({
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
             aria-label="语音通话"
             title="语音通话"
           >
@@ -141,7 +179,7 @@ export function ChatHeader({
           </button>
           <button
             type="button"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
             aria-label="视频通话"
             title="视频通话"
           >
@@ -151,7 +189,7 @@ export function ChatHeader({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className="flex shrink-0 items-center gap-0 overflow-hidden rounded-full py-0.5 pl-1.5 pr-1 text-muted-foreground transition-colors hover:rounded-full hover:bg-zinc-100 hover:text-foreground dark:hover:bg-zinc-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
+            className="flex shrink-0 items-center gap-0 overflow-hidden rounded-full py-0.5 pl-1.5 pr-1 text-muted-foreground transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 focus-visible:ring-offset-2"
             aria-label={`聊天会话菜单：${title}`}
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center">

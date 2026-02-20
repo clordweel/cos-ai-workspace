@@ -18,11 +18,16 @@ function SheetClose(props: SheetPrimitive.Close.Props) {
   return <SheetPrimitive.Close data-slot="sheet-close" {...props} />;
 }
 
-function SheetBackdrop({ className, ...props }: SheetPrimitive.Backdrop.Props) {
+function SheetBackdrop({
+  className,
+  contained,
+  ...props
+}: SheetPrimitive.Backdrop.Props & { contained?: boolean }) {
   return (
     <SheetPrimitive.Backdrop
       className={cn(
-        "fixed inset-0 z-50 bg-black/32 backdrop-blur-sm transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
+        contained ? "absolute inset-0" : "fixed inset-0",
+        "z-50 bg-black/32 backdrop-blur-sm transition-all duration-200 data-ending-style:opacity-0 data-starting-style:opacity-0",
         className,
       )}
       data-slot="sheet-backdrop"
@@ -35,15 +40,18 @@ function SheetViewport({
   className,
   side,
   variant = "default",
+  contained,
   ...props
 }: SheetPrimitive.Viewport.Props & {
   side?: "right" | "left" | "top" | "bottom";
   variant?: "default" | "inset";
+  contained?: boolean;
 }) {
   return (
     <SheetPrimitive.Viewport
       className={cn(
-        "fixed inset-0 z-50 grid",
+        contained ? "absolute inset-0" : "fixed inset-0",
+        "z-50 grid",
         side === "bottom" && "grid grid-rows-[1fr_auto] pt-12",
         side === "top" && "grid grid-rows-[auto_1fr] pb-12",
         side === "left" && "flex justify-start",
@@ -62,16 +70,20 @@ function SheetPopup({
   showCloseButton = true,
   side = "right",
   variant = "default",
+  container,
   ...props
 }: SheetPrimitive.Popup.Props & {
   showCloseButton?: boolean;
   side?: "right" | "left" | "top" | "bottom";
   variant?: "default" | "inset";
+  /** 指定挂载容器时，Sheet 仅覆盖该区域（会话区等），不占全屏 */
+  container?: HTMLElement | null;
 }) {
+  const contained = Boolean(container);
   return (
-    <SheetPortal>
-      <SheetBackdrop />
-      <SheetViewport side={side} variant={variant}>
+    <SheetPortal container={container ?? undefined}>
+      <SheetBackdrop contained={contained} />
+      <SheetViewport side={side} variant={variant} contained={contained}>
         <SheetPrimitive.Popup
           className={cn(
             "relative flex max-h-full min-h-0 w-full min-w-0 flex-col bg-popover not-dark:bg-clip-padding text-popover-foreground shadow-lg/5 transition-[opacity,translate] duration-200 ease-in-out will-change-transform before:pointer-events-none before:absolute before:inset-0 before:shadow-[0_1px_--theme(--color-black/4%)] data-ending-style:opacity-0 data-starting-style:opacity-0 max-sm:before:hidden dark:before:shadow-[0_-1px_--theme(--color-white/6%)]",
