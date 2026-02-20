@@ -52,8 +52,22 @@ export function useMessages(sessionId: string | undefined) {
   );
 
   const commitStreamingMessage = useCallback(
-    (finalContent: string) => {
-      if (sessionId) store.commitStreamingMessage(sessionId, finalContent);
+    (finalContent: string, thinking?: string) => {
+      if (sessionId) store.commitStreamingMessage(sessionId, finalContent, thinking);
+    },
+    [sessionId]
+  );
+
+  const appendStreamingThinking = useCallback(
+    (delta: string) => {
+      if (sessionId) store.appendStreamingThinking(sessionId, delta);
+    },
+    [sessionId]
+  );
+
+  const setStreamingThinking = useCallback(
+    (fullText: string) => {
+      if (sessionId) store.setStreamingThinking(sessionId, fullText);
     },
     [sessionId]
   );
@@ -80,6 +94,8 @@ export function useMessages(sessionId: string | undefined) {
     fetchMessages,
     appendStreamingContent,
     commitStreamingMessage,
+    appendStreamingThinking,
+    setStreamingThinking,
     appendUserMessage,
     discardStreamingMessage,
     appendWaitingAssistant,

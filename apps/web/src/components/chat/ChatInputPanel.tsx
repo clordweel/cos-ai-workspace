@@ -24,6 +24,8 @@ export interface ChatInputPanelProps {
   mentionItems?: MentionItem[];
   /** 输入区高度变化时上报（px），用于聊天区底部留白 */
   onHeightChange?: (heightPx: number) => void;
+  /** AI 助手思考/流式输出时隐藏底部工具条（格式提示 + 发送按钮） */
+  hideToolbarWhenThinking?: boolean;
   className?: string;
 }
 
@@ -39,6 +41,7 @@ export function ChatInputPanel({
   enterToSend = true,
   mentionItems = [],
   onHeightChange,
+  hideToolbarWhenThinking = false,
   className,
 }: ChatInputPanelProps) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -116,6 +119,7 @@ export function ChatInputPanel({
               disabled={disabled}
               enterToSend={enterToSend}
               mentionItems={mentionItems}
+              hideToolbar={hideToolbarWhenThinking}
               toolbarExtra={
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground whitespace-nowrap" aria-hidden>

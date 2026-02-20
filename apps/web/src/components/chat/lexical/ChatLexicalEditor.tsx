@@ -45,6 +45,8 @@ export interface ChatLexicalEditorProps {
   /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
   enterToSend?: boolean;
   mentionItems: MentionItem[];
+  /** 隐藏底部工具条（思考/流式输出时使用） */
+  hideToolbar?: boolean;
   /** 工具栏右侧插槽（如发送按钮），与工具按钮同一栏 */
   toolbarExtra?: ReactNode;
   className?: string;
@@ -64,6 +66,7 @@ export function ChatLexicalEditor({
   disabled = false,
   enterToSend = true,
   mentionItems,
+  hideToolbar = false,
   toolbarExtra,
   className,
 }: ChatLexicalEditorProps) {
@@ -98,12 +101,14 @@ export function ChatLexicalEditor({
             ErrorBoundary={LexicalErrorBoundary}
           />
         </div>
-        <div className="flex shrink-0 items-center gap-2 border-t border-border/60 pt-2">
-          <ChatInputToolbar disabled={disabled} />
-          {toolbarExtra != null && (
-            <div className="ml-auto shrink-0">{toolbarExtra}</div>
-          )}
-        </div>
+        {!hideToolbar && (
+          <div className="flex shrink-0 items-center gap-2 border-t border-border/60 pt-2">
+            <ChatInputToolbar disabled={disabled} />
+            {toolbarExtra != null && (
+              <div className="ml-auto shrink-0">{toolbarExtra}</div>
+            )}
+          </div>
+        )}
         <HistoryPlugin />
         <OnChangePlugin
           ignoreSelectionChange

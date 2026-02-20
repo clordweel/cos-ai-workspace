@@ -86,36 +86,75 @@ export function appendStreamingContent(roomId: string, delta: string): void {
   if (last?.role === 'assistant' && last.id === '__streaming__') {
     messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, content: (last.content || '') + delta }];
   } else if (last?.role === 'assistant' && last.id === '__waiting__') {
-    messagesByRoom[roomId] = [...list.slice(0, -1), { id: '__streaming__', role: 'assistant' as const, content: delta }];
+    messagesByRoom[roomId] = [...list.slice(0, -1), { id: '__streaming__', role: 'assistant' as const, content: delta, thinking: last.thinking }];
   } else {
     messagesByRoom[roomId] = [...list, { id: '__streaming__', role: 'assistant' as const, content: delta }];
   }
   notify();
 }
 
-export function commitStreamingMessage(roomId: string, finalContent: string): void {
+/** 流式思考过程：追加到当前 __waiting__ / __streaming__ 的 thinking 字段 */
+export function appendStreamingThinking(roomId: string, delta: string): void {
+  if (!roomId || !delta) return;
+  const list = messagesByRoom[roomId] ?? [];
+  const last = list[list.length - 1];
+  if (last?.role !== 'assistant' || (last.id !== '__streaming__' && last.id !== '__waiting__')) return;
+  const nextThinking = (last.thinking || '') + delta;
+  messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, thinking: nextThinking }];
+  notify();
+}
+
+/** 流式结束时设置当前条目的完整 thinking（API 可能下发 fullText） */
+export function setStreamingThinking(roomId: string, fullText: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
+  if (last?.role !== 'assistant' || (last.id !== '__streaming__' && last.id !== '__waiting__')) return;
+  messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, thinking: fullText }];
+  notify();
+}
+
+export function commitStreamingMessage(roomId: string, finalContent: string, thinking?: string): void {
+  if (!roomId) return;
+  const list = messagesByRoom[roomId] ?? [];
+  const last = list[list.length - 1];
+  const finalThinking = thinking ?? last?.role === 'assistant' ? (last as Message).thinking : undefined;
   if (last?.role === 'assistant' && last.id === '__waiting__') {
     messagesByRoom[roomId] = list.slice(0, -1);
     notify();
-    if ((finalContent ?? '').trim() !== '') {
-      messagesByRoom[roomId] = [...messagesByRoom[roomId]!, { id: `msg-${Date.now()}`, role: 'assistant' as const, content: finalContent, createdAt: Date.now() }];
+    if ((finalContent ?? '').trim() !== '' || (finalThinking ?? '').trim() !== '') {
+      messagesByRoom[roomId] = [
+        ...messagesByRoom[roomId]!,
+        { id: `msg-${Date.now()}`, role: 'assistant' as const, content: finalContent ?? '', thinking: finalThinking, createdAt: Date.now() },
+      ];
       notify();
     }
     return;
   }
   if (last?.role === 'assistant' && last.id === '__streaming__') {
-    if ((finalContent ?? '').trim() === '') {
+    if ((finalContent ?? '').trim() === '' && (finalThinking ?? '').trim() === '') {
       messagesByRoom[roomId] = list.slice(0, -1);
     } else {
-      messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, id: `msg-${Date.now()}`, content: finalContent }];
+      messagesByRoom[roomId] = [
+        ...list.slice(0, -1),
+        { ...last, id: `msg-${Date.now()}`, content: finalContent ?? '', thinking: finalThinking ?? (last as Message).thinking },
+      ];
     }
     notify();
     return;
   }
   if (last?.role === 'assistant' && (finalContent ?? '').trim() !== '' && (last.content ?? '').trim() === (finalContent ?? '').trim()) {
+    return;
+  }
+  // 最后一条已是助手消息（如 Sync 先于 commit 到达）：原地更新内容/thinking，避免重复追加
+  if (last?.role === 'assistant' && last.id !== '__streaming__' && last.id !== '__waiting__') {
+    const next: Message = {
+      ...last,
+      content: (finalContent ?? last.content).trim() !== '' ? (finalContent ?? last.content) : last.content,
+      thinking: finalThinking ?? (last as Message).thinking,
+    };
+    messagesByRoom[roomId] = [...list.slice(0, -1), next];
+    notify();
     return;
   }
   if ((finalContent ?? '').trim() !== '') {
@@ -165,6 +204,31 @@ function stripMarkdownForCompare(s: string): string {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .trim();
 }
+/** 若最后一条为助手消息且与 Sync 的 body 内容一致（去 Markdown 后比较），则用 Sync 的 id/formattedContent 更新并返回 true，避免重复追加 */
+export function replaceLastAssistantMessageIfMatch(
+  roomId: string,
+  bodyStr: string,
+  eventId: string,
+  formattedContent?: string,
+  recentMs: number = 20000
+): boolean {
+  if (!roomId || !eventId) return false;
+  const list = messagesByRoom[roomId] ?? [];
+  const last = list[list.length - 1];
+  if (last?.role !== 'assistant' || last.id === '__streaming__' || last.id === '__waiting__') return false;
+  const created = typeof last.createdAt === 'number' ? last.createdAt : 0;
+  if (Date.now() - created > recentMs) return false;
+  const plainLast = stripMarkdownForCompare(last.content);
+  const plainBody = stripMarkdownForCompare(bodyStr);
+  if (plainLast !== plainBody) return false;
+  messagesByRoom[roomId] = [
+    ...list.slice(0, -1),
+    { ...last, id: eventId, backendMessageId: eventId, formattedContent: formattedContent ?? last.formattedContent },
+  ];
+  notify();
+  return true;
+}
+
 /** 若最后一条为本端占位用户消息（id 以 u- 开头）且与 Sync 的 body（纯文本）内容一致（去 Markdown 后比较），则用 Sync 的 id/formattedContent 替换并返回 true，避免重复显示 */
 export function replaceLastUserMessageIfMatch(
   roomId: string,

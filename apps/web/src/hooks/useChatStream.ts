@@ -14,6 +14,10 @@ export function useChatStream() {
         /** 消息中 @ 的机器人 id 列表（如 assistant），有则走 Dify 流式回复 */
         botIds?: string[];
         onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void;
+        /** 深度思考过程（<think> 标签内容）增量 */
+        onThinking?: (delta: string) => void;
+        /** 深度思考过程完整文本（流结束时的 fullText） */
+        onThinkingFull?: (fullText: string) => void;
       }
     ): Promise<string> => {
       const body: Record<string, unknown> = {
@@ -79,7 +83,10 @@ export function useChatStream() {
                 const delta = String(data.delta);
                 fullText += delta;
                 onDelta(delta);
-              } else if (data?.delta != null && lastEvent !== 'thinking') {
+              } else if (lastEvent === 'thinking') {
+                if (data?.delta != null) options?.onThinking?.(String(data.delta));
+                if (data?.fullText != null) options?.onThinkingFull?.(String(data.fullText));
+              } else if (data?.delta != null) {
                 const delta = String(data.delta);
                 fullText += delta;
                 onDelta(delta);
@@ -96,7 +103,10 @@ export function useChatStream() {
         try {
           const data = JSON.parse(buffer.slice(6)) as Record<string, unknown>;
           if (lastEvent === 'error' && data?.message != null) throw new Error(String(data.message));
-          if (lastEvent === 'message' && data?.delta != null) {
+          if (lastEvent === 'thinking') {
+            if (data?.delta != null) options?.onThinking?.(String(data.delta));
+            if (data?.fullText != null) options?.onThinkingFull?.(String(data.fullText));
+          } else if (lastEvent === 'message' && data?.delta != null) {
             const delta = String(data.delta);
             fullText += delta;
             onDelta(delta);

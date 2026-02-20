@@ -391,6 +391,167 @@
   }
 }
 
+/* 流式消息打字机光标：柔和闪烁，更顺滑 */
+@keyframes streaming-cursor {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 消息富文本排版（与 frontend/coss 一致：段落、列表、代码、引用、链接、表格） */
+.chat-markdown,
+.chat-formatted-html {
+  line-height: 1.55;
+  word-break: break-word;
+}
+.chat-markdown p,
+.chat-formatted-html p {
+  margin: 0 0 0.5em;
+}
+.chat-markdown p:last-child,
+.chat-formatted-html p:last-child {
+  margin-bottom: 0;
+}
+.chat-markdown h1,
+.chat-markdown h2,
+.chat-markdown h3,
+.chat-markdown h4,
+.chat-markdown h5,
+.chat-markdown h6,
+.chat-formatted-html h1,
+.chat-formatted-html h2,
+.chat-formatted-html h3,
+.chat-formatted-html h4,
+.chat-formatted-html h5,
+.chat-formatted-html h6 {
+  margin: 0.75em 0 0.35em;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.chat-markdown h1,
+.chat-formatted-html h1 { font-size: 1.15em; }
+.chat-markdown h2,
+.chat-formatted-html h2 { font-size: 1.08em; }
+.chat-markdown h3,
+.chat-formatted-html h3 { font-size: 1.02em; }
+.chat-markdown h4,
+.chat-formatted-html h4 { font-size: 1em; }
+.chat-markdown h5,
+.chat-formatted-html h5 { font-size: 0.95em; }
+.chat-markdown h6,
+.chat-formatted-html h6 { font-size: 0.9em; }
+.chat-markdown ul,
+.chat-formatted-html ul {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+  list-style-type: disc;
+}
+.chat-markdown ol,
+.chat-formatted-html ol {
+  margin: 0.4em 0;
+  padding-left: 1.5em;
+  list-style-type: decimal;
+}
+.chat-markdown li,
+.chat-formatted-html li {
+  margin: 0.2em 0;
+}
+.chat-markdown blockquote,
+.chat-formatted-html blockquote {
+  margin: 0.5em 0;
+  padding: 0.25em 0 0.25em 0.85em;
+  border-left: 3px solid rgb(228 228 231);
+  color: rgb(113 113 122);
+}
+.dark .chat-markdown blockquote,
+.dark .chat-formatted-html blockquote {
+  border-left-color: rgb(82 82 91);
+  color: rgb(161 161 170);
+}
+.chat-markdown pre,
+.chat-formatted-html pre {
+  margin: 0.5em 0;
+  padding: 0.65em 0.8em;
+  border-radius: 0.5rem;
+  background: rgb(244 244 245);
+  border: 1px solid rgb(228 228 231);
+  overflow-x: auto;
+  font-size: 0.9em;
+  line-height: 1.45;
+}
+.dark .chat-markdown pre,
+.dark .chat-formatted-html pre {
+  background: rgb(39 39 42);
+  border-color: rgb(63 63 70);
+}
+.chat-markdown code,
+.chat-formatted-html code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+.chat-markdown pre code,
+.chat-formatted-html pre code {
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+.chat-markdown :not(pre) > code,
+.chat-formatted-html :not(pre) > code {
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  background: rgb(244 244 245);
+  border: 1px solid rgb(228 228 231);
+}
+.dark .chat-markdown :not(pre) > code,
+.dark .chat-formatted-html :not(pre) > code {
+  background: rgb(39 39 42);
+  border-color: rgb(63 63 70);
+}
+.chat-markdown a,
+.chat-formatted-html a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+.chat-markdown a:hover,
+.chat-formatted-html a:hover {
+  text-decoration: none;
+}
+.chat-markdown table,
+.chat-formatted-html table {
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.95em;
+}
+.chat-markdown th,
+.chat-markdown td,
+.chat-formatted-html th,
+.chat-formatted-html td {
+  border: 1px solid rgb(228 228 231);
+  padding: 0.4em 0.65em;
+  text-align: left;
+}
+.dark .chat-markdown th,
+.dark .chat-markdown td,
+.dark .chat-formatted-html th,
+.dark .chat-formatted-html td {
+  border-color: rgb(63 63 70);
+}
+.chat-markdown hr,
+.chat-formatted-html hr {
+  margin: 0.75em 0;
+  border: none;
+  border-top: 1px solid rgb(228 228 231);
+}
+.dark .chat-markdown hr,
+.dark .chat-formatted-html hr {
+  border-top-color: rgb(63 63 70);
+}
+
 /* react-mentions 输入框与 @ 高亮（与 frontend 提及体验一致） */
 .chat-mentions-input {
   font-size: 0.875rem;

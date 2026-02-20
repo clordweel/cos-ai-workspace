@@ -7,6 +7,7 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import { $getSelection, $isRangeSelection, TextNode } from 'lexical';
+import { COMMAND_PRIORITY_NORMAL } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -118,6 +119,7 @@ export function ChatMentionsPlugin({ mentionItems }: { mentionItems: MentionItem
       options={options}
       menuRenderFn={menuRenderFn}
       anchorClassName="chat-lexical-mentions-anchor"
+      commandPriority={COMMAND_PRIORITY_NORMAL}
     />
   );
 }

@@ -63,6 +63,8 @@ export interface ChatPaneProps {
   typingUserIds?: string[];
   /** 将 MXID 转为展示名（可选，默认截取 localpart） */
   formatTypingName?: (userId: string) => string;
+  /** AI 助手思考/流式输出中时隐藏输入区工具条 */
+  streamingInProgress?: boolean;
   className?: string;
 }
 
@@ -94,6 +96,7 @@ export function ChatPane({
   messageContextMenuHandlers,
   typingUserIds = [],
   formatTypingName = (userId: string) => (userId.includes(':') ? userId.slice(0, userId.indexOf(':')) : userId),
+  streamingInProgress = false,
   className,
 }: ChatPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -226,6 +229,7 @@ export function ChatPane({
           enterToSend={enterToSend}
           mentionItems={mentionItems}
           onHeightChange={onInputAreaHeightChange}
+          hideToolbarWhenThinking={streamingInProgress}
         />
       </div>
     </div>

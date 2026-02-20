@@ -169,6 +169,8 @@ export default function Space() {
     fetchMessages,
     appendStreamingContent,
     commitStreamingMessage,
+    appendStreamingThinking,
+    setStreamingThinking,
     appendUserMessage,
     discardStreamingMessage,
     appendWaitingAssistant,
@@ -317,13 +319,27 @@ export default function Space() {
     const text = (submittedText ?? chatInput).trim();
     if (!text || streamingInProgress) return;
     const conversationId = selectedChatId || undefined;
+    const roomId = selectedChatId ?? '';
     appendUserMessage(text);
     setChatInput('');
     setStreamingInProgress(true);
     const botIds = getMentionedBotIdsFromText(text);
     if (botIds?.length) appendWaitingAssistant();
+    let batch = '';
+    let rafId: number | null = null;
+    const flush = () => {
+      rafId = null;
+      if (batch && roomId) {
+        appendStreamingContent(batch);
+        batch = '';
+      }
+    };
+    const onDelta = (delta: string) => {
+      batch += delta;
+      if (rafId == null) rafId = requestAnimationFrame(flush);
+    };
     try {
-      const fullText = await streamChat(text, (delta) => appendStreamingContent(delta), {
+      const fullText = await streamChat(text, onDelta, {
         conversationId,
         botIds: botIds.length ? botIds : undefined,
         onSessionCreated: (p) => {
@@ -331,9 +347,15 @@ export default function Space() {
           setSelectedChatId(p.session_id);
           if (id) setLastChatId(id, p.session_id);
         },
+        onThinking: (delta) => appendStreamingThinking(delta),
+        onThinkingFull: (full) => setStreamingThinking(full),
       });
+      if (rafId != null) cancelAnimationFrame(rafId);
+      flush();
       commitStreamingMessage(fullText);
     } catch (e) {
+      if (rafId != null) cancelAnimationFrame(rafId);
+      flush();
       discardStreamingMessage();
       if (process.env.NODE_ENV === 'development') {
         console.error('[Space] streamChat error:', e);
@@ -349,6 +371,8 @@ export default function Space() {
     appendUserMessage,
     appendStreamingContent,
     commitStreamingMessage,
+    appendStreamingThinking,
+    setStreamingThinking,
     discardStreamingMessage,
     appendWaitingAssistant,
     streamChat,
@@ -916,6 +940,7 @@ export default function Space() {
                   inputAreaHeightPx={chatInputAreaHeightPx}
                   onInputAreaHeightChange={setChatInputAreaHeightPx}
                   typingUserIds={typingUserIds}
+                  streamingInProgress={streamingInProgress}
                 />
                 <SessionMembersSheet
                   open={membersSheetOpen}
