@@ -245,6 +245,73 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  /** 当前用户是否为该会话（房间）创建者；用于删除时区分「删除」与「退出」 */
+  app.get('/api/sessions/:id/creator', async (req, reply) => {
+    const sessionId = (req.params as { id?: string })?.id;
+    if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
+    let session = await getSessionFromCookie(req.headers.cookie);
+    if (session && config.chat.provider === 'matrix') {
+      const ensured = await ensureMatrixTokenAndSession(session, reply);
+      if (!ensured.ok) return;
+      session = ensured.session;
+    }
+    const adapter = getAdapter(req);
+    if (!('getSessionCreator' in adapter) || typeof adapter.getSessionCreator !== 'function') {
+      return reply.send({ isCreator: false });
+    }
+    try {
+      const creator = await adapter.getSessionCreator({
+        sessionId: decodeURIComponent(sessionId),
+        matrixAccessToken: session?.matrixAccessToken,
+      });
+      const isCreator =
+        typeof creator === 'string' &&
+        creator.length > 0 &&
+        session?.matrixUserId != null &&
+        session.matrixUserId === creator;
+      return reply.send({ isCreator: !!isCreator });
+    } catch (e) {
+      req.log.error(e);
+      return reply.send({ isCreator: false });
+    }
+  });
+
+  /** 重命名会话（如 Matrix 房间名称） */
+  app.patch('/api/sessions/:id', async (req, reply) => {
+    const sessionId = (req.params as { id?: string })?.id;
+    if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
+    const body = (req.body as { title?: string }) || {};
+    const title = typeof body.title === 'string' ? body.title.trim() : '';
+    if (!title) return reply.code(400).send({ error: 'title is required' });
+    let session = await getSessionFromCookie(req.headers.cookie);
+    if (session && config.chat.provider === 'matrix') {
+      const ensured = await ensureMatrixTokenAndSession(session, reply);
+      if (!ensured.ok) return;
+      session = ensured.session;
+    }
+    const userId = session ? getStableUserId(session) : 'default';
+    const adapter = getAdapter(req);
+    if (!('renameSession' in adapter) || typeof adapter.renameSession !== 'function') {
+      return reply.code(501).send({ error: '当前后端不支持重命名会话' });
+    }
+    try {
+      await adapter.renameSession({
+        sessionId: decodeURIComponent(sessionId),
+        title,
+        userId,
+        matrixAccessToken: session?.matrixAccessToken,
+      });
+      return reply.send({ ok: true });
+    } catch (e) {
+      req.log.error(e);
+      return reply.code(502).send({
+        error: '重命名失败',
+        message: e instanceof Error ? e.message : String(e),
+      });
+    }
+  });
+
+  // user_id：支持完整 MXID（@localpart:server）或本服务器的 logtoSub/username，后端会解析为 MXID
   app.post('/api/sessions/:id/invite', async (req, reply) => {
     const sessionId = (req.params as { id?: string })?.id;
     if (!sessionId) return reply.code(400).send({ error: 'session id is required' });
@@ -280,8 +347,10 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       conversation_id?: string;
       user_id?: string;
       reply_to_message_id?: string;
+      bot_ids?: string[];
     }) || {};
-    const { message, conversation_id } = body;
+    const { message, conversation_id, bot_ids: botIdsRaw } = body;
+    const botIds = Array.isArray(botIdsRaw) ? botIdsRaw.filter((id): id is string => typeof id === 'string') : undefined;
     if (!message || typeof message !== 'string') {
       return reply.code(400).send({ error: 'message is required' });
     }
@@ -316,6 +385,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
         send,
         flush,
         replyToMessageId: body.reply_to_message_id,
+        botIds: botIds?.length ? botIds : undefined,
         matrixAccessToken: session?.matrixAccessToken,
         currentUserMxid: session?.matrixUserId,
       });

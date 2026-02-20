@@ -11,17 +11,21 @@ export function useChatStream() {
       options?: {
         conversationId?: string;
         signal?: AbortSignal;
+        /** 消息中 @ 的机器人 id 列表（如 assistant），有则走 Dify 流式回复 */
+        botIds?: string[];
         onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void;
       }
     ): Promise<string> => {
+      const body: Record<string, unknown> = {
+        message,
+        conversation_id: options?.conversationId || undefined,
+      };
+      if (options?.botIds?.length) body.bot_ids = options.botIds;
       const res = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          message,
-          conversation_id: options?.conversationId || undefined,
-        }),
+        body: JSON.stringify(body),
         signal: options?.signal,
       });
       if (res.status === 401) throw new Error('需要登录');

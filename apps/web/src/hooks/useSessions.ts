@@ -6,6 +6,7 @@ export interface Session {
   updatedAt: number;
   backendSessionId?: string;
   provider?: string;
+  participants?: { name: string; avatar?: string; kind?: 'user' | 'bot'; id?: string }[];
 }
 
 export function useSessions() {

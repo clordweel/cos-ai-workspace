@@ -6,6 +6,14 @@ import { config } from '../config.js';
 
 const basePath = '/_matrix/client/v3';
 
+/** Matrix 请求默认超时（毫秒），参考 MATRIX_CLIENT_BEST_PRACTICES */
+const DEFAULT_MATRIX_REQUEST_TIMEOUT_MS = 30_000;
+/** 429 最大重试次数（不含首次请求） */
+const MAX_429_RETRIES = 3;
+/** 429 等待时间上限（毫秒） */
+const MAX_RETRY_AFTER_MS = 120_000;
+const MIN_RETRY_AFTER_MS = 1_000;
+
 export class MatrixApiError extends Error {
   constructor(
     message: string,
@@ -21,6 +29,27 @@ let cachedToken: string | null = null;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * 从 429 响应中安全解析等待时间（参考 MATRIX_CLIENT_BEST_PRACTICES §1.3）
+ * 优先 Retry-After 头（秒），否则 retry_after_ms；上下限 [MIN_RETRY_AFTER_MS, MAX_RETRY_AFTER_MS]
+ */
+function safeGetRetryAfterMs(res: Response, body: { retry_after_ms?: number }, attempt: number): number {
+  const defaultMs = Math.min(1000 * 2 ** attempt, MAX_RETRY_AFTER_MS);
+  const ra = res.headers.get('Retry-After');
+  if (ra != null && ra !== '') {
+    const sec = parseInt(ra, 10);
+    if (Number.isInteger(sec) && sec > 0) {
+      const ms = sec * 1000;
+      return Math.min(Math.max(ms, MIN_RETRY_AFTER_MS), MAX_RETRY_AFTER_MS);
+    }
+  }
+  const ms = body?.retry_after_ms;
+  if (typeof ms === 'number' && Number.isInteger(ms) && ms > 0) {
+    return Math.min(Math.max(ms, MIN_RETRY_AFTER_MS), MAX_RETRY_AFTER_MS);
+  }
+  return defaultMs;
 }
 
 async function doLogin(userId: string, password: string): Promise<{ res: Response; data: Record<string, unknown> }> {
@@ -129,20 +158,28 @@ export async function matrixFetchWithToken(
   options: RequestInit & { query?: Record<string, string> } = {},
   token: string
 ): Promise<Response> {
-  const { query, ...rest } = options;
+  const { query, signal: userSignal, ...rest } = options;
   let url = `${config.matrix.baseUrl}${basePath}${path}`;
   if (query && Object.keys(query).length) {
     const qs = new URLSearchParams(query).toString();
     url += (path.includes('?') ? '&' : '?') + qs;
   }
-  return fetch(url, {
-    ...rest,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(rest.headers as Record<string, string>),
-    },
-  });
+  const signal = userSignal ?? AbortSignal.timeout(DEFAULT_MATRIX_REQUEST_TIMEOUT_MS);
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    ...(rest.headers as Record<string, string>),
+  };
+
+  let lastRes: Response | null = null;
+  for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
+    lastRes = await fetch(url, { ...rest, signal, headers });
+    if (lastRes.status !== 429 || attempt === MAX_429_RETRIES) return lastRes;
+    const data = (await lastRes.json().catch(() => ({}))) as { retry_after_ms?: number };
+    const waitMs = safeGetRetryAfterMs(lastRes, data, attempt);
+    await sleep(waitMs);
+  }
+  return lastRes!;
 }
 
 export interface MatrixRoomSummary {

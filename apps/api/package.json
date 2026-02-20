@@ -13,9 +13,11 @@
   "dependencies": {
     "@fastify/cookie": "^10.x",
     "@fastify/cors": "^10.x",
+    "dify-client": "^3.0.0",
     "dotenv": "^16.6.1",
     "fastify": "^5.x",
-    "ioredis": "^5.9.2"
+    "ioredis": "^5.9.2",
+    "marked": "^17.0.3"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

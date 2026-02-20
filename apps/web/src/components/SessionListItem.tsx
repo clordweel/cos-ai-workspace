@@ -9,7 +9,7 @@ export type SessionListEntry = {
   title: string;
   updatedAt: number;
   type?: 'private' | 'group';
-  participants?: { name: string; avatar?: string; kind?: 'user' | 'bot' }[];
+  participants?: { name: string; avatar?: string; kind?: 'user' | 'bot'; id?: string }[];
 };
 import {
   ContextMenu,
@@ -69,6 +69,7 @@ export function SessionListItem({
       <SessionListThumb
         type={item.type ?? 'private'}
         participants={item.participants}
+        title={item.title}
       />
       <p className="min-w-0 flex-1 truncate text-xs font-medium text-inherit">
         {item.title}

@@ -121,4 +121,23 @@
 ## 五、使用方式
 
 - 新会话可引用本计划：「按 `.cursor/plans/web-api-session-matrix-follow-up.md` 实现 P1」或「按该计划执行任务 2（已读回执 UI）」。
-- 每完成一项建议或任务，可在本文件底部增加「执行记录」注明日期与结果。
+- 每完成一项建议或任务，可在本文件底部「执行记录」中更新日期与结果。
+
+---
+
+## 六、执行记录
+
+| 项 | 状态 | 说明 |
+|----|------|------|
+| **P1** Token 过期校验与刷新 | ✅ 已完成 | `apps/api/src/services/matrixSessionToken.ts` 与 middleware 同路径均已实现：`matrixTokenExpiresAt < Date.now() + TOKEN_EXPIRY_BUFFER_MS` 时清空并重新获取。 |
+| **P2** invite 时 MXID 解析 | ✅ 已完成 | `matrixUserSync.resolveInviteeToMatrixUserId`：已为 MXID 则原样返回，否则按 logtoSub/username 生成 @localpart:serverName；Matrix 适配器邀请前调用。路由注释约定 user_id 支持 MXID 或 logtoSub/username。 |
+| **P3** 会话列表 updatedAt | ✅ 已确认 | api 的 listSessions 已对每房间调 getRoomLastActivityTs（最新消息 origin_server_ts），并按 updatedAt 降序排序，与真实最后活动时间一致。 |
+| **P4** 请求超时与 429 | ✅ 已完成 | matrixClient：默认 30s 超时（AbortSignal.timeout）；429 时解析 Retry-After/retry_after_ms，安全上下限 1s–120s，最多重试 3 次。 |
+| **任务 1** 粘性当前房间 | ✅ 已完成 | apps/web Space：activeSessions 计算时把 selectedChatId 固定首位，其余按 updatedAt 降序。 |
+| **任务 2** 已读回执 UI | 待办 | 未实现。 |
+| **任务 3** 消息回复/引用 | 待办 | 未实现。 |
+| **任务 4** 消息编辑 | 待办 | 未实现。 |
+| **任务 5** 联系人/邀请 MXID | 待办（可选） | 未实现。 |
+| **任务 6** 语音/视频通话 | 待办 | 未实现。 |
+| **任务 7** E2EE/加密房间 | 待办（远期） | 未实现。 |
+| **任务 8** 密钥备份 | 待办 | 未实现。 |

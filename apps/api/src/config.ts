@@ -1,14 +1,14 @@
 /**
  * 环境与常量（阶段 1 子集，与现 middleware 对齐便于对照）
+ * 仅从 apps/api/.env 加载环境变量，不读取根目录 .env，与根目录彻底隔离。
  */
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// 仅加载本目录 apps/api/.env，不读取根目录 .env（与根 .env 彻底隔离）
 const apiEnv = path.resolve(__dirname, '..', '.env');
-dotenv.config({ path: apiEnv });
+dotenv.config({ path: apiEnv, override: true });
 
 export const config = {
   port: Number(process.env.API_PORT) || Number(process.env.PORT) || 3000,
@@ -42,4 +42,9 @@ export const config = {
     return v === 'redis' ? 'redis' : 'memory';
   })(),
   redisUrl: (process.env.REDIS_URL || '').trim(),
+  /** Dify：@ 助手时流式回复，与 middleware 一致 */
+  dify: {
+    apiBase: (process.env.DIFY_API_BASE || 'https://api.dify.ai/v1').replace(/\/$/, ''),
+    apiKey: (process.env.DIFY_API_KEY || '').trim(),
+  },
 };

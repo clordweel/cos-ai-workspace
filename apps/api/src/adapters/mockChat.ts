@@ -17,6 +17,8 @@ import type {
   JoinSessionParams,
   LeaveSessionParams,
   InviteToSessionParams,
+  GetSessionCreatorParams,
+  RenameSessionParams,
 } from './types.js';
 
 interface UserData {
@@ -173,6 +175,14 @@ export function getMockChatAdapter() {
 
     async inviteToSession(_params: InviteToSessionParams): Promise<void> {
       // mock 无多用户邀请
+    },
+
+    async getSessionCreator(_params: GetSessionCreatorParams): Promise<string | undefined> {
+      return undefined;
+    },
+
+    async renameSession(_params: RenameSessionParams): Promise<void> {
+      // mock 无持久化房间名称
     },
   };
 }

@@ -21,6 +21,8 @@ export interface ChatMessageItem {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  /** Matrix formatted_body（HTML），有则优先用于渲染，与 Element 客户端一致 */
+  formattedContent?: string;
   createdAt?: number;
   /** 已读时展示的读者来源 */
   readBy?: MessageSource[];

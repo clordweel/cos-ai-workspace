@@ -69,6 +69,10 @@ export function useMessages(sessionId: string | undefined) {
     if (sessionId) store.discardStreamingMessage(sessionId);
   }, [sessionId]);
 
+  const appendWaitingAssistant = useCallback(() => {
+    if (sessionId) store.appendWaitingAssistant(sessionId);
+  }, [sessionId]);
+
   return {
     messages,
     loading,
@@ -78,5 +82,6 @@ export function useMessages(sessionId: string | undefined) {
     commitStreamingMessage,
     appendUserMessage,
     discardStreamingMessage,
+    appendWaitingAssistant,
   };
 }

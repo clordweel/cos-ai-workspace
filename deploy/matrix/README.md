@@ -46,6 +46,28 @@
 
 **注意**：`SYNAPSE_SERVER_NAME` 一旦确定不可更改，否则需重建数据。
 
+### 使用域名或自定义后缀
+
+用户名和房间名的后缀（如 `@user:10.1.1.15`、`!room:10.1.1.15`）由 **server_name** 决定。要改为域名或自定义字符串，需在**首次部署 Synapse 前**设置：
+
+1. **Synapse（本目录）**：在 `deploy/matrix/.env` 中设置  
+   `SYNAPSE_SERVER_NAME=你的域名或主机名`  
+   例如：`cosai.junhai.work`、`matrix.example.com`、`matrix.internal`。内网也可用 IP（如 `10.1.1.15`）。
+2. **API 与中间层**：在 `apps/api/.env`（或根目录 .env）中设置  
+   `MATRIX_SERVER_NAME=与上相同的值`  
+   这样 Logto 用户同步、bot 账号的 MXID 都会使用该后缀。
+
+若 Synapse **已用 10.1.1.15 跑过**，再改 server_name 需重建数据或做迁移，建议新环境直接用目标域名/主机名部署。
+
+### server_name 常见问题
+
+- **意义**：server_name 是 Matrix 协议里** Homeserver 的标识**，用来区分「哪台服务器上的用户/房间」。MXID 形如 `@用户:server_name`，房间 ID 形如 `!xxx:server_name`；联邦时其它服务器会按 server_name 寻址。**不能移除**，否则无法构成合法 MXID/房间 ID。
+- **同一 Synapse 能否多个后缀**：**不能**。一个 Synapse 实例只能配置**一个** server_name；同一进程不能同时用 `@user:10.1.1.15` 和 `@user:cosai.com`。若需要多个后缀，需部署多套 Synapse（或其它方案），不能在一台上混用。
+- **能否用公司名缩写**：**可以**。只要符合「可当作主机名用的字符串」即可，例如：
+  - 子域名：`matrix.cosai.junhai.work`、`cosai.junhai.work`
+  - 内网主机名：`matrix.internal`、`cosai`
+  - 单标签（仅内网、不联邦时）：`cosai`、`junhai` 等缩写也可，但建议用至少带点的形式（如 `matrix.cosai`）或你方已有域名，以减少客户端或联邦时的兼容问题。
+
 Synapse 要求 PostgreSQL 使用 `C` locale；若使用默认 locale（如 `en_US.utf8`），配置中会启用 `allow_unsafe_locale: true`（内网单实例可接受）。新部署时 docker-compose 已设置 `POSTGRES_INITDB_ARGS: "--locale=C"` 以符合要求。
 
 ## 验证

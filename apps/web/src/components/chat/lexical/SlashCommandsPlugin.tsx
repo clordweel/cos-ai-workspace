@@ -8,6 +8,7 @@ import {
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import { $getSelection, $isRangeSelection } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
+import { getPlainTextWithMentions } from './lexicalSerialization';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
@@ -38,7 +39,7 @@ export function SlashCommandsPlugin({
   onSubmit,
 }: {
   commands?: SlashCommandItem[];
-  onSubmit?: () => void;
+  onSubmit?: (currentPlainText?: string) => void;
 }) {
   const [editor] = useLexicalComposerContext();
   const [queryString, setQueryString] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export function SlashCommandsPlugin({
           }
         }
       });
-      if (selectedOption.item.key === 'send' && onSubmit) onSubmit();
+      if (selectedOption.item.key === 'send' && onSubmit) onSubmit(getPlainTextWithMentions(editor));
       else selectedOption.item.onSelect?.(editor);
       closeMenu();
     },

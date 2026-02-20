@@ -28,6 +28,18 @@ export function getMatrixUserId(logtoSub: string, username?: string): string {
 }
 
 /**
+ * 将邀请参数解析为 Matrix MXID。
+ * - 若已为完整 MXID（含 ':'），原样返回；
+ * - 否则视为 logtoSub 或 username，按本服务器规则生成 @localpart:serverName。
+ */
+export function resolveInviteeToMatrixUserId(inviteeUserId: string): string {
+  const s = String(inviteeUserId).trim();
+  if (!s) return s;
+  if (s.includes(':')) return s;
+  return getMatrixUserId(s, s);
+}
+
+/**
  * 获取用于会话/API 的 Matrix user_id；有 username 时优先使用 username 作为 localpart
  */
 export function getMatrixUserIdForSession(
