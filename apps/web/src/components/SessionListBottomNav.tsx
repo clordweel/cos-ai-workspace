@@ -163,7 +163,7 @@ export function SessionListBottomNav({
         {userAvatar != null || userName != null ? (
           <Avatar
             className={cn(
-              'shrink-0 ring-1 ring-zinc-200/60 dark:ring-zinc-500/40',
+              'shrink-0 border-0 ring-1 ring-zinc-200/60 dark:ring-zinc-500/40',
               value === 'me' ? '!rounded-xl' : 'h-6 w-6 rounded-full'
             )}
             style={value === 'me' ? { width: 'inherit', height: 'inherit' } : undefined}
