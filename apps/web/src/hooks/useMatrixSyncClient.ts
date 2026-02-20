@@ -204,15 +204,41 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
             const relatesTo = (content as { 'm.relates_to'?: { rel_type?: string; event_id?: string } })['m.relates_to'];
             if (relatesTo?.rel_type === 'm.replace') return;
             const role = event.getSender?.() === matrixUserId ? 'user' : 'assistant';
-            const msg: store.Message = {
-              role: role as 'user' | 'assistant',
-              content: String(body),
-              id: eventId ?? undefined,
-              createdAt,
-            };
+            const bodyStr = String(body);
+            if (bodyStr.trim() === '' && role === 'assistant') return;
             const room = c.getRoom?.(roomId);
             const title = (room?.name ?? '').trim() || roomId;
             ensureSession?.(roomId, title);
+            if (eventId && store.replaceLastMessageIdIfMatch(roomId, bodyStr, role as 'user' | 'assistant', eventId)) {
+              return;
+            }
+            const formattedBody = typeof (content as { formatted_body?: string }).formatted_body === 'string'
+              ? (content as { formatted_body: string }).formatted_body
+              : undefined;
+            if (role === 'user' && eventId && store.replaceLastUserMessageIfMatch(roomId, bodyStr, eventId, formattedBody)) {
+              return;
+            }
+            const senderId = role === 'assistant' ? (event.getSender?.() ?? undefined) : undefined;
+            const msg: store.Message = {
+              role: role as 'user' | 'assistant',
+              content: bodyStr,
+              formattedContent: formattedBody,
+              id: eventId ?? undefined,
+              backendMessageId: eventId ?? undefined,
+              createdAt,
+              senderId,
+            };
+            if (role === 'assistant' && store.replaceStreamingWithMessage(roomId, msg)) {
+              return;
+            }
+            if (role === 'assistant') {
+              const list = store.getMessages(roomId);
+              const last = list[list.length - 1];
+              if (last?.role === 'assistant' && (last.content ?? '').trim() === bodyStr.trim()) {
+                if (eventId) store.setLastMessageId(roomId, eventId);
+                return;
+              }
+            }
             store.appendMessage(roomId, msg);
             return;
           }
@@ -320,7 +346,7 @@ function fillMessagesFromSyncTimelineImpl(
     const sorted = [...rawEvents].sort(byTs);
     const eventMap = new Map<
       string,
-      { role: 'user' | 'assistant'; content: string; id: string; createdAt: number }
+      { role: 'user' | 'assistant'; content: string; formattedContent?: string; id: string; createdAt: number; senderId?: string }
     >();
     const ev = (e: unknown) => ({
       getType: () => (typeof (e as { getType?: () => string }).getType === 'function' ? (e as { getType(): string }).getType() : ''),
@@ -341,13 +367,19 @@ function fillMessagesFromSyncTimelineImpl(
       const role = sender === userId ? ('user' as const) : ('assistant' as const);
       const id = e.getId();
       const ts = e.getTs();
-      eventMap.set(id, { role, content: String(body), id, createdAt: ts > 0 ? ts : Date.now() });
+      const formattedBody = typeof (content as { formatted_body?: string }).formatted_body === 'string'
+        ? (content as { formatted_body: string }).formatted_body
+        : undefined;
+      const senderId = role === 'assistant' ? sender : undefined;
+      eventMap.set(id, { role, content: String(body), formattedContent: formattedBody, id, createdAt: ts > 0 ? ts : Date.now(), senderId });
     }
     const messages = [...eventMap.values()].sort((a, b) => a.createdAt - b.createdAt).map((m) => ({
       role: m.role,
       content: m.content,
+      formattedContent: m.formattedContent,
       id: m.id,
       createdAt: m.createdAt,
+      senderId: m.senderId,
     }));
     if (messages.length === 0) return false;
     store.setMessages(roomId, messages);

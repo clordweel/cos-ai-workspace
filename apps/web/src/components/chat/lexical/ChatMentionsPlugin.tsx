@@ -6,7 +6,7 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
-import { TextNode } from 'lexical';
+import { $getSelection, $isRangeSelection, TextNode } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
 import * as React from 'react';
 import { createPortal } from 'react-dom';
@@ -61,6 +61,8 @@ export function ChatMentionsPlugin({ mentionItems }: { mentionItems: MentionItem
         );
         if (nodeToReplace) nodeToReplace.replace(mentionNode);
         mentionNode.select();
+        const sel = $getSelection();
+        if ($isRangeSelection(sel)) sel.insertText(' ');
         closeMenu();
       });
     },
@@ -87,7 +89,7 @@ export function ChatMentionsPlugin({ mentionItems }: { mentionItems: MentionItem
         >
           {opts.map((option, i) => (
             <li
-              key={option.key}
+              key={option.id}
               role="option"
               aria-selected={selectedIndex === i}
               className={`cursor-pointer px-2 py-1.5 text-sm ${selectedIndex === i ? 'bg-accent text-accent-foreground' : ''}`}

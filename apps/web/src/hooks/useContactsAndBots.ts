@@ -23,12 +23,14 @@ function parseInstructionAttrs(inner: string): Record<string, string> {
 
 /**
  * 从消息文本解析被 @ 的机器人 id 列表（与 frontend 及中间层约定一致）。
- * 支持：纯文本 @名称、指令块 [@id="..." label="..."]
+ * 支持：纯文本 @名称、@名称无空格变体、指令块 [@id="..." label="..."]
  */
 export function getMentionedBotIdsFromText(text: string): string[] {
   const ids = new Set<string>();
   for (const b of BOTS) {
     if (text.includes(`@${b.name}`)) ids.add(b.id);
+    const nameNoSpace = b.name.replace(/\s+/g, '');
+    if (nameNoSpace && nameNoSpace !== b.name && text.includes(`@${nameNoSpace}`)) ids.add(b.id);
   }
   INSTRUCTION_REGEX.lastIndex = 0;
   let m: RegExpExecArray | null;
@@ -81,13 +83,14 @@ export function useContactsAndBots(): {
     fetchContacts();
   }, [fetchContacts]);
 
-  const mentionItems = useMemo<MentionItem[]>(
-    () => [
-      ...contacts.map((c) => ({ id: `contact-${c.id}`, display: c.name })),
+  const mentionItems = useMemo<MentionItem[]>(() => {
+    const botNames = new Set(BOTS.map((b) => b.name));
+    const contactsFiltered = contacts.filter((c) => !botNames.has(c.name));
+    return [
+      ...contactsFiltered.map((c) => ({ id: `contact-${c.id}`, display: c.name })),
       ...BOTS.map((b) => ({ id: `bot-${b.id}`, display: b.name })),
-    ],
-    [contacts]
-  );
+    ];
+  }, [contacts]);
 
   return {
     contacts,

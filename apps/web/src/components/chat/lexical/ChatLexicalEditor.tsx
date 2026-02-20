@@ -15,7 +15,7 @@ import { ChatMentionsPlugin } from './ChatMentionsPlugin';
 import { ChatInputToolbar } from './ChatInputToolbar';
 import { SlashCommandsPlugin } from './SlashCommandsPlugin';
 import { MentionNode } from './MentionNode';
-import { getPlainTextWithMentions } from './lexicalSerialization';
+import { getPlainTextWithMentions, getMarkdownWithMentions } from './lexicalSerialization';
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +34,12 @@ export interface ChatLexicalEditorProps {
   /** 受控：父组件传入的纯文本，仅用于清空时同步（value === '' 时清空编辑器） */
   value: string;
   onChange: (plainText: string) => void;
-  onSubmit?: () => void;
+  /** 提交时传入当前编辑器纯文本（含 @显示名），避免 state 未同步导致 @ 未识别 */
+  onSubmit?: (currentPlainText?: string) => void;
+  /** 注册「获取当前编辑器纯文本」函数，供父组件在表单提交等时机取最新内容，避免 value 滞后 */
+  onRegisterGetText?: (getText: () => string) => void;
+  /** 注册「获取当前编辑器 Markdown」函数，用于发送格式化内容（粗体/斜体/代码），便于 Matrix formatted_body 与消息列表渲染 */
+  onRegisterGetMarkdown?: (getMarkdown: () => string) => void;
   placeholder?: string;
   disabled?: boolean;
   /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
@@ -53,6 +58,8 @@ export function ChatLexicalEditor({
   value,
   onChange,
   onSubmit,
+  onRegisterGetText,
+  onRegisterGetMarkdown,
   placeholder = '说点什么？输入 @ 可提及联系人或机器人',
   disabled = false,
   enterToSend = true,
@@ -75,16 +82,16 @@ export function ChatLexicalEditor({
         <div className="chat-input-editor-scroll relative flex min-h-0 flex-1 flex-col overflow-y-auto">
           <RichTextPlugin
             contentEditable={
-              <div className="chat-session-content-text min-h-0 flex-1 min-w-0 overflow-y-auto" style={{ display: 'block' }}>
+              <div className="chat-session-content-text chat-input-editor-inner h-full min-h-0 flex-1 min-w-0 overflow-y-auto" style={{ display: 'block' }}>
                 <ContentEditable
-                  className="min-h-[2.5rem] w-full resize-none rounded-lg border-0 bg-transparent px-[2px] py-0 outline-none placeholder:text-muted-foreground disabled:opacity-50 [&_.lexical-editor]:outline-none"
+                  className="h-full min-h-full w-full resize-none rounded-lg border-0 bg-transparent px-[2px] py-0 outline-none placeholder:text-muted-foreground disabled:opacity-50 [&_.lexical-editor]:outline-none"
                   aria-placeholder={placeholder}
                   aria-disabled={disabled}
                 />
               </div>
             }
             placeholder={
-              <span className="pointer-events-none absolute left-[2px] right-[2px] top-0 text-xs text-muted-foreground leading-[24px]">
+              <span className="chat-input-placeholder pointer-events-none absolute left-[2px] right-[2px] top-0 text-muted-foreground">
                 {placeholder}
               </span>
             }
@@ -106,6 +113,7 @@ export function ChatLexicalEditor({
           }}
         />
         <EnterSubmitPlugin onSubmit={onSubmit} disabled={disabled} enterToSend={enterToSend} />
+        <RegisterGetTextPlugin onRegisterGetText={onRegisterGetText} onRegisterGetMarkdown={onRegisterGetMarkdown} />
         <EditablePlugin disabled={disabled} />
         <SyncClearPlugin value={value} />
         {mentionItems.length > 0 && <ChatMentionsPlugin mentionItems={mentionItems} />}
@@ -115,12 +123,35 @@ export function ChatLexicalEditor({
   );
 }
 
+function RegisterGetTextPlugin({
+  onRegisterGetText,
+  onRegisterGetMarkdown,
+}: {
+  onRegisterGetText?: (getText: () => string) => void;
+  onRegisterGetMarkdown?: (getMarkdown: () => string) => void;
+}) {
+  const [editor] = useLexicalComposerContext();
+  useEffect(() => {
+    if (onRegisterGetText) {
+      onRegisterGetText(() => getPlainTextWithMentions(editor));
+    }
+    if (onRegisterGetMarkdown) {
+      onRegisterGetMarkdown(() => getMarkdownWithMentions(editor));
+    }
+    return () => {
+      onRegisterGetText?.(() => '');
+      onRegisterGetMarkdown?.(() => '');
+    };
+  }, [editor, onRegisterGetText, onRegisterGetMarkdown]);
+  return null;
+}
+
 function EnterSubmitPlugin({
   onSubmit,
   disabled,
   enterToSend,
 }: {
-  onSubmit?: () => void;
+  onSubmit?: (currentPlainText?: string) => void;
   disabled: boolean;
   enterToSend: boolean;
 }) {
@@ -132,13 +163,14 @@ function EnterSubmitPlugin({
         if (disabled) return false;
         const plain = getPlainTextWithMentions(editor);
         if (!plain.trim()) return false;
+        const markdown = getMarkdownWithMentions(editor);
         if (enterToSend) {
           if (event?.shiftKey) return false;
-          onSubmit?.();
+          onSubmit?.(markdown);
           return true;
         }
         if (!event?.ctrlKey) return false;
-        onSubmit?.();
+        onSubmit?.(markdown);
         return true;
       },
       COMMAND_PRIORITY_LOW

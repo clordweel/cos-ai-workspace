@@ -21,6 +21,8 @@ export interface ChatPaneProps {
   chatUserAvatar?: string | null;
   /** 对方名称 */
   chatUserName?: string | null;
+  /** 对方为 @ai-assistant 机器人且无头像时，顶栏使用占位头像 */
+  chatUserIsAiAssistant?: boolean;
   /** 日期分隔与消息交错列表 */
   displayItems: ChatDisplayItem[];
   /** 输入框受控值 */
@@ -28,7 +30,7 @@ export interface ChatPaneProps {
   /** 输入框变更 */
   onInputChange: (value: string) => void;
   /** 发送消息 */
-  onSubmit?: () => void;
+  onSubmit?: (currentText?: string) => void;
   /** @ 提及菜单项（联系人 + AI 助手），与 frontend UEditorMentionMenu 一致 */
   mentionItems?: MentionItem[];
   /** 关闭会话（顶栏菜单） */
@@ -37,6 +39,8 @@ export interface ChatPaneProps {
   onOpenMembers?: () => void;
   /** 离开会话（Matrix；提供时顶栏菜单显示「离开会话」） */
   onLeave?: () => void;
+  /** 重命名会话（顶栏菜单） */
+  onRename?: () => void;
   /** 是否展示顶栏返回按钮 */
   showBack?: boolean;
   /** 当前用户头像（顶栏菜单左侧） */
@@ -69,6 +73,7 @@ export function ChatPane({
   chatTitle,
   chatUserAvatar,
   chatUserName,
+  chatUserIsAiAssistant = false,
   displayItems,
   input,
   onInputChange,
@@ -77,6 +82,7 @@ export function ChatPane({
   onClose,
   onOpenMembers,
   onLeave,
+  onRename,
   showBack = false,
   currentUserAvatar,
   currentUserName,
@@ -202,6 +208,7 @@ export function ChatPane({
         title={chatTitle}
         userAvatar={chatUserAvatar}
         userName={chatUserName}
+        userIsAiAssistant={chatUserIsAiAssistant}
         participants={participants}
         currentUserAvatar={currentUserAvatar}
         currentUserName={currentUserName}
@@ -209,6 +216,7 @@ export function ChatPane({
         onClose={onClose}
         onOpenMembers={onOpenMembers}
         onLeave={onLeave}
+        onRename={onRename}
       />
       <div className="absolute bottom-0 left-0 right-0 z-20">
         <ChatInputPanel

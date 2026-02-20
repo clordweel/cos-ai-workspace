@@ -14,7 +14,8 @@ const DEFAULT_EDIT_HEIGHT_PX = 150;
 export interface ChatInputPanelProps {
   value: string;
   onChange: (value: string) => void;
-  onSubmit?: () => void;
+  /** 提交时可选传入当前内容（编辑器 Enter 会传；表单提交时用 value） */
+  onSubmit?: (currentText?: string) => void;
   placeholder?: string;
   disabled?: boolean;
   /** true = Enter 发送 / Shift+Enter 换行，false = Enter 换行 / Ctrl+Enter 发送，默认 true */
@@ -41,6 +42,8 @@ export function ChatInputPanel({
   className,
 }: ChatInputPanelProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const getEditorTextRef = useRef<(() => string) | null>(null);
+  const getEditorMarkdownRef = useRef<(() => string) | null>(null);
   const [editHeightPx, setEditHeightPx] = useState(DEFAULT_EDIT_HEIGHT_PX);
   const resolvedPlaceholder =
     placeholder ?? (mentionItems.length > 0 ? MENTION_PLACEHOLDER : DEFAULT_PLACEHOLDER);
@@ -76,7 +79,8 @@ export function ChatInputPanel({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!disabled && value.trim()) onSubmit?.();
+    const toSend = (getEditorMarkdownRef.current?.() ?? getEditorTextRef.current?.() ?? value).trim();
+    if (!disabled && toSend) onSubmit?.(toSend);
   };
 
   return (
@@ -102,6 +106,12 @@ export function ChatInputPanel({
               value={value}
               onChange={onChange}
               onSubmit={onSubmit}
+              onRegisterGetText={(getText) => {
+                getEditorTextRef.current = getText;
+              }}
+              onRegisterGetMarkdown={(getMarkdown) => {
+                getEditorMarkdownRef.current = getMarkdown;
+              }}
               placeholder={resolvedPlaceholder}
               disabled={disabled}
               enterToSend={enterToSend}
