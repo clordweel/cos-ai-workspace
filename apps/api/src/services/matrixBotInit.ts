@@ -11,7 +11,10 @@ import { getMatrixAccessToken, loginAsUser } from '../adapters/matrixClient.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ADMIN_PATH = '/_synapse/admin/v2/users';
-const BOT_TOKEN_FILE = path.resolve(__dirname, '..', 'data', '.matrix-bot-token');
+/** Token 存于 apps/api/data/，与 src 平级，便于 .gitignore 且不混入源码 */
+const BOT_TOKEN_FILE = path.resolve(__dirname, '..', '..', 'data', '.matrix-bot-token');
+/** 兼容旧位置 src/data/（已废弃，仅读取时回退） */
+const BOT_TOKEN_FILE_LEGACY = path.resolve(__dirname, '..', 'data', '.matrix-bot-token');
 
 const DEFAULT_BOT_LOCALPART = 'ai-assistant';
 const BOT_DISPLAYNAME = 'AI 助手';
@@ -31,15 +34,18 @@ function getBotUserId(): string {
 }
 
 async function readStoredBotToken(): Promise<{ botUserId: string; accessToken: string } | null> {
-  try {
-    const raw = await readFile(BOT_TOKEN_FILE, 'utf8');
-    const line = raw.split('\n')[0]?.trim();
-    if (!line) return null;
-    const botUserId = getBotUserId();
-    return { botUserId, accessToken: line };
-  } catch {
-    return null;
-  }
+  const tryRead = async (filePath: string) => {
+    try {
+      const raw = await readFile(filePath, 'utf8');
+      const line = raw.split('\n')[0]?.trim();
+      if (!line) return null;
+      return { botUserId: getBotUserId(), accessToken: line };
+    } catch {
+      return null;
+    }
+  };
+  const stored = (await tryRead(BOT_TOKEN_FILE)) ?? (await tryRead(BOT_TOKEN_FILE_LEGACY));
+  return stored;
 }
 
 async function writeStoredBotToken(accessToken: string): Promise<void> {

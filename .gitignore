@@ -10,6 +10,7 @@ package-lock.json
 
 # API 自动创建的 Matrix bot token（敏感）
 apps/api/data/
+apps/api/src/data/
 
 # Build / output
 dist/
