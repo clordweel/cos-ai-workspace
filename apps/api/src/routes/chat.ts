@@ -370,10 +370,18 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     });
 
     const send: (event: string, data: Record<string, unknown>) => void = (event, data) => {
-      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      try {
+        reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      } catch {
+        /* 客户端已断开（如刷新），忽略写入失败，继续消费 Dify 流以便完成后写入 Matrix */
+      }
     };
     const flush = () => {
-      reply.raw.flushHeaders?.();
+      try {
+        reply.raw.flushHeaders?.();
+      } catch {
+        /* 同上 */
+      }
     };
 
     try {
@@ -394,7 +402,11 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
       send('error', { message: e instanceof Error ? e.message : String(e) });
       flush();
     } finally {
-      reply.raw.end();
+      try {
+        reply.raw.end();
+      } catch {
+        /* 连接已关闭时忽略 */
+      }
     }
   });
 }

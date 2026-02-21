@@ -71,6 +71,7 @@ import { getAuthParam } from '@/lib/authParam';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId, createNewWorkspaceId } from '@/lib/workspaceStorage';
 import { formatSessionDate } from '@/lib/time';
+import { toastManager } from '@/components/ui/toast';
 
 /**
  * 工作区页：/space 进入上次工作空间（无则默认公开工作区 public）并重定向到 /space/:id；
@@ -360,6 +361,7 @@ export default function Space() {
       if (process.env.NODE_ENV === 'development') {
         console.error('[Space] streamChat error:', e);
       }
+      toastManager.add({ title: '回复失败', description: '请重试', type: 'error' });
     } finally {
       setStreamingInProgress(false);
     }

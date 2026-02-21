@@ -127,6 +127,16 @@ export interface MessageTileContextMenuHandlers {
   onReaction?: (message: ChatMessageItem, type: 'like' | 'dislike') => void;
 }
 
+/** 流式内容是否「未成形」：空、仅 <、或未闭合标签，避免展示裸 < + 光标 */
+function isStreamingContentIncomplete(content: string | undefined): boolean {
+  if (content == null) return true;
+  const t = content.trim();
+  if (t.length === 0) return true;
+  if (t === '<') return true;
+  if (/^\s*<[^>]*\s*$/.test(t)) return true;
+  return false;
+}
+
 /** Element 风格气泡消息：用户右对齐、助手/他人左对齐，含头像/发送者/时间/状态/已读/反应/编辑 */
 function BubbleMessageTile({
   message,
@@ -250,13 +260,20 @@ function BubbleMessageTile({
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'] }) }}
                 />
               ) : message.role === 'assistant' && message.id === '__streaming__' ? (
-                <p className="chat-session-content-text whitespace-pre-wrap break-words">
-                  {message.content}
-                  <span
-                    className="inline-block h-4 w-0.5 align-middle bg-current ml-0.5 animate-[streaming-cursor_1s_ease-in-out_infinite]"
-                    aria-hidden
-                  />
-                </p>
+                isStreamingContentIncomplete(message.content) ? (
+                  <p className="chat-session-content-text flex items-center gap-2 py-2 px-0 text-muted-foreground" role="status">
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
+                    <span>正在输出…</span>
+                  </p>
+                ) : (
+                  <p className="chat-session-content-text whitespace-pre-wrap break-words">
+                    {message.content}
+                    <span
+                      className="inline-block h-4 w-0.5 align-middle bg-current ml-0.5 animate-[streaming-cursor_1s_ease-in-out_infinite]"
+                      aria-hidden
+                    />
+                  </p>
+                )
               ) : (
                 <div className="chat-session-content-text chat-markdown text-xs break-words">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>

@@ -19,7 +19,7 @@ import { getPlainTextWithMentions, getMarkdownWithMentions } from './lexicalSeri
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 import { cn } from '@/lib/utils';
 
-/** Lexical theme：text 须为 TextNodeThemeClasses 对象；bold/italic/code 与 frontend/Element 格式化一致 */
+/** Lexical theme：text 须为 TextNodeThemeClasses 对象；bold/italic/code 与设计规范一致 */
 const theme = {
   paragraph: 'mb-0 leading-tight',
   text: {

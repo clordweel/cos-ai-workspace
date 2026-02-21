@@ -31,6 +31,11 @@
 - 将 `message` 事件内容逐字/逐块追加到 UI，实现打字机效果。
 - 将 `tool_result` 或结构化数据渲染为**任务卡片**（订单进度、库存、BOM、待确认物料等）。
 
+### 1.5 多段 <think> 与流式解析（apps/api）
+
+- **根因**：流式按 chunk 累积全文后再用成对 `<think>`/`</think>` 分离 thinking 与 answer。chunk 边界会导致**未成对标签**落入 answer：例如先到 `</think>` 或中间出现孤立 `</think>`，该段会被当作「块间正文」下发给前端，界面出现裸 `</think>`、`<think…` 或与后续文字粘连（如 `<thinktation"文档时...`）。末尾未闭合的 `<think>` 也会把残余标签留在 answer。
+- **方案**：在 `apps/api/src/lib/thinkingParser.ts` 中，对 `splitThinkingAndAnswer` 得到的 answer 再做一次**杂散标签清理**：移除所有成对 `<think>`/`</think>` 及末尾不完整标签（如 `<think`、`</think>`），再下发给前端，保证 message 正文不包含 think 标签。thinking 仍由成对块拼接，不在此 strip。
+
 ---
 
 ## 2. 安全（Safety）

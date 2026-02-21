@@ -4,6 +4,12 @@
 
 ---
 
+## 0. 已废弃包（请勿修改或引用）
+
+- **frontend/**、**middleware/** 已废弃，由 **apps/web**、**apps/api** 替代。开发与 Agent 不得修改或引用该两包内容，详见 `docs/DEPRECATED_PACKAGES.md`。
+
+---
+
 ## 1. 架构与数据流
 
 | 维度 | 状态 | 说明 |

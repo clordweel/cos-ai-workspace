@@ -132,7 +132,16 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     return;
   }
   if (last?.role === 'assistant' && last.id === '__streaming__') {
-    if ((finalContent ?? '').trim() === '' && (finalThinking ?? '').trim() === '') {
+    const trimmed = (finalContent ?? '').trim();
+    const hasThinking = (finalThinking ?? (last as Message).thinking ?? '').trim().length > 0;
+    const isIncompleteContent =
+      trimmed.length < 2 ||
+      trimmed === '<' ||
+      /^\s*<[^>]*\s*$/.test(trimmed);
+    if (trimmed === '' && !hasThinking) {
+      messagesByRoom[roomId] = list.slice(0, -1);
+    } else if (isIncompleteContent && !hasThinking) {
+      /* 残缺内容（如仅 <）不落库，避免重复插入；等 Sync 或用户重试 */
       messagesByRoom[roomId] = list.slice(0, -1);
     } else {
       messagesByRoom[roomId] = [

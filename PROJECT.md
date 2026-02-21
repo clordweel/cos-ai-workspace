@@ -52,18 +52,10 @@ workspace/
 │   ├── PROJECT_STATUS.md      # 多维度当前状态（推荐先读）
 │   ├── API_SPEC.md、FRONTEND_SPEC.md、STREAM_AND_SAFETY.md 等
 │   └── archive/               # 研究/选型与 MAS 归档
-├── frontend/                  # Nuxt 3 + Tailwind + Shadcn-vue，对话流 + 任务卡片
-│   ├── app.vue, nuxt.config.ts, layouts/, pages/
-│   ├── pages/logto.vue, logto-callback.vue  # Logto 登录与回调（前端承载时）
-│   ├── components/            # SessionList*, ChatMessageBubble, ChatInputPanel, AppPanel, TaskCard/*, space/*
-│   ├── composables/          # useChatStream, useChatSessions, useAppView, useAuth, useWorkspaceLayout, usePermissions…
-│   └── types/app-extensions.ts
-├── middleware/                # Node.js (Fastify) TypeScript，SSE + 适配器 + 编排
-│   └── src/
-│       ├── index.ts, config.ts
-│       ├── adapters/         # mock, matrix（聊天后端适配器）
-│       ├── routes/           # auth, chat, material, diagnostics, health, options
-│       └── services/         # auth, difyStream, cosClient, exportMarkdown
+├── apps/web/                  # 当前前端（React + Webpack）
+├── apps/api/                  # 当前中间层（Fastify），SSE + Matrix 适配器 + 编排
+├── frontend/                  # 【已废弃】Nuxt 3 旧前端，请勿修改或引用；由 apps/web 替代
+├── middleware/                # 【已废弃】旧中间层，请勿修改或引用；由 apps/api 替代
 ├── cos/                       # Frappe 自定义 App 说明与占位（见 cos/README.md）
 │   └── README.md
 └── logs/CHANGELOG.md          # 开发变更记录
