@@ -8,7 +8,7 @@
  */
 import { ChatClient } from 'dify-client';
 import { config } from '../src/config.js';
-import { extractText } from '../src/lib/thinkingParser.js';
+import { extractText } from '../src/lib/difyMessageParser.js';
 import { StreamParser } from '../src/lib/streamParser.js';
 
 const QUERY = process.env.DEBUG_DIFY_QUERY || '自我介绍。';

@@ -15,6 +15,7 @@ import {
 import {
   normalizeAssistantContentForDisplay,
   normalizeThinkingForDisplay,
+  extractThoughtBlocksFromContent,
 } from '@/components/chat/assistantDisplayNormalize';
 import { SegmentedMessageBody } from '@/components/chat/SegmentedMessageBody';
 
@@ -31,10 +32,13 @@ export interface AssistantMessageContentProps {
   onOpenAssociation?: (appId: string, entityId: string) => void;
 }
 
-/** 助手消息气泡内容：思考区（可折叠）+ 正文（等待/流式/HTML/Markdown） */
+/** 助手消息气泡内容：思考区（<think> 或正文中的 Thought/Action 块）+ 正文（等待/流式/Markdown） */
 export function AssistantMessageContent({ message, className, onOpenAssociation }: AssistantMessageContentProps) {
   const [thinkingOpen, setThinkingOpen] = useState(false);
-  const hasThinking = message.thinking != null && message.thinking.trim() !== '';
+  const thinkingFromField = (message.thinking ?? '').trim();
+  const thinkingFromContent = extractThoughtBlocksFromContent(message.content);
+  const hasThinking = thinkingFromField !== '' || thinkingFromContent !== '';
+  const thinkingDisplayText = thinkingFromField !== '' ? normalizeThinkingForDisplay(message.thinking) : thinkingFromContent;
   const isWaiting = message.role === 'assistant' && message.id === ASSISTANT_WAITING_ID;
   const isStreaming = message.role === 'assistant' && message.id === ASSISTANT_STREAMING_ID;
   const streamingIncomplete = isStreaming && isStreamingContentIncomplete(message.content);
@@ -57,7 +61,7 @@ export function AssistantMessageContent({ message, className, onOpenAssociation 
           </button>
           {thinkingOpen && (
             <div className="mt-1.5 rounded-lg border border-border bg-muted/50 dark:bg-zinc-800/50 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
-              {normalizeThinkingForDisplay(message.thinking)}
+              {thinkingDisplayText}
             </div>
           )}
         </div>

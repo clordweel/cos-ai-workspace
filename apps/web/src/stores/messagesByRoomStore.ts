@@ -98,7 +98,7 @@ export function appendStreamingContent(roomId: string, delta: string): void {
   notify();
 }
 
-/** 流式思考过程：追加到当前等待/流式占位的 thinking 字段 */
+/** 流式思考过程：追加到当前等待/流式占位的 thinking 字段（TokenLoom 解析 <think> 后由 API 下发） */
 export function appendStreamingThinking(roomId: string, delta: string): void {
   if (!roomId || !delta) return;
   const list = messagesByRoom[roomId] ?? [];
@@ -109,7 +109,7 @@ export function appendStreamingThinking(roomId: string, delta: string): void {
   notify();
 }
 
-/** 流式结束时设置当前条目的完整 thinking（API 可能下发 fullText） */
+/** 流式结束时设置当前条目的完整 thinking（API 下发 fullText） */
 export function setStreamingThinking(roomId: string, fullText: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
@@ -123,7 +123,7 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  const finalThinking = thinking ?? last?.role === 'assistant' ? (last as Message).thinking : undefined;
+  const finalThinking = thinking ?? (last?.role === 'assistant' ? (last as Message).thinking : undefined);
   if (last?.role === 'assistant' && last.id === ASSISTANT_WAITING_ID) {
     messagesByRoom[roomId] = list.slice(0, -1);
     notify();
@@ -146,7 +146,6 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     if (trimmed === '' && !hasThinking) {
       messagesByRoom[roomId] = list.slice(0, -1);
     } else if (isIncompleteContent && !hasThinking) {
-      /* 残缺内容（如仅 <）不落库，避免重复插入；等 Sync 或用户重试 */
       messagesByRoom[roomId] = list.slice(0, -1);
     } else {
       messagesByRoom[roomId] = [
@@ -157,7 +156,6 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     notify();
     return;
   }
-  // 最后一条已是助手消息（如 Sync 先于 commit 到达）：原地更新内容/thinking，避免重复追加
   if (last?.role === 'assistant' && !isAssistantStreamingPlaceholder(last.id)) {
     const next: Message = {
       ...last,
@@ -169,7 +167,7 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     return;
   }
   if ((finalContent ?? '').trim() !== '') {
-    messagesByRoom[roomId] = [...list, { id: `msg-${Date.now()}`, role: 'assistant' as const, content: finalContent, createdAt: Date.now() }];
+    messagesByRoom[roomId] = [...list, { id: `msg-${Date.now()}`, role: 'assistant' as const, content: finalContent, thinking: finalThinking, createdAt: Date.now() }];
     notify();
   }
 }
@@ -220,20 +218,13 @@ function stripMarkdownForCompare(s: string): string {
     .trim();
 }
 
-/** 去掉开头的 Thought:/Action:/<thinht:/<thin> 等辅助标识，便于与 Sync/API 正文去重比较 */
-function stripAssistantLabelForCompare(s: string): string {
-  return (s ?? '')
-    .replace(/^\s*(?:Thought\s*:|Action\s*:|<\s*thinht\s*:|<\s*thin\s*>\s*)\s*/i, '')
-    .trim();
-}
-
-/** 若最后一条为助手消息且与 Sync 的 body 内容一致（去 Markdown 与 Thought/Action 前缀后比较），则用 Sync 的 id/formattedContent 更新并返回 true，避免重复追加 */
+/** 若最后一条为助手消息且与 Sync 的 body 内容一致（去 Markdown 后比较），则用 Sync 的 id/formattedContent 更新并返回 true，避免重复追加 */
 export function replaceLastAssistantMessageIfMatch(
   roomId: string,
   bodyStr: string,
   eventId: string,
   formattedContent?: string,
-  recentMs: number = 20000
+  recentMs: number = 60000
 ): boolean {
   if (!roomId || !eventId) return false;
   const list = messagesByRoom[roomId] ?? [];
@@ -241,12 +232,52 @@ export function replaceLastAssistantMessageIfMatch(
   if (last?.role !== 'assistant' || isAssistantStreamingPlaceholder(last.id)) return false;
   const created = typeof last.createdAt === 'number' ? last.createdAt : 0;
   if (Date.now() - created > recentMs) return false;
-  const plainLast = stripMarkdownForCompare(stripAssistantLabelForCompare(last.content ?? ''));
-  const plainBody = stripMarkdownForCompare(stripAssistantLabelForCompare(bodyStr));
+  const plainLast = stripMarkdownForCompare(last.content ?? '');
+  const plainBody = stripMarkdownForCompare(bodyStr);
   if (plainLast !== plainBody) return false;
   messagesByRoom[roomId] = [
     ...list.slice(0, -1),
     { ...last, id: eventId, backendMessageId: eventId, formattedContent: formattedContent ?? last.formattedContent },
+  ];
+  notify();
+  return true;
+}
+
+/**
+ * 流式提交后 Sync 同条消息到达：最后一条为助手消息且无 backendMessageId 时，用 Sync 消息替换避免重复插入。
+ * 比较时做去 Markdown 归一化，且允许“互为子串”以兼容 API 与 Matrix body 的细微差异。
+ */
+export function replaceLastAssistantMessageIfFromSync(
+  roomId: string,
+  bodyStr: string,
+  eventId: string,
+  formattedContent?: string,
+  senderId?: string,
+  recentMs: number = 60000
+): boolean {
+  if (!roomId || !eventId) return false;
+  const list = messagesByRoom[roomId] ?? [];
+  const last = list[list.length - 1];
+  if (last?.role !== 'assistant' || isAssistantStreamingPlaceholder(last.id)) return false;
+  if ((last as Message).backendMessageId) return false;
+  const created = typeof last.createdAt === 'number' ? last.createdAt : 0;
+  if (Date.now() - created > recentMs) return false;
+  const plainLast = stripMarkdownForCompare(last.content ?? '');
+  const plainBody = stripMarkdownForCompare(bodyStr);
+  const same = plainLast === plainBody;
+  const lastInBody = plainBody.length > 20 && plainLast.length > 0 && plainBody.includes(plainLast);
+  const bodyInLast = plainLast.length > 20 && plainBody.length > 0 && plainLast.includes(plainBody);
+  if (!same && !lastInBody && !bodyInLast) return false;
+  messagesByRoom[roomId] = [
+    ...list.slice(0, -1),
+    {
+      ...last,
+      id: eventId,
+      backendMessageId: eventId,
+      formattedContent: formattedContent ?? (last as Message).formattedContent,
+      content: bodyStr,
+      senderId: senderId ?? (last as Message).senderId,
+    },
   ];
   notify();
   return true;

@@ -38,6 +38,9 @@ importers:
       marked:
         specifier: ^17.0.3
         version: 17.0.3
+      tokenloom:
+        specifier: ^1.0.9
+        version: 1.0.9
     devDependencies:
       '@types/node':
         specifier: ^22.10.1
@@ -7487,6 +7490,10 @@ packages:
   toidentifier@1.0.1:
     resolution: {integrity: sha512-o5sSPKEkg/DIQNmH43V0/uerLrpzVedkUh8tGNvaeXpfpuwjKenlSox/2O/BTlZUtEe+JG7s5YhEz608PlAHRA==}
     engines: {node: '>=0.6'}
+
+  tokenloom@1.0.9:
+    resolution: {integrity: sha512-6U6jR8c86gFjt5/EyheilX4CgLm/9NwF7IebP3I0wHc94Dh4rY4kJKJZJaR3/cvRSdGf8KQ7QOVoDkUoaEEikQ==}
+    engines: {node: '>=18'}
 
   totalist@3.0.1:
     resolution: {integrity: sha512-sf4i37nQ2LBx4m3wB74y+ubopq6W/dIzXg0FDGjsYnZHVa1Da8FH853wlL2gtUhg+xJXjfk3kUZS3BRoQeoQBQ==}
@@ -16133,6 +16140,10 @@ snapshots:
   toad-cache@3.7.0: {}
 
   toidentifier@1.0.1: {}
+
+  tokenloom@1.0.9:
+    dependencies:
+      events: 3.3.0
 
   totalist@3.0.1: {}
 

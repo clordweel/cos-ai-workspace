@@ -10,6 +10,7 @@ export interface ChatSendSubmitPayload {
   botIds: string[] | undefined;
   onSessionCreated?: (p: { session_id: string; backend_session_id?: string }) => void;
   onDelta: (delta: string) => void;
+  /** TokenLoom 解析 <think> 后 API 下发的思考过程 */
   onThinking?: (delta: string) => void;
   onThinkingFull?: (full: string) => void;
   /** 流阶段变化（connecting/thinking/streaming/completed），便于 UI 展示 */

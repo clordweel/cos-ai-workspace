@@ -1,10 +1,10 @@
 /**
- * Dify 流式对话：调用 ChatClient，接收数据流后进行结构化解析，按前端约定转发 SSE 事件
+ * Dify 流式对话：调用 ChatClient，经 TokenLoom 解析 <think>/正文 后下发 thinking + message 事件
  */
 import { ChatClient } from 'dify-client';
 import { config } from '../config.js';
-import { extractText } from '../lib/thinkingParser.js';
-import { StreamParser } from '../lib/streamParser.js';
+import { extractText } from '../lib/difyMessageParser.js';
+import { createTokenLoomAdapter } from '../lib/tokenloomStreamAdapter.js';
 
 export interface StreamParams {
   message: string;
@@ -21,8 +21,8 @@ type SSESend = (event: string, data: Record<string, unknown>) => void;
 type SSEFlush = () => void;
 
 /**
- * 运行流式对话，向 send/flush 写入 SSE 事件
- * @returns 助手回复的完整文本（不含思考过程），供写入 Matrix 等持久化
+ * 运行流式对话，向 send/flush 写入 SSE 事件（thinking + message + message_end）
+ * @returns 助手回复的正文全文（不含 <think> 内容）
  */
 export async function runStreamWithParams(
   params: StreamParams,
@@ -54,7 +54,7 @@ interface DifyStreamEvent {
 }
 
 /**
- * 消费 Dify 流式迭代器，发送 SSE 事件（thinking / message / message_end）
+ * 消费 Dify 流式迭代器：提取正文后经 TokenLoom 拆分为 <think>/正文，下发 thinking 与 message 事件
  */
 export async function consumeStream(
   result: AsyncIterable<DifyStreamEvent> | { data?: unknown },
@@ -65,30 +65,41 @@ export async function consumeStream(
     result && typeof (result as AsyncIterable<DifyStreamEvent>)[Symbol.asyncIterator] === 'function';
   if (!isStream) {
     const data = (result as { data?: unknown }).data;
-    const answer = extractText(
+    const text = extractText(
       typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : undefined
     );
-    const text = typeof answer === 'string' ? answer : '';
-    if (text) send('message', { delta: text });
-    flush();
+    const str = typeof text === 'string' ? text : '';
+    if (str) {
+      const adapter = createTokenLoomAdapter(send, flush);
+      adapter.feed(str);
+      const { answer, thinking } = await adapter.flush();
+      if (thinking) send('thinking', { fullText: thinking });
+      flush();
+      if (answer) send('message', { delta: answer });
+      flush();
+      send('message_end', {});
+      flush();
+      return answer || str;
+    }
     send('message_end', {});
     flush();
-    return text;
+    return '';
   }
 
   send('status', { status: 'thinking' });
   flush();
 
-  const parser = new StreamParser();
+  const adapter = createTokenLoomAdapter(send, flush);
+  let accumulated = '';
   let sentAny = false;
 
   for await (const ev of result as AsyncIterable<DifyStreamEvent>) {
     let data: string | Record<string, unknown> | undefined =
       ev?.data != null ? (ev.data as string | Record<string, unknown>) : (ev as Record<string, unknown> | undefined);
-    // Dify SSE 常仅含 data 行、无 event 行，SDK 的 ev.event 可能为空，从 data 内补取 event 类型
     let evName: string | undefined =
       ev?.event ??
       (data != null && typeof data === 'object' ? (data as Record<string, unknown>).event as string | undefined : undefined);
+
     if (evName === 'error') {
       const msg = (data && typeof data === 'object' && (data as { message?: string }).message != null
         ? String((data as { message?: string }).message)
@@ -108,7 +119,7 @@ export async function consumeStream(
       send('error', { message: hint });
       flush();
     }
-    // agent_message 与 message 均含 answer，下文会统一按 data 提取正文并转发
+
     if (evName && evName !== 'message' && evName !== 'message_end' && evName !== 'agent_message') {
       send('dify_event', {
         type: evName,
@@ -116,31 +127,36 @@ export async function consumeStream(
       });
       flush();
     }
+
     if (typeof data === 'string') {
       try {
         data = JSON.parse(data) as Record<string, unknown>;
         evName = (data as Record<string, unknown>).event as string | undefined ?? evName;
       } catch {
-        if (data) {
-          parser.append(data);
-          const { thinkingDelta, answerDelta } = parser.getSnapshot();
-          if (thinkingDelta.length > 0) {
-            send('thinking', { delta: thinkingDelta });
-            flush();
-            sentAny = true;
-          }
-          if (answerDelta.length > 0) {
-            send('message', { delta: answerDelta });
-            flush();
-            sentAny = true;
-          }
+        const raw = typeof data === 'string' ? data : '';
+        if (raw) {
+          accumulated += raw;
+          adapter.feed(raw);
+          sentAny = true;
         }
         continue;
       }
     }
-    if (!data || typeof data !== 'object') continue;
+
+    if (!data || typeof data !== 'object') {
+      const ev = data && typeof data === 'object' ? (data as DifyStreamEvent) : null;
+      if (ev?.event === 'message_end') {
+        send('message_end', {
+          conversation_id: ev.conversation_id,
+          message_id: ev.message_id,
+        });
+        flush();
+      }
+      continue;
+    }
+
     const chunk = extractText(data as Record<string, unknown>);
-    if (typeof chunk !== 'string') {
+    if (typeof chunk !== 'string' || chunk.length === 0) {
       if ((data as DifyStreamEvent).event === 'message_end') {
         send('message_end', {
           conversation_id: (data as DifyStreamEvent).conversation_id,
@@ -150,37 +166,26 @@ export async function consumeStream(
       }
       continue;
     }
-    if (chunk.length === 0) {
-      if ((data as DifyStreamEvent).event === 'message_end') {
-        send('message_end', {
-          conversation_id: (data as DifyStreamEvent).conversation_id,
-          message_id: (data as DifyStreamEvent).message_id,
-        });
-        flush();
-      }
-      continue;
-    }
+
     const dataObj = data as DifyStreamEvent;
     if (
       dataObj.answer !== undefined &&
       typeof dataObj.answer === 'string' &&
-      dataObj.answer.length > parser.getAccumulatedLength()
+      dataObj.answer.length > accumulated.length
     ) {
-      parser.replaceFull(dataObj.answer);
+      const full = dataObj.answer;
+      const delta = full.slice(accumulated.length);
+      accumulated = full;
+      if (delta) {
+        adapter.feed(delta);
+        sentAny = true;
+      }
     } else {
-      parser.append(chunk);
-    }
-    const { thinkingDelta, answerDelta } = parser.getSnapshot();
-    if (thinkingDelta.length > 0) {
-      send('thinking', { delta: thinkingDelta });
-      flush();
+      accumulated += chunk;
+      adapter.feed(chunk);
       sentAny = true;
     }
-    if (answerDelta.length > 0) {
-      send('message', { delta: answerDelta });
-      flush();
-      sentAny = true;
-    }
+
     if (dataObj.event === 'message_end') {
       send('message_end', {
         conversation_id: dataObj.conversation_id,
@@ -190,17 +195,12 @@ export async function consumeStream(
     }
   }
 
-  const { thinking: finalThinking } = parser.getResult();
-  if (finalThinking && finalThinking.length > 0) {
-    send('thinking', { fullText: finalThinking });
-    flush();
-  }
-  if (!sentAny) {
+  const { answer } = await adapter.flush();
+  if (!sentAny && !answer) {
     send('message', { delta: '（Dify 未返回文本，请检查应用类型与 API 配置）' });
     flush();
   }
   send('message_end', {});
   flush();
-  const { answer } = parser.getResult();
-  return answer ?? '';
+  return answer ?? accumulated ?? '';
 }

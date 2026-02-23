@@ -231,6 +231,9 @@ export function useMatrixSyncClient(options: UseMatrixSyncClientOptions) {
             if (role === 'assistant' && store.replaceStreamingWithMessage(roomId, msg)) {
               return;
             }
+            if (role === 'assistant' && eventId && store.replaceLastAssistantMessageIfFromSync(roomId, bodyStr, eventId, formattedBody, senderId)) {
+              return;
+            }
             if (role === 'assistant' && eventId && store.replaceLastAssistantMessageIfMatch(roomId, bodyStr, eventId, formattedBody)) {
               return;
             }

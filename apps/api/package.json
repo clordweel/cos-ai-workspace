@@ -20,7 +20,8 @@
     "dotenv": "^16.6.1",
     "fastify": "^5.x",
     "ioredis": "^5.9.2",
-    "marked": "^17.0.3"
+    "marked": "^17.0.3",
+    "tokenloom": "^1.0.9"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

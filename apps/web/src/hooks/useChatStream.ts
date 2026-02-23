@@ -8,6 +8,7 @@ export interface StreamChatOptions {
   signal?: AbortSignal;
   botIds?: string[];
   onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void;
+  /** TokenLoom 解析 <think> 后 API 下发的思考过程（增量/全文） */
   onThinking?: (delta: string) => void;
   onThinkingFull?: (fullText: string) => void;
   /** 流阶段变化（connecting → thinking → streaming → completed），便于 UI 展示「思考中/流式中」 */
