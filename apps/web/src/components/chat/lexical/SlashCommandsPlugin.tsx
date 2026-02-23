@@ -7,6 +7,7 @@ import {
   useBasicTypeaheadTriggerMatch,
 } from '@lexical/react/LexicalTypeaheadMenuPlugin';
 import { $getSelection, $isRangeSelection } from 'lexical';
+import { COMMAND_PRIORITY_CRITICAL } from 'lexical';
 import { useCallback, useMemo, useState } from 'react';
 import { getPlainTextWithMentions } from './lexicalSerialization';
 import * as React from 'react';
@@ -136,6 +137,7 @@ export function SlashCommandsPlugin({
       options={options}
       menuRenderFn={menuRenderFn}
       anchorClassName="chat-lexical-slash-anchor"
+      commandPriority={COMMAND_PRIORITY_CRITICAL}
     />
   );
 }

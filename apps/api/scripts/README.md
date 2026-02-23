@@ -24,6 +24,7 @@
 
 - `local-health.ts` — 请求 `GET /health`，无需认证。
 - `local-auth-me.ts` — 请求 `GET /api/auth/me`，需 Cookie；未设置 `AUTH_SESSION_COOKIE` 时仅打印需求提示。
+- `debug-dify-stream.ts` — 直接请求 Dify 流式接口，打印原始 chunk 与结构化解析结果（thinking / answer），用于格式解析调试。需 `DIFY_API_KEY`（及可选 `DIFY_API_BASE`）；可选 `DEBUG_DIFY_QUERY` 覆盖默认问题（默认「自我介绍。」）。
 
 ## 运行前
 

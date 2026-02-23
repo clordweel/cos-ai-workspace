@@ -10,7 +10,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/src/index.js",
     "script:health": "tsx scripts/local-health.ts",
-    "script:auth-me": "tsx scripts/local-auth-me.ts"
+    "script:auth-me": "tsx scripts/local-auth-me.ts",
+    "script:debug-dify-stream": "tsx scripts/debug-dify-stream.ts"
   },
   "dependencies": {
     "@fastify/cookie": "^10.x",

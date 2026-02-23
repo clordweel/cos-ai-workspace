@@ -12,6 +12,10 @@ import {
   ASSISTANT_STREAMING_ID,
   isStreamingContentIncomplete,
 } from '@/components/chat/assistantConstants';
+import {
+  normalizeAssistantContentForDisplay,
+  normalizeThinkingForDisplay,
+} from '@/components/chat/assistantDisplayNormalize';
 import { SegmentedMessageBody } from '@/components/chat/SegmentedMessageBody';
 
 const ALLOWED_HTML_TAGS = [
@@ -53,7 +57,7 @@ export function AssistantMessageContent({ message, className, onOpenAssociation 
           </button>
           {thinkingOpen && (
             <div className="mt-1.5 rounded-lg border border-border bg-muted/50 dark:bg-zinc-800/50 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
-              {message.thinking}
+              {normalizeThinkingForDisplay(message.thinking)}
             </div>
           )}
         </div>
@@ -72,7 +76,7 @@ export function AssistantMessageContent({ message, className, onOpenAssociation 
           </p>
         ) : (
           <p className="chat-session-content-text whitespace-pre-wrap break-words">
-            {message.content}
+            {normalizeAssistantContentForDisplay(message.content)}
             <span
               className="inline-block h-4 w-0.5 align-middle bg-current ml-0.5 animate-[streaming-cursor_1s_ease-in-out_infinite]"
               aria-hidden
@@ -81,7 +85,7 @@ export function AssistantMessageContent({ message, className, onOpenAssociation 
         )
       ) : (message.content ?? '').includes('[ASSOC]') ? (
         /* 优先按 content 解析 ASSOC，刷新后从 API/Matrix 拉到的消息也能正确渲染关联段 */
-        <SegmentedMessageBody content={message.content || ''} onOpenApp={onOpenAssociation} />
+        <SegmentedMessageBody content={normalizeAssistantContentForDisplay(message.content) || ''} onOpenApp={onOpenAssociation} />
       ) : message.formattedContent ? (
         <div
           className="chat-session-content-text chat-formatted-html text-xs break-words"
@@ -91,7 +95,7 @@ export function AssistantMessageContent({ message, className, onOpenAssociation 
         />
       ) : (
         <div className="chat-session-content-text chat-markdown text-xs break-words">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{normalizeAssistantContentForDisplay(message.content) || ''}</ReactMarkdown>
         </div>
       )}
     </div>

@@ -157,9 +157,6 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     notify();
     return;
   }
-  if (last?.role === 'assistant' && (finalContent ?? '').trim() !== '' && (last.content ?? '').trim() === (finalContent ?? '').trim()) {
-    return;
-  }
   // 最后一条已是助手消息（如 Sync 先于 commit 到达）：原地更新内容/thinking，避免重复追加
   if (last?.role === 'assistant' && !isAssistantStreamingPlaceholder(last.id)) {
     const next: Message = {
@@ -187,13 +184,17 @@ export function discardStreamingMessage(roomId: string): void {
   }
 }
 
-/** 若最后一条为流式占位，用 Sync 收到的真实消息替换，避免重复显示；返回是否已替换 */
+/** 若最后一条为流式占位，用 Sync 收到的真实消息替换，避免重复显示；保留占位上的 thinking，返回是否已替换 */
 export function replaceStreamingWithMessage(roomId: string, msg: Message): boolean {
   if (!roomId) return false;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
   if (last?.role !== 'assistant' || !isAssistantStreamingPlaceholder(last.id)) return false;
-  messagesByRoom[roomId] = [...list.slice(0, -1), { ...msg, id: msg.id ?? msg.backendMessageId }];
+  const thinking = (last as Message).thinking;
+  messagesByRoom[roomId] = [
+    ...list.slice(0, -1),
+    { ...msg, id: msg.id ?? msg.backendMessageId, thinking: thinking ?? msg.thinking },
+  ];
   notify();
   return true;
 }
@@ -218,7 +219,15 @@ function stripMarkdownForCompare(s: string): string {
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .trim();
 }
-/** 若最后一条为助手消息且与 Sync 的 body 内容一致（去 Markdown 后比较），则用 Sync 的 id/formattedContent 更新并返回 true，避免重复追加 */
+
+/** 去掉开头的 Thought:/Action:/<thinht:/<thin> 等辅助标识，便于与 Sync/API 正文去重比较 */
+function stripAssistantLabelForCompare(s: string): string {
+  return (s ?? '')
+    .replace(/^\s*(?:Thought\s*:|Action\s*:|<\s*thinht\s*:|<\s*thin\s*>\s*)\s*/i, '')
+    .trim();
+}
+
+/** 若最后一条为助手消息且与 Sync 的 body 内容一致（去 Markdown 与 Thought/Action 前缀后比较），则用 Sync 的 id/formattedContent 更新并返回 true，避免重复追加 */
 export function replaceLastAssistantMessageIfMatch(
   roomId: string,
   bodyStr: string,
@@ -232,8 +241,8 @@ export function replaceLastAssistantMessageIfMatch(
   if (last?.role !== 'assistant' || isAssistantStreamingPlaceholder(last.id)) return false;
   const created = typeof last.createdAt === 'number' ? last.createdAt : 0;
   if (Date.now() - created > recentMs) return false;
-  const plainLast = stripMarkdownForCompare(last.content);
-  const plainBody = stripMarkdownForCompare(bodyStr);
+  const plainLast = stripMarkdownForCompare(stripAssistantLabelForCompare(last.content ?? ''));
+  const plainBody = stripMarkdownForCompare(stripAssistantLabelForCompare(bodyStr));
   if (plainLast !== plainBody) return false;
   messagesByRoom[roomId] = [
     ...list.slice(0, -1),

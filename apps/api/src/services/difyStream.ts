@@ -1,9 +1,10 @@
 /**
- * Dify 流式对话：调用 ChatClient，按前端约定转发 SSE 事件（与 middleware 对齐）
+ * Dify 流式对话：调用 ChatClient，接收数据流后进行结构化解析，按前端约定转发 SSE 事件
  */
 import { ChatClient } from 'dify-client';
 import { config } from '../config.js';
-import { extractText, splitThinkingAndAnswer } from '../lib/thinkingParser.js';
+import { extractText } from '../lib/thinkingParser.js';
+import { StreamParser } from '../lib/streamParser.js';
 
 export interface StreamParams {
   message: string;
@@ -78,9 +79,7 @@ export async function consumeStream(
   send('status', { status: 'thinking' });
   flush();
 
-  let accumulatedFull = '';
-  let prevThinkingLen = 0;
-  let prevAnswerLen = 0;
+  const parser = new StreamParser();
   let sentAny = false;
 
   for await (const ev of result as AsyncIterable<DifyStreamEvent>) {
@@ -123,18 +122,16 @@ export async function consumeStream(
         evName = (data as Record<string, unknown>).event as string | undefined ?? evName;
       } catch {
         if (data) {
-          accumulatedFull += data;
-          const { thinking, answer } = splitThinkingAndAnswer(accumulatedFull);
-          if (thinking.length > prevThinkingLen) {
-            send('thinking', { delta: thinking.slice(prevThinkingLen) });
+          parser.append(data);
+          const { thinkingDelta, answerDelta } = parser.getSnapshot();
+          if (thinkingDelta.length > 0) {
+            send('thinking', { delta: thinkingDelta });
             flush();
-            prevThinkingLen = thinking.length;
             sentAny = true;
           }
-          if (answer.length > prevAnswerLen) {
-            send('message', { delta: answer.slice(prevAnswerLen) });
+          if (answerDelta.length > 0) {
+            send('message', { delta: answerDelta });
             flush();
-            prevAnswerLen = answer.length;
             sentAny = true;
           }
         }
@@ -164,27 +161,24 @@ export async function consumeStream(
       continue;
     }
     const dataObj = data as DifyStreamEvent;
-    // 仅当新 answer 严格更长时视为累积更新并替换，避免 Agent/工具调用后 Dify 只发短尾（如 "。"）时覆盖已累积正文
     if (
       dataObj.answer !== undefined &&
       typeof dataObj.answer === 'string' &&
-      dataObj.answer.length > accumulatedFull.length
+      dataObj.answer.length > parser.getAccumulatedLength()
     ) {
-      accumulatedFull = dataObj.answer;
+      parser.replaceFull(dataObj.answer);
     } else {
-      accumulatedFull += chunk;
+      parser.append(chunk);
     }
-    const { thinking, answer } = splitThinkingAndAnswer(accumulatedFull);
-    if (thinking.length > prevThinkingLen) {
-      send('thinking', { delta: thinking.slice(prevThinkingLen) });
+    const { thinkingDelta, answerDelta } = parser.getSnapshot();
+    if (thinkingDelta.length > 0) {
+      send('thinking', { delta: thinkingDelta });
       flush();
-      prevThinkingLen = thinking.length;
       sentAny = true;
     }
-    if (answer.length > prevAnswerLen) {
-      send('message', { delta: answer.slice(prevAnswerLen) });
+    if (answerDelta.length > 0) {
+      send('message', { delta: answerDelta });
       flush();
-      prevAnswerLen = answer.length;
       sentAny = true;
     }
     if (dataObj.event === 'message_end') {
@@ -196,7 +190,7 @@ export async function consumeStream(
     }
   }
 
-  const { thinking: finalThinking } = splitThinkingAndAnswer(accumulatedFull);
+  const { thinking: finalThinking } = parser.getResult();
   if (finalThinking && finalThinking.length > 0) {
     send('thinking', { fullText: finalThinking });
     flush();
@@ -207,6 +201,6 @@ export async function consumeStream(
   }
   send('message_end', {});
   flush();
-  const { answer } = splitThinkingAndAnswer(accumulatedFull);
+  const { answer } = parser.getResult();
   return answer ?? '';
 }
