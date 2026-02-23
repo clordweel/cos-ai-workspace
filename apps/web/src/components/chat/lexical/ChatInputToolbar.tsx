@@ -4,12 +4,14 @@ import { useLexicalComposerContext } from '@lexical/react/LexicalComposerContext
 import { $getSelection, $isRangeSelection } from 'lexical';
 import { FORMAT_TEXT_COMMAND } from 'lexical';
 import { useCallback } from 'react';
-import { AtSign, Bold, Code, Hash, Italic, Slash } from 'lucide-react';
+import { AtSign, Bold, Code, Italic, Link2, Slash } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAssociationOptional } from '@/contexts/AssociationContext';
 
-/** 与 frontend ChatInputPanel 一致：插入 @ / # / 与 粗体/斜体/代码 格式化 */
+/** 插入 @ / 关联 / / 与 粗体/斜体/代码 格式化 */
 export function ChatInputToolbar({ disabled }: { disabled?: boolean }) {
   const [editor] = useLexicalComposerContext();
+  const association = useAssociationOptional();
 
   const insertAtCursor = useCallback(
     (char: string) => {
@@ -55,14 +57,14 @@ export function ChatInputToolbar({ disabled }: { disabled?: boolean }) {
       <button
         type="button"
         className={chipClass}
-        title="# 来源"
-        aria-label="# 来源"
-        onClick={() => insertAtCursor('#')}
+        title="关联"
+        aria-label="关联应用或内容到当前会话"
+        onClick={() => (association ? association.openAssociationPicker() : insertAtCursor('#'))}
       >
         <span className={iconWrapClass}>
-          <Hash className="h-2 w-2" aria-hidden />
+          <Link2 className="h-2 w-2" aria-hidden />
         </span>
-        <span className="text-[10px] font-medium text-black dark:text-white">来源</span>
+        <span className="text-[10px] font-medium text-black dark:text-white">关联</span>
       </button>
       <button
         type="button"

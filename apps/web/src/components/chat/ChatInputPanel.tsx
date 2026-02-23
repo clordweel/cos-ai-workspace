@@ -1,10 +1,18 @@
 'use client';
 
-import { GripHorizontal, SendHorizontal } from 'lucide-react';
+import { GripHorizontal, SendHorizontal, X, Link2 } from 'lucide-react';
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 import { ChatLexicalEditor } from '@/components/chat/lexical/ChatLexicalEditor';
+import { useAssociationOptional } from '@/contexts/AssociationContext';
+import { ASSOCIATION_CANDIDATES } from '@/data/associationCandidates';
+import {
+  Popover,
+  PopoverPopup,
+  PopoverTitle,
+  PopoverDescription,
+} from '@/components/ui/popover';
 
 /** 最小高度 150px（抬高一倍后再调低 1/4），需容纳容器 padding、编辑器、底部工具栏 */
 const MIN_EDIT_HEIGHT_PX = 150;
@@ -48,6 +56,15 @@ export function ChatInputPanel({
   const getEditorTextRef = useRef<(() => string) | null>(null);
   const getEditorMarkdownRef = useRef<(() => string) | null>(null);
   const [editHeightPx, setEditHeightPx] = useState(DEFAULT_EDIT_HEIGHT_PX);
+  const [associationPickerOpen, setAssociationPickerOpen] = useState(false);
+  const associationAnchorRef = useRef<HTMLDivElement>(null);
+  const association = useAssociationOptional();
+
+  useEffect(() => {
+    if (!association) return;
+    return association.registerOpenAssociationPicker(() => setAssociationPickerOpen(true));
+  }, [association]);
+
   const resolvedPlaceholder =
     placeholder ?? (mentionItems.length > 0 ? MENTION_PLACEHOLDER : DEFAULT_PLACEHOLDER);
 
@@ -104,7 +121,77 @@ export function ChatInputPanel({
         style={{ height: editHeightPx, minHeight: editHeightPx }}
       >
         <form onSubmit={handleSubmit} className="flex h-full min-h-0 flex-col overflow-hidden">
-          <div className="flex flex-1 min-h-0 flex-col rounded-xl border-2 border-border bg-white/70 px-2 py-2 overflow-hidden backdrop-blur-md dark:bg-zinc-900/70">
+          <div className="relative flex flex-1 min-h-0 flex-col rounded-xl border-2 border-border bg-white/70 px-2 py-2 overflow-hidden backdrop-blur-md dark:bg-zinc-900/70">
+            {association && association.pendingAssociations.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pb-2 shrink-0">
+                {association.pendingAssociations.map((item) => (
+                  <span
+                    key={`${item.appId}:${item.entityId}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 px-1.5 py-0.5 text-[10px] text-foreground"
+                  >
+                    <span className="max-w-[120px] truncate" title={item.title}>
+                      {item.title}
+                    </span>
+                    <button
+                      type="button"
+                      className="rounded p-0.5 hover:bg-muted"
+                      aria-label={`移除关联 ${item.title}`}
+                      onClick={() => association.removePendingAssociation(item.entityId, item.appId)}
+                    >
+                      <X className="h-2.5 w-2.5" aria-hidden />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <Popover open={associationPickerOpen} onOpenChange={setAssociationPickerOpen}>
+              <div
+                ref={associationAnchorRef}
+                className="absolute left-0 top-0 h-0 w-0"
+                aria-hidden
+              />
+              <PopoverPopup anchor={associationAnchorRef} side="top" align="start" className="w-72 max-h-[min(20rem,60vh)] flex flex-col">
+                <PopoverTitle className="text-sm">关联到当前会话</PopoverTitle>
+                <PopoverDescription className="mt-1 mb-2">
+                  选择一项即可添加到输入框上方，发送时随消息一起提交。
+                </PopoverDescription>
+                <ul className="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0" role="list">
+                  {ASSOCIATION_CANDIDATES.map((item) => {
+                    const key = `${item.appId}:${item.entityId}`;
+                    const alreadyAdded = association?.pendingAssociations.some(
+                      (p) => p.appId === item.appId && p.entityId === item.entityId
+                    );
+                    return (
+                      <li key={key}>
+                        <button
+                          type="button"
+                          className={cn(
+                            'flex w-full items-start gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-left transition-colors',
+                            alreadyAdded
+                              ? 'opacity-60 cursor-default'
+                              : 'hover:bg-muted/60 hover:border-border cursor-pointer'
+                          )}
+                          onClick={() => {
+                            if (alreadyAdded || !association) return;
+                            association.addPendingAssociation(item);
+                            setAssociationPickerOpen(false);
+                          }}
+                          disabled={alreadyAdded || !association}
+                        >
+                          <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                          <div className="min-w-0 flex-1">
+                            <span className="text-sm font-medium text-foreground">{item.title}</span>
+                            {item.summary && (
+                              <p className="mt-0.5 text-[10px] text-muted-foreground line-clamp-2">{item.summary}</p>
+                            )}
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </PopoverPopup>
+            </Popover>
             <ChatLexicalEditor
               value={value}
               onChange={onChange}

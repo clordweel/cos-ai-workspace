@@ -74,18 +74,22 @@ import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId, createNewWorkspaceId } from '@/lib/workspaceStorage';
 import { formatSessionDate } from '@/lib/time';
 import { toastManager } from '@/components/ui/toast';
+import { AssociationProvider, useAssociationOptional } from '@/contexts/AssociationContext';
+import { toAssociationPayload } from '@/types/associations';
+import { serializeSegmentsToMessageBody } from '@/types/messageSegments';
 
 /**
  * 工作区页：/space 进入上次工作空间（无则默认公开工作区 public）并重定向到 /space/:id；
  * /space/:id 为主界面框架：会话区 + 操作区（对应 frontend 应用区），具体布局与容器查询后续设计。
  */
-export default function Space() {
+function SpaceContent() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user, isAuthenticated, reAuthWithPopup, logout, matrixSyncToken, matrixBaseUrl, matrixUserId, matrixDeviceId, fetchUser } = useAuth();
   const { uiFontSizeStep, setUIFontSizeStep, sessionAreaFontScale, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
   const [enterToSend, setEnterToSend] = useState(true);
+  const association = useAssociationOptional();
 
   /** 认证回调后：先等 Cookie 落盘再拉用户（延迟 + 重试），成功后再清理 URL，保证个人中心立即有数据 */
   useEffect(() => {
@@ -342,6 +346,15 @@ export default function Space() {
       const conversationId = selectedChatId || undefined;
       const roomId = selectedChatId ?? '';
       const botIds = getMentionedBotIdsFromText(text);
+      const pending = association?.pendingAssociations ?? [];
+      const messageBody =
+        pending.length > 0
+          ? serializeSegmentsToMessageBody([
+              { type: 'text', content: text },
+              ...pending.map((item) => ({ type: 'association' as const, payload: toAssociationPayload(item) })),
+            ])
+          : text;
+      association?.clearPendingAssociations();
       let batch = '';
       let rafId: number | null = null;
       const flush = () => {
@@ -357,7 +370,7 @@ export default function Space() {
       };
       setChatInput('');
       submit({
-        text,
+        text: messageBody,
         conversationId,
         botIds: botIds.length ? botIds : undefined,
         onSessionCreated: (p) => {
@@ -393,6 +406,7 @@ export default function Space() {
       selectedChatId,
       id,
       isSending,
+      association,
       submit,
       appendStreamingContent,
       appendStreamingThinking,
@@ -969,6 +983,7 @@ export default function Space() {
                   typingUserIds={typingUserIds}
                   streamingInProgress={false}
                   streamPhaseLabel={getStreamPhaseLabel(streamPhase)}
+                  onOpenAssociation={(appId) => openView('app', appId)}
                 />
                 <SessionMembersSheet
                   open={membersSheetOpen}
@@ -1129,6 +1144,7 @@ export default function Space() {
                     .catch(() => {});
                 }}
                 onLogout={logout}
+                onOpenApp={(appId) => openView('app', appId)}
               />
             </main>
           </div>
@@ -1141,5 +1157,13 @@ export default function Space() {
         onConfirm={handleCreateSession}
       />
     </PageGrid>
+  );
+}
+
+export default function Space() {
+  return (
+    <AssociationProvider>
+      <SpaceContent />
+    </AssociationProvider>
   );
 }

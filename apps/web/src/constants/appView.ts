@@ -46,7 +46,13 @@ export const defaultHomeTab: AppTab = {
   title: '首页',
 };
 
+/** 已知应用 ID 的展示名（测试应用等） */
+const APP_DISPLAY_NAMES: Record<string, string> = {
+  'memo-test': '测试备忘录',
+  'task-test': '测试任务',
+};
+
 export function getViewTitle(view: AppView, appId?: string): string {
-  if (view === 'app' && appId) return appId;
+  if (view === 'app' && appId) return APP_DISPLAY_NAMES[appId] ?? appId;
   return VIEW_TITLES[view] ?? view;
 }

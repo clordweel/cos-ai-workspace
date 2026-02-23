@@ -7,12 +7,21 @@ import { ChatHeader, type ChatHeaderParticipant } from '@/components/chat/ChatHe
 import { ChatInputPanel } from '@/components/chat/ChatInputPanel';
 import { MessageTile, type MessageTileContextMenuHandlers } from '@/components/chat/MessageTile';
 import type { ChatMessageItem } from '@/components/chat/chatMessageTypes';
+import type { MessageSegment } from '@/types/messageSegments';
 import { cn } from '@/lib/utils';
 import type { MentionItem } from '@/hooks/useContactsAndBots';
 
 export type ChatDisplayItem =
   | { type: 'date'; label: string }
-  | { type: 'message'; message: ChatMessageItem };
+  | { type: 'message'; message: ChatMessageItem }
+  | {
+      type: 'messageSegment';
+      message: ChatMessageItem;
+      segment: MessageSegment;
+      segmentIndex: number;
+      isFirstSegment: boolean;
+      isLastSegment: boolean;
+    };
 
 export interface ChatPaneProps {
   /** 会话标题 */
@@ -67,6 +76,8 @@ export interface ChatPaneProps {
   streamingInProgress?: boolean;
   /** 流阶段文案（如「思考中」），来自 Dify 流阶段状态机，可选展示在输入区上方 */
   streamPhaseLabel?: string | null;
+  /** 点击消息内关联块时打开对应应用（appId + entityId） */
+  onOpenAssociation?: (appId: string, entityId?: string) => void;
   className?: string;
 }
 
@@ -100,6 +111,7 @@ export function ChatPane({
   formatTypingName = (userId: string) => (userId.includes(':') ? userId.slice(0, userId.indexOf(':')) : userId),
   streamingInProgress = false,
   streamPhaseLabel = null,
+  onOpenAssociation,
   className,
 }: ChatPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -177,6 +189,20 @@ export function ChatPane({
                       {item.label}
                     </span>
                   </div>
+                ) : item.type === 'messageSegment' ? (
+                  <MessageTile
+                    key={`${item.message.id}-${item.segmentIndex}`}
+                    message={item.message}
+                    segmentInfo={{
+                      segment: item.segment,
+                      isFirstSegment: item.isFirstSegment,
+                      isLastSegment: item.isLastSegment,
+                    }}
+                    currentUserAvatar={currentUserAvatar}
+                    currentUserName={currentUserName}
+                    contextMenuHandlers={messageContextMenuHandlers}
+                    onOpenAssociation={onOpenAssociation}
+                  />
                 ) : (
                   <MessageTile
                     key={item.message.id}
@@ -184,6 +210,7 @@ export function ChatPane({
                     currentUserAvatar={currentUserAvatar}
                     currentUserName={currentUserName}
                     contextMenuHandlers={messageContextMenuHandlers}
+                    onOpenAssociation={onOpenAssociation}
                   />
                 )
               )}

@@ -12,6 +12,7 @@ import {
   ASSISTANT_STREAMING_ID,
   isStreamingContentIncomplete,
 } from '@/components/chat/assistantConstants';
+import { SegmentedMessageBody } from '@/components/chat/SegmentedMessageBody';
 
 const ALLOWED_HTML_TAGS = [
   'p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li',
@@ -22,10 +23,12 @@ const ALLOWED_HTML_TAGS = [
 export interface AssistantMessageContentProps {
   message: ChatMessageItem;
   className?: string;
+  /** 点击消息内关联块时打开对应应用（appId + entityId） */
+  onOpenAssociation?: (appId: string, entityId: string) => void;
 }
 
 /** 助手消息气泡内容：思考区（可折叠）+ 正文（等待/流式/HTML/Markdown） */
-export function AssistantMessageContent({ message, className }: AssistantMessageContentProps) {
+export function AssistantMessageContent({ message, className, onOpenAssociation }: AssistantMessageContentProps) {
   const [thinkingOpen, setThinkingOpen] = useState(false);
   const hasThinking = message.thinking != null && message.thinking.trim() !== '';
   const isWaiting = message.role === 'assistant' && message.id === ASSISTANT_WAITING_ID;
@@ -61,13 +64,6 @@ export function AssistantMessageContent({ message, className }: AssistantMessage
           <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
           <span>正在思考…</span>
         </p>
-      ) : message.formattedContent ? (
-        <div
-          className="chat-session-content-text chat-formatted-html text-xs break-words"
-          dangerouslySetInnerHTML={{
-            __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: [...ALLOWED_HTML_TAGS] }),
-          }}
-        />
       ) : isStreaming ? (
         streamingIncomplete ? (
           <p className="chat-session-content-text flex items-center gap-2 py-2 px-0 text-muted-foreground" role="status">
@@ -83,6 +79,16 @@ export function AssistantMessageContent({ message, className }: AssistantMessage
             />
           </p>
         )
+      ) : (message.content ?? '').includes('[ASSOC]') ? (
+        /* 优先按 content 解析 ASSOC，刷新后从 API/Matrix 拉到的消息也能正确渲染关联段 */
+        <SegmentedMessageBody content={message.content || ''} onOpenApp={onOpenAssociation} />
+      ) : message.formattedContent ? (
+        <div
+          className="chat-session-content-text chat-formatted-html text-xs break-words"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: [...ALLOWED_HTML_TAGS] }),
+          }}
+        />
       ) : (
         <div className="chat-session-content-text chat-markdown text-xs break-words">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>

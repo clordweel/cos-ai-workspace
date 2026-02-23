@@ -28,6 +28,7 @@ export type SSEFlush = () => void;
 export interface StreamMessageParams {
   sessionId: string;
   backendSessionId?: string;
+  /** 消息正文；可为方案 B：可读文本 + [ASSOC]{...}[/ASSOC] 定界符内 JSON */
   message: string;
   userId: string;
   send: SSESend;

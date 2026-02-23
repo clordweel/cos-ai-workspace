@@ -6,6 +6,9 @@ import { AuthPanel } from '@/components/AuthPanel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { HomeContent } from '@/components/app/HomeContent';
+import { MemoTestApp } from '@/components/app/testApps/MemoTestApp';
+import { TaskTestApp } from '@/components/app/testApps/TaskTestApp';
 
 export interface AppContentProps {
   /** 当前选中的标签，为 null 时显示首页占位 */
@@ -14,6 +17,8 @@ export interface AppContentProps {
   reAuthLoading?: boolean;
   onReAuth?: () => void;
   onLogout?: () => void;
+  /** 打开应用（view=app 时用 appId 打开；首页卡片调用以打开测试应用） */
+  onOpenApp?: (appId: string) => void;
 }
 
 export function AppContent({
@@ -22,8 +27,10 @@ export function AppContent({
   reAuthLoading = false,
   onReAuth,
   onLogout,
+  onOpenApp,
 }: AppContentProps) {
   const view = activeTab?.view ?? 'home';
+  const appId = activeTab?.appId;
 
   if (view === 'profile') {
     if (user) {
@@ -78,15 +85,28 @@ export function AppContent({
     return <AuthPanel className="min-h-full" />;
   }
 
-  if (view === 'contacts' || view === 'bots' || view === 'settings' || view === 'app') {
+  if (view === 'contacts' || view === 'bots' || view === 'settings') {
     return (
       <div className="flex min-h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
         {view === 'contacts' && '联系人功能开发中'}
         {view === 'bots' && '机器人功能开发中'}
         {view === 'settings' && '设置功能开发中'}
-        {view === 'app' && '应用扩展开发中'}
       </div>
     );
+  }
+
+  if (view === 'app') {
+    if (appId === 'memo-test') return <MemoTestApp />;
+    if (appId === 'task-test') return <TaskTestApp />;
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
+        未找到该应用或扩展已卸载
+      </div>
+    );
+  }
+
+  if (view === 'home') {
+    return <HomeContent onOpenApp={onOpenApp} />;
   }
 
   return <div className="min-h-full p-4" />;

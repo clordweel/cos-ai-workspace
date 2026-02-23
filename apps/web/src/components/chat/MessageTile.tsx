@@ -29,7 +29,42 @@ import type {
 } from './chatMessageTypes';
 import { AssistantMessageContent } from '@/components/chat/AssistantMessageContent';
 import { AI_ASSISTANT_LABEL } from '@/components/chat/assistantConstants';
-import { Check, CheckCheck, AlertCircle, Loader2, Reply, Copy, Trash2, Pencil, RefreshCw, Undo2, ThumbsUp, ThumbsDown, MoreVertical, Sparkle, User, Cog } from 'lucide-react';
+import { parseMessageBodyToSegments, ASSOC_OPEN } from '@/types/messageSegments';
+import type { MessageSegment } from '@/types/messageSegments';
+import { SegmentedMessageBody, SingleSegmentContent } from '@/components/chat/SegmentedMessageBody';
+import { Check, CheckCheck, AlertCircle, Loader2, Reply, Copy, Trash2, Pencil, RefreshCw, Undo2, ThumbsUp, ThumbsDown, MoreVertical, Sparkle, User, Cog, Link2 } from 'lucide-react';
+
+/** 用户消息正文：无关联段时按原样（formattedContent 或 Markdown），有关联段时按方案 B 分段渲染（含历史消息） */
+function UserMessageBody({
+  content,
+  formattedContent,
+  onOpenAssociation,
+}: {
+  content: string;
+  formattedContent?: string;
+  onOpenAssociation?: (appId: string, entityId: string) => void;
+}) {
+  const segments = parseMessageBodyToSegments(content ?? '');
+  const hasAssoc = segments.some((s) => s.type === 'association') || content?.includes(ASSOC_OPEN);
+  if (hasAssoc) return <SegmentedMessageBody content={content} onOpenApp={onOpenAssociation} />;
+  if (formattedContent) {
+    return (
+      <div
+        className="chat-session-content-text chat-formatted-html text-xs break-words"
+        dangerouslySetInnerHTML={{
+          __html: DOMPurify.sanitize(formattedContent, {
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'],
+          }),
+        }}
+      />
+    );
+  }
+  return (
+    <div className="chat-session-content-text chat-markdown text-xs break-words">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || ''}</ReactMarkdown>
+    </div>
+  );
+}
 
 /** Element 风格系统消息：居中、无头像、背景色跟随聊天区 */
 function SystemMessageTile({ content }: { content: string }) {
@@ -129,21 +164,40 @@ export interface MessageTileContextMenuHandlers {
   onReaction?: (message: ChatMessageItem, type: 'like' | 'dislike') => void;
 }
 
-/** Element 风格气泡消息：用户右对齐、助手/他人左对齐，含头像/发送者/时间/状态/已读/反应/编辑 */
+/** 单段展示时的信息（ASSOC 拆成多条消息时使用） */
+export interface MessageSegmentInfo {
+  segment: MessageSegment;
+  isFirstSegment: boolean;
+  isLastSegment: boolean;
+}
+
+/** Element 风格气泡消息：用户右对齐、助手/他人左对齐，含头像/发送者/时间/状态/已读/反应/编辑；segmentInfo 存在时仅渲染该段且头像/时间仅首尾显示 */
 function BubbleMessageTile({
   message,
+  segmentInfo,
   currentUserAvatar,
   currentUserName,
   contextMenuHandlers,
+  onOpenAssociation,
 }: {
   message: ChatMessageItem;
+  segmentInfo?: MessageSegmentInfo;
   currentUserAvatar?: string | null;
   currentUserName?: string | null;
   contextMenuHandlers?: MessageTileContextMenuHandlers;
+  onOpenAssociation?: (appId: string, entityId: string) => void;
 }) {
   const isUser = message.role === 'user';
   const ts = message.createdAt ?? Date.now();
   const h = contextMenuHandlers;
+  const showAvatar = !segmentInfo || segmentInfo.isFirstSegment;
+  const showNameRow = !segmentInfo || segmentInfo.isFirstSegment;
+  const showTime = !segmentInfo || segmentInfo.isLastSegment;
+  const showReactions = !segmentInfo || segmentInfo.isLastSegment;
+  const showToolbar = !segmentInfo || segmentInfo.isLastSegment;
+  const showReceipt = !segmentInfo || segmentInfo.isLastSegment;
+  const showEdited = !segmentInfo || segmentInfo.isLastSegment;
+  const showReplyTo = !segmentInfo || segmentInfo.isLastSegment;
   return (
     <ContextMenu>
       <div
@@ -153,8 +207,8 @@ function BubbleMessageTile({
         )}
         role="listitem"
       >
-      {/* 左侧（他人/助手）：头像；用户消息不显示“我”头像 */}
-      {!isUser && (
+      {/* 左侧（他人/助手）：头像；拆段时仅首段显示 */}
+      {!isUser && showAvatar && (
         <div className="flex h-8 shrink-0 flex-col items-center justify-center">
           {message.sources?.[0]?.type === 'bot' ? (
             <span className="flex h-8 w-8 shrink-0 items-center justify-center" aria-hidden>
@@ -170,16 +224,19 @@ function BubbleMessageTile({
         </div>
       )}
 
+      {/* 拆段时非首段占位，保持时间轴对齐 */}
+      {!isUser && !showAvatar && <div className="h-8 w-8 shrink-0" aria-hidden />}
+
       <div className={cn('flex min-w-0 max-w-[85%] flex-col', isUser ? 'items-end' : 'items-start')}>
-        {/* 对侧：名称行；仅当 sources 标明为 bot 且无 label 时兜底助手名，其余用 sources[0].label */}
-        {!isUser && (
+        {/* 对侧：名称行；拆段时仅首段显示 */}
+        {!isUser && showNameRow && (
           <div className="flex min-h-8 w-full items-center">
             <span className="text-[11px] font-medium text-foreground">
               {message.sources?.[0]?.label ?? (message.sources?.[0]?.type === 'bot' ? AI_ASSISTANT_LABEL : '')}
             </span>
           </div>
         )}
-        {!isUser && (
+        {!isUser && showTime && (
           <>
             <span
               className="absolute -right-3 top-6 h-[5px] w-[5px] -translate-y-1/2 rounded-full bg-zinc-200 dark:bg-zinc-700"
@@ -194,8 +251,8 @@ function BubbleMessageTile({
           </>
         )}
 
-        {/* “我”的消息：已读头像在气泡顶部 */}
-        {isUser && message.readBy && message.readBy.length > 0 && (
+        {/* “我”的消息：已读头像在气泡顶部；拆段时仅末段显示 */}
+        {isUser && showReceipt && message.readBy && message.readBy.length > 0 && (
           <div className="flex justify-end pb-0.5">
             <ReadReceiptAvatars readBy={message.readBy} />
           </div>
@@ -207,42 +264,43 @@ function BubbleMessageTile({
             <div
               className={cn(
                 'rounded-xl text-xs',
-                isUser
-                  ? 'chat-bubble-own rounded-tr-none bg-primary text-primary-foreground px-3 py-2'
-                  : 'rounded-tl-none bg-[var(--session-frame-panel-bg)] text-foreground px-0 py-0'
+                segmentInfo?.segment.type === 'association'
+                  ? 'chat-bubble-association border border-primary/25 bg-primary/5 dark:bg-primary/10 px-0 py-0 min-w-[200px]'
+                  : isUser
+                    ? 'chat-bubble-own rounded-tr-none bg-primary text-primary-foreground px-3 py-2'
+                    : 'rounded-tl-none bg-[var(--session-frame-panel-bg)] text-foreground px-0 py-0'
               )}
             >
-              {message.replyToId && (
+              {showReplyTo && message.replyToId && (
                 <div className="mb-1 border-l-2 border-muted-foreground/30 pl-2 text-[10px] text-muted-foreground">
                   引用消息
                 </div>
               )}
-              {!isUser ? (
-                <AssistantMessageContent message={message} />
-              ) : message.formattedContent ? (
-                <div
-                  className="chat-session-content-text chat-formatted-html text-xs break-words"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'] }) }}
+              {segmentInfo ? (
+                <SingleSegmentContent
+                  segment={segmentInfo.segment}
+                  onOpenApp={onOpenAssociation}
+                  associationVariant={segmentInfo.segment.type === 'association' ? 'bubble' : 'inline'}
                 />
+              ) : !isUser ? (
+                <AssistantMessageContent message={message} onOpenAssociation={onOpenAssociation} />
               ) : (
-                <div className="chat-session-content-text chat-markdown text-xs break-words">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>
-                </div>
+                <UserMessageBody content={message.content || ''} formattedContent={message.formattedContent} onOpenAssociation={onOpenAssociation} />
               )}
-              {message.editedAt != null && message.editedBy?.label && (
+              {showEdited && message.editedAt != null && message.editedBy?.label && (
                 <p className="mt-0.5 text-[10px] opacity-80">
                   已编辑 · {message.editedBy.label}
                 </p>
               )}
             </div>
           </ContextMenuTrigger>
-          {isUser && message.receiptStatus && (
+          {isUser && showReceipt && message.receiptStatus && (
             <ReceiptStatusIcon status={message.receiptStatus} />
           )}
         </div>
 
-        {/* 己方：时间与时间轴点放在 listitem 右侧底部，贴近气泡 */}
-        {isUser && (
+        {/* 己方：时间与时间轴点放在 listitem 右侧底部；拆段时仅末段显示 */}
+        {isUser && showTime && (
           <>
             <span
               className="absolute -right-3 bottom-0 h-[5px] w-[5px] translate-y-1/2 rounded-full bg-zinc-200 dark:bg-zinc-700"
@@ -257,13 +315,13 @@ function BubbleMessageTile({
           </>
         )}
 
-        {/* 对侧不展示来源等提示信息，仅保留底边工具条；反应照常展示 */}
-        {message.reactions && message.reactions.length > 0 && (
+        {/* 对侧：反应；拆段时仅末段显示 */}
+        {showReactions && message.reactions && message.reactions.length > 0 && (
           <ReactionPills reactions={message.reactions} />
         )}
 
-        {/* 消息底边工具栏（与 frontend 左侧消息底栏工具条一致）：赞同/反对/复制/更多 + 右侧堆叠来源头像 */}
-        {!isUser && (
+        {/* 消息底边工具栏；拆段时仅末段显示 */}
+        {!isUser && showToolbar && (
           <div className="-ml-[7px] mt-1.5 flex items-center justify-between gap-0.5 text-zinc-400 dark:text-zinc-500">
             <div className="flex items-center gap-0.5">
               <button
@@ -406,17 +464,22 @@ function BubbleMessageTile({
   );
 }
 
-/** Element 风格单条消息：系统 / 气泡（用户/助手） */
+/** Element 风格单条消息：系统 / 气泡（用户/助手）；segmentInfo 时仅渲染该段（ASSOC 拆成多条之一） */
 export function MessageTile({
   message,
+  segmentInfo,
   currentUserAvatar,
   currentUserName,
   contextMenuHandlers,
+  onOpenAssociation,
 }: {
   message: ChatMessageItem;
+  segmentInfo?: MessageSegmentInfo;
   currentUserAvatar?: string | null;
   currentUserName?: string | null;
   contextMenuHandlers?: MessageTileContextMenuHandlers;
+  /** 点击消息内关联块时打开对应应用（appId + entityId） */
+  onOpenAssociation?: (appId: string, entityId: string) => void;
 }) {
   if (message.role === 'system') {
     return <SystemMessageTile content={message.content} />;
@@ -424,9 +487,11 @@ export function MessageTile({
   return (
     <BubbleMessageTile
       message={message}
+      segmentInfo={segmentInfo}
       currentUserAvatar={currentUserAvatar}
       currentUserName={currentUserName}
       contextMenuHandlers={contextMenuHandlers}
+      onOpenAssociation={onOpenAssociation}
     />
   );
 }

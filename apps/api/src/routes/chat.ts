@@ -341,6 +341,7 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     }
   });
 
+  /** message 可为方案 B：可读文本 + 定界符 [ASSOC]{...}[/ASSOC] 内 JSON，不支持解析的客户端直接展示 body */
   app.post('/api/chat/stream', async (req, reply) => {
     const body = (req.body as {
       message?: string;
