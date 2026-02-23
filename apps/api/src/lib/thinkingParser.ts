@@ -3,11 +3,21 @@
  * 兼容大小写、可选空格、HTML 实体
  */
 
+/**
+ * 从 Dify 事件数据中取正文，兼容顶层 answer/delta 与嵌套 message.answer（部分 Agent 返回格式）
+ */
 export function extractText(data: string | Record<string, unknown> | null | undefined): string {
   if (typeof data === 'string') return data;
   if (!data || typeof data !== 'object') return '';
   const obj = data as Record<string, unknown>;
-  return (obj.answer ?? obj.text ?? obj.delta ?? obj.content ?? '') as string;
+  const top =
+    obj.answer ?? obj.text ?? obj.delta ?? obj.content ?? '';
+  if (typeof top === 'string' && top.length > 0) return top;
+  const msg = obj.message;
+  if (msg != null && typeof msg === 'object' && typeof (msg as Record<string, unknown>).answer === 'string') {
+    return (msg as Record<string, unknown>).answer as string;
+  }
+  return typeof top === 'string' ? top : '';
 }
 
 export interface ThinkingAndAnswer {

@@ -86,7 +86,10 @@ export async function consumeStream(
   for await (const ev of result as AsyncIterable<DifyStreamEvent>) {
     let data: string | Record<string, unknown> | undefined =
       ev?.data != null ? (ev.data as string | Record<string, unknown>) : (ev as Record<string, unknown> | undefined);
-    const evName = ev?.event;
+    // Dify SSE 常仅含 data 行、无 event 行，SDK 的 ev.event 可能为空，从 data 内补取 event 类型
+    let evName: string | undefined =
+      ev?.event ??
+      (data != null && typeof data === 'object' ? (data as Record<string, unknown>).event as string | undefined : undefined);
     if (evName === 'error') {
       const msg = (data && typeof data === 'object' && (data as { message?: string }).message != null
         ? String((data as { message?: string }).message)
@@ -106,7 +109,8 @@ export async function consumeStream(
       send('error', { message: hint });
       flush();
     }
-    if (evName && evName !== 'message' && evName !== 'message_end') {
+    // agent_message 与 message 均含 answer，下文会统一按 data 提取正文并转发
+    if (evName && evName !== 'message' && evName !== 'message_end' && evName !== 'agent_message') {
       send('dify_event', {
         type: evName,
         data: data && typeof data === 'object' ? (data as Record<string, unknown>) : {},
@@ -116,6 +120,7 @@ export async function consumeStream(
     if (typeof data === 'string') {
       try {
         data = JSON.parse(data) as Record<string, unknown>;
+        evName = (data as Record<string, unknown>).event as string | undefined ?? evName;
       } catch {
         if (data) {
           accumulatedFull += data;
@@ -159,10 +164,11 @@ export async function consumeStream(
       continue;
     }
     const dataObj = data as DifyStreamEvent;
+    // 仅当新 answer 严格更长时视为累积更新并替换，避免 Agent/工具调用后 Dify 只发短尾（如 "。"）时覆盖已累积正文
     if (
       dataObj.answer !== undefined &&
       typeof dataObj.answer === 'string' &&
-      dataObj.answer.length >= accumulatedFull.length
+      dataObj.answer.length > accumulatedFull.length
     ) {
       accumulatedFull = dataObj.answer;
     } else {

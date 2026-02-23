@@ -61,12 +61,14 @@ import { useContactsAndBots } from '@/hooks/useContactsAndBots';
 import { useSessions } from '@/hooks/useSessions';
 import { useMessages } from '@/hooks/useMessages';
 import { useChatStream } from '@/hooks/useChatStream';
+import { useChatSendMachine } from '@/hooks/useChatSendMachine';
 import { useInvitedSessions } from '@/hooks/useInvitedSessions';
 import { useMatrixSyncClient } from '@/hooks/useMatrixSyncClient';
 import { useRoomMentionItems } from '@/hooks/useRoomMentionItems';
 import { useSessionMembers } from '@/hooks/useSessionMembers';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
+import { getStreamPhaseLabel, isAiAssistantSender, AI_ASSISTANT_LABEL as assistantLabel } from '@/components/chat/assistantConstants';
 import { getAuthParam } from '@/lib/authParam';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
 import { getEffectiveWorkspaceId, setLastWorkspaceId, createNewWorkspaceId } from '@/lib/workspaceStorage';
@@ -142,7 +144,6 @@ export default function Space() {
   const [appAreaCollapsed, setAppAreaCollapsed] = useState(false);
   const [tagBarHovered, setTagBarHovered] = useState(false);
   const [reAuthLoading, setReAuthLoading] = useState(false);
-  const [streamingInProgress, setStreamingInProgress] = useState(false);
   const [invitedAccepting, setInvitedAccepting] = useState<string | null>(null);
   const [invitedDeclining, setInvitedDeclining] = useState<string | null>(null);
   const [membersSheetOpen, setMembersSheetOpen] = useState(false);
@@ -160,6 +161,8 @@ export default function Space() {
   const [renameInputValue, setRenameInputValue] = useState('');
   const [renameSubmitting, setRenameSubmitting] = useState(false);
   const [renameError, setRenameError] = useState<string | null>(null);
+  /** Dify 流阶段（由 useChatStream 内状态机驱动），便于 UI 展示思考中/流式中/正在调用工具 */
+  const [streamPhase, setStreamPhase] = useState<string>('idle');
   const isTagBarExpanded = appTagsBarPinned || tagBarHovered;
 
   const { sessions, loading: sessionsLoading, error: sessionsError, fetchSessions, createSession, addOrUpdateSession } = useSessions();
@@ -177,6 +180,7 @@ export default function Space() {
     appendWaitingAssistant,
   } = useMessages(selectedChatId ?? undefined);
   const { streamChat } = useChatStream();
+  const { isSending, errorMessage, submit } = useChatSendMachine(streamChat);
   const { invited, fetchInvited, acceptInvite, declineInvite } = useInvitedSessions();
   const { members, loading: membersLoading, fetchMembers } = useSessionMembers(selectedChatId ?? undefined);
   const hasSyncToken = Boolean(matrixSyncToken && matrixBaseUrl && matrixUserId);
@@ -302,45 +306,58 @@ export default function Space() {
         thinking: m.thinking,
       };
       if (m.role !== 'assistant') return base;
-      const isAiAssistantBot = m.senderId == null || m.senderId.toLowerCase().includes('ai-assistant');
+      const isAiAssistantBot = isAiAssistantSender(m.senderId);
       const sources =
         m.senderId != null
           ? [
               isAiAssistantBot
-                ? ({ type: 'bot' as const, label: getSenderLabel(m.senderId) || 'AI 助手' })
+                ? ({ type: 'bot' as const, label: getSenderLabel(m.senderId) || assistantLabel })
                 : ({ type: 'other_user' as const, label: getSenderLabel(m.senderId) }),
             ]
-          : [{ type: 'bot' as const, label: 'AI 助手' }];
+          : [{ type: 'bot' as const, label: assistantLabel }];
       return { ...base, sources };
     });
     return buildChatDisplayItems(items);
   }, [messages, selectedChatId, syncClient]);
 
-  const handleChatSubmit = useCallback(async (submittedText?: string) => {
-    const text = (submittedText ?? chatInput).trim();
-    if (!text || streamingInProgress) return;
-    const conversationId = selectedChatId || undefined;
-    const roomId = selectedChatId ?? '';
-    appendUserMessage(text);
-    setChatInput('');
-    setStreamingInProgress(true);
-    const botIds = getMentionedBotIdsFromText(text);
-    if (botIds?.length) appendWaitingAssistant();
-    let batch = '';
-    let rafId: number | null = null;
-    const flush = () => {
-      rafId = null;
-      if (batch && roomId) {
-        appendStreamingContent(batch);
-        batch = '';
-      }
-    };
-    const onDelta = (delta: string) => {
-      batch += delta;
-      if (rafId == null) rafId = requestAnimationFrame(flush);
-    };
-    try {
-      const fullText = await streamChat(text, onDelta, {
+  /** 流结束后重置阶段，便于下次发送时从 connecting 开始 */
+  useEffect(() => {
+    if (!isSending) setStreamPhase('idle');
+  }, [isSending]);
+
+  /** 聊天发送失败时 toast（仅在一次进入 error 时提示，避免重复） */
+  const prevErrorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (errorMessage && prevErrorRef.current !== errorMessage) {
+      prevErrorRef.current = errorMessage;
+      toastManager.add({ title: '回复失败', description: errorMessage || '请重试', type: 'error' });
+    }
+    if (!errorMessage) prevErrorRef.current = null;
+  }, [errorMessage]);
+
+  const handleChatSubmit = useCallback(
+    (submittedText?: string) => {
+      const text = (submittedText ?? chatInput).trim();
+      if (!text || isSending) return;
+      const conversationId = selectedChatId || undefined;
+      const roomId = selectedChatId ?? '';
+      const botIds = getMentionedBotIdsFromText(text);
+      let batch = '';
+      let rafId: number | null = null;
+      const flush = () => {
+        rafId = null;
+        if (batch && roomId) {
+          appendStreamingContent(batch);
+          batch = '';
+        }
+      };
+      const onDelta = (delta: string) => {
+        batch += delta;
+        if (rafId == null) rafId = requestAnimationFrame(flush);
+      };
+      setChatInput('');
+      submit({
+        text,
         conversationId,
         botIds: botIds.length ? botIds : undefined,
         onSessionCreated: (p) => {
@@ -348,38 +365,46 @@ export default function Space() {
           setSelectedChatId(p.session_id);
           if (id) setLastChatId(id, p.session_id);
         },
+        onDelta,
         onThinking: (delta) => appendStreamingThinking(delta),
         onThinkingFull: (full) => setStreamingThinking(full),
+        onPhaseChange: (phase) => setStreamPhase(phase),
+        onDifyEvent: (ev) => {
+          if (ev.type === 'tool_call') {
+            toastManager.add({
+              title: '正在调用工具',
+              type: 'info',
+              duration: 2000,
+            });
+          }
+        },
+        appendUserMessage,
+        appendWaitingAssistant,
+        commitStreamingMessage,
+        discardStreamingMessage,
+        onBeforeCommit: () => {
+          if (rafId != null) cancelAnimationFrame(rafId);
+          flush();
+        },
       });
-      if (rafId != null) cancelAnimationFrame(rafId);
-      flush();
-      commitStreamingMessage(fullText);
-    } catch (e) {
-      if (rafId != null) cancelAnimationFrame(rafId);
-      flush();
-      discardStreamingMessage();
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[Space] streamChat error:', e);
-      }
-      toastManager.add({ title: '回复失败', description: '请重试', type: 'error' });
-    } finally {
-      setStreamingInProgress(false);
-    }
-  }, [
-    chatInput,
-    selectedChatId,
-    id,
-    streamingInProgress,
-    appendUserMessage,
-    appendStreamingContent,
-    commitStreamingMessage,
-    appendStreamingThinking,
-    setStreamingThinking,
-    discardStreamingMessage,
-    appendWaitingAssistant,
-    streamChat,
-    addOrUpdateSession,
-  ]);
+    },
+    [
+      chatInput,
+      selectedChatId,
+      id,
+      isSending,
+      submit,
+      appendStreamingContent,
+      appendStreamingThinking,
+      setStreamingThinking,
+      appendUserMessage,
+      appendWaitingAssistant,
+      commitStreamingMessage,
+      discardStreamingMessage,
+      addOrUpdateSession,
+      getMentionedBotIdsFromText,
+    ]
+  );
 
   const filteredSessions = useMemo((): SessionListEntry[] => {
     let list = sessionsList;
@@ -917,9 +942,9 @@ export default function Space() {
                   chatUserName={selectedSession.participants?.[0]?.name ?? selectedSession.title}
                   chatUserIsAiAssistant={
                     !selectedSession.participants?.[0]?.avatar &&
-                    (selectedSession.title === 'AI 助手' ||
-                      selectedSession.participants?.[0]?.name === 'AI 助手' ||
-                      (selectedSession.participants?.[0]?.kind === 'bot' && selectedSession.participants?.[0]?.id?.toLowerCase().includes('ai-assistant')))
+                    (selectedSession.title === assistantLabel ||
+                      selectedSession.participants?.[0]?.name === assistantLabel ||
+                      (selectedSession.participants?.[0]?.kind === 'bot' && selectedSession.participants?.[0]?.id && isAiAssistantSender(selectedSession.participants[0].id)))
                   }
                   currentUserAvatar={user?.avatar}
                   currentUserName={user?.name ?? user?.email}
@@ -942,7 +967,8 @@ export default function Space() {
                   inputAreaHeightPx={chatInputAreaHeightPx}
                   onInputAreaHeightChange={setChatInputAreaHeightPx}
                   typingUserIds={typingUserIds}
-                  streamingInProgress={streamingInProgress}
+                  streamingInProgress={false}
+                  streamPhaseLabel={getStreamPhaseLabel(streamPhase)}
                 />
                 <SessionMembersSheet
                   open={membersSheetOpen}

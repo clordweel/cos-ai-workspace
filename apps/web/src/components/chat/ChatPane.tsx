@@ -65,6 +65,8 @@ export interface ChatPaneProps {
   formatTypingName?: (userId: string) => string;
   /** AI 助手思考/流式输出中时隐藏输入区工具条 */
   streamingInProgress?: boolean;
+  /** 流阶段文案（如「思考中」），来自 Dify 流阶段状态机，可选展示在输入区上方 */
+  streamPhaseLabel?: string | null;
   className?: string;
 }
 
@@ -97,6 +99,7 @@ export function ChatPane({
   typingUserIds = [],
   formatTypingName = (userId: string) => (userId.includes(':') ? userId.slice(0, userId.indexOf(':')) : userId),
   streamingInProgress = false,
+  streamPhaseLabel = null,
   className,
 }: ChatPaneProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -222,6 +225,11 @@ export function ChatPane({
         onRename={onRename}
       />
       <div className="absolute bottom-0 left-0 right-0 z-20">
+        {streamPhaseLabel && (
+          <p className="mb-1 px-4 text-xs text-zinc-500 dark:text-zinc-400" aria-live="polite">
+            {streamPhaseLabel}
+          </p>
+        )}
         <ChatInputPanel
           value={input}
           onChange={onInputChange}

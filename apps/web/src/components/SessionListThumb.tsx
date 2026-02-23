@@ -3,12 +3,13 @@
 import { MessageCircle, Sparkle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AiAssistantAvatarIcon } from '@/components/icons/AiAssistantAvatarIcon';
+import { AI_ASSISTANT_LABEL, isAiAssistantSender } from '@/components/chat/assistantConstants';
 
 export type SessionParticipant = {
   name: string;
   avatar?: string;
   kind?: 'user' | 'bot';
-  /** Matrix userId 等，用于识别 @ai-assistant 前缀的机器人以使用占位头像 */
+  /** Matrix userId 等，用于识别 AI 助手机器人以使用占位头像 */
   id?: string;
 };
 
@@ -27,9 +28,9 @@ function SingleAvatar({
   const firstChar = participant?.name?.trim?.()?.charAt(0)?.toUpperCase() ?? '?';
   const isAiAssistantNoAvatar =
     !participant?.avatar &&
-    (title === 'AI 助手' ||
-      participant?.name === 'AI 助手' ||
-      (participant?.kind === 'bot' && participant?.id?.toLowerCase().includes('ai-assistant')));
+    (title === AI_ASSISTANT_LABEL ||
+      participant?.name === AI_ASSISTANT_LABEL ||
+      (participant?.kind === 'bot' && participant?.id && isAiAssistantSender(participant.id)));
 
   return (
     <span className={cn(THUMB_SIZE, THUMB_BASE, className)}>
@@ -62,7 +63,7 @@ function GridAvatars({ participants, title }: { participants: SessionParticipant
         <span key={i} className="flex items-center justify-center overflow-hidden bg-zinc-100 dark:bg-zinc-600">
           {p.avatar ? (
             <img src={p.avatar} alt={p.name} className="h-full w-full object-cover" />
-          ) : p.kind === 'bot' && (p.id?.toLowerCase().includes('ai-assistant') || p.name === 'AI 助手') ? (
+          ) : p.kind === 'bot' && (p.id ? isAiAssistantSender(p.id) : p.name === AI_ASSISTANT_LABEL) ? (
             <AiAssistantAvatarIcon className="h-3 w-3" />
           ) : (
             <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-300">

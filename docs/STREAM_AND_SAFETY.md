@@ -36,6 +36,13 @@
 - **根因**：流式按 chunk 累积全文后再用成对 `<think>`/`</think>` 分离 thinking 与 answer。chunk 边界会导致**未成对标签**落入 answer：例如先到 `</think>` 或中间出现孤立 `</think>`，该段会被当作「块间正文」下发给前端，界面出现裸 `</think>`、`<think…` 或与后续文字粘连（如 `<thinktation"文档时...`）。末尾未闭合的 `<think>` 也会把残余标签留在 answer。
 - **方案**：在 `apps/api/src/lib/thinkingParser.ts` 中，对 `splitThinkingAndAnswer` 得到的 answer 再做一次**杂散标签清理**：移除所有成对 `<think>`/`</think>` 及末尾不完整标签（如 `<think`、`</think>`），再下发给前端，保证 message 正文不包含 think 标签。thinking 仍由成对块拼接，不在此 strip。
 
+### 1.6 Agent/工具调用时回复仅剩句号（apps/api，已修复）
+
+- **现象**：涉及 MCP 工具调用等复杂操作时，AI 助手最终回复只显示一个「。」或极短尾内容；或出现「I am thinking about how to help you」重复/乱序。
+- **根因**：Dify 在 Agent 模式下会先发 `agent_thought`、`tool_call` 等事件（无 answer），再在部分实现中发 `message`/`agent_message` 的 **累积** `answer`。若某条事件里 `answer` 仅为结尾标点（如「。」）且此前逻辑用「新 answer 长度 ≥ 已累积长度」即**整体替换**，会把已通过其它 chunk 累积的正文覆盖掉，导致前端只收到最后这一小段。
+- **修复**：在 `apps/api/src/services/difyStream.ts` 的 `consumeStream` 中，仅当 `dataObj.answer` **严格更长**于当前 `accumulatedFull` 时才用其替换（`length > accumulatedFull.length`），否则按 delta 追加。这样短尾不会覆盖已累积正文。
+- **验证**：本地用「@AI 助手 测试获取最近的一个出库记录」等触发工具调用的请求，确认回复为完整内容而非仅「。」。
+
 ---
 
 ## 2. 安全（Safety）

@@ -2,6 +2,11 @@
  * 按房间维度的消息存储，供 useMessages 与 useMatrixSyncClient 共用（阶段 4.2）
  * 可订阅，便于 useSyncExternalStore 在任意房间更新时重算当前房间快照
  */
+import {
+  ASSISTANT_WAITING_ID,
+  ASSISTANT_STREAMING_ID,
+  isAssistantStreamingPlaceholder,
+} from '@/components/chat/assistantConstants';
 export interface Message {
   id?: string;
   role: 'user' | 'assistant' | 'system';
@@ -74,8 +79,8 @@ export function appendWaitingAssistant(roomId: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role === 'assistant' && last.id === '__waiting__') return;
-  messagesByRoom[roomId] = [...list, { id: '__waiting__', role: 'assistant' as const, content: '', createdAt: Date.now() }];
+  if (last?.role === 'assistant' && last.id === ASSISTANT_WAITING_ID) return;
+  messagesByRoom[roomId] = [...list, { id: ASSISTANT_WAITING_ID, role: 'assistant' as const, content: '', createdAt: Date.now() }];
   notify();
 }
 
@@ -83,22 +88,22 @@ export function appendStreamingContent(roomId: string, delta: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role === 'assistant' && last.id === '__streaming__') {
+  if (last?.role === 'assistant' && last.id === ASSISTANT_STREAMING_ID) {
     messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, content: (last.content || '') + delta }];
-  } else if (last?.role === 'assistant' && last.id === '__waiting__') {
-    messagesByRoom[roomId] = [...list.slice(0, -1), { id: '__streaming__', role: 'assistant' as const, content: delta, thinking: last.thinking }];
+  } else if (last?.role === 'assistant' && last.id === ASSISTANT_WAITING_ID) {
+    messagesByRoom[roomId] = [...list.slice(0, -1), { id: ASSISTANT_STREAMING_ID, role: 'assistant' as const, content: delta, thinking: last.thinking }];
   } else {
-    messagesByRoom[roomId] = [...list, { id: '__streaming__', role: 'assistant' as const, content: delta }];
+    messagesByRoom[roomId] = [...list, { id: ASSISTANT_STREAMING_ID, role: 'assistant' as const, content: delta }];
   }
   notify();
 }
 
-/** 流式思考过程：追加到当前 __waiting__ / __streaming__ 的 thinking 字段 */
+/** 流式思考过程：追加到当前等待/流式占位的 thinking 字段 */
 export function appendStreamingThinking(roomId: string, delta: string): void {
   if (!roomId || !delta) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role !== 'assistant' || (last.id !== '__streaming__' && last.id !== '__waiting__')) return;
+  if (last?.role !== 'assistant' || !isAssistantStreamingPlaceholder(last.id)) return;
   const nextThinking = (last.thinking || '') + delta;
   messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, thinking: nextThinking }];
   notify();
@@ -109,7 +114,7 @@ export function setStreamingThinking(roomId: string, fullText: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role !== 'assistant' || (last.id !== '__streaming__' && last.id !== '__waiting__')) return;
+  if (last?.role !== 'assistant' || !isAssistantStreamingPlaceholder(last.id)) return;
   messagesByRoom[roomId] = [...list.slice(0, -1), { ...last, thinking: fullText }];
   notify();
 }
@@ -119,7 +124,7 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
   const finalThinking = thinking ?? last?.role === 'assistant' ? (last as Message).thinking : undefined;
-  if (last?.role === 'assistant' && last.id === '__waiting__') {
+  if (last?.role === 'assistant' && last.id === ASSISTANT_WAITING_ID) {
     messagesByRoom[roomId] = list.slice(0, -1);
     notify();
     if ((finalContent ?? '').trim() !== '' || (finalThinking ?? '').trim() !== '') {
@@ -131,7 +136,7 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     }
     return;
   }
-  if (last?.role === 'assistant' && last.id === '__streaming__') {
+  if (last?.role === 'assistant' && last.id === ASSISTANT_STREAMING_ID) {
     const trimmed = (finalContent ?? '').trim();
     const hasThinking = (finalThinking ?? (last as Message).thinking ?? '').trim().length > 0;
     const isIncompleteContent =
@@ -156,7 +161,7 @@ export function commitStreamingMessage(roomId: string, finalContent: string, thi
     return;
   }
   // 最后一条已是助手消息（如 Sync 先于 commit 到达）：原地更新内容/thinking，避免重复追加
-  if (last?.role === 'assistant' && last.id !== '__streaming__' && last.id !== '__waiting__') {
+  if (last?.role === 'assistant' && !isAssistantStreamingPlaceholder(last.id)) {
     const next: Message = {
       ...last,
       content: (finalContent ?? last.content).trim() !== '' ? (finalContent ?? last.content) : last.content,
@@ -176,18 +181,18 @@ export function discardStreamingMessage(roomId: string): void {
   if (!roomId) return;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role === 'assistant' && (last.id === '__streaming__' || last.id === '__waiting__')) {
+  if (last?.role === 'assistant' && isAssistantStreamingPlaceholder(last.id)) {
     messagesByRoom[roomId] = list.slice(0, -1);
     notify();
   }
 }
 
-/** 若最后一条为 __streaming__ 或 __waiting__，用 Sync 收到的真实消息替换，避免重复显示；返回是否已替换 */
+/** 若最后一条为流式占位，用 Sync 收到的真实消息替换，避免重复显示；返回是否已替换 */
 export function replaceStreamingWithMessage(roomId: string, msg: Message): boolean {
   if (!roomId) return false;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role !== 'assistant' || (last.id !== '__streaming__' && last.id !== '__waiting__')) return false;
+  if (last?.role !== 'assistant' || !isAssistantStreamingPlaceholder(last.id)) return false;
   messagesByRoom[roomId] = [...list.slice(0, -1), { ...msg, id: msg.id ?? msg.backendMessageId }];
   notify();
   return true;
@@ -224,7 +229,7 @@ export function replaceLastAssistantMessageIfMatch(
   if (!roomId || !eventId) return false;
   const list = messagesByRoom[roomId] ?? [];
   const last = list[list.length - 1];
-  if (last?.role !== 'assistant' || last.id === '__streaming__' || last.id === '__waiting__') return false;
+  if (last?.role !== 'assistant' || isAssistantStreamingPlaceholder(last.id)) return false;
   const created = typeof last.createdAt === 'number' ? last.createdAt : 0;
   if (Date.now() - created > recentMs) return false;
   const plainLast = stripMarkdownForCompare(last.content);

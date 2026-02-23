@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { AI_ASSISTANT_LABEL } from '@/components/chat/assistantConstants';
 
 /** 顶栏展示的参与者（排除“我”）；与 AvatarStackItem 一致，用于堆叠展示 */
 export interface ChatHeaderParticipant {
@@ -105,7 +106,7 @@ export function ChatHeader({
     } else if (userAvatar ?? userName ?? userIsAiAssistant) {
       list.push({
         id: userIsAiAssistant ? 'ai-assistant' : 'other',
-        name: userName ?? (userIsAiAssistant ? 'AI 助手' : undefined),
+        name: userName ?? (userIsAiAssistant ? AI_ASSISTANT_LABEL : undefined),
         avatar: userAvatar ?? undefined,
         kind: userIsAiAssistant ? 'bot' : 'user',
       });

@@ -27,7 +27,9 @@ import type {
   MessageReaction,
   MessageReceiptStatus,
 } from './chatMessageTypes';
-import { Check, CheckCheck, AlertCircle, Loader2, Reply, Copy, Trash2, Pencil, RefreshCw, Undo2, ThumbsUp, ThumbsDown, MoreVertical, Sparkle, User, Cog, ChevronRight } from 'lucide-react';
+import { AssistantMessageContent } from '@/components/chat/AssistantMessageContent';
+import { AI_ASSISTANT_LABEL } from '@/components/chat/assistantConstants';
+import { Check, CheckCheck, AlertCircle, Loader2, Reply, Copy, Trash2, Pencil, RefreshCw, Undo2, ThumbsUp, ThumbsDown, MoreVertical, Sparkle, User, Cog } from 'lucide-react';
 
 /** Element 风格系统消息：居中、无头像、背景色跟随聊天区 */
 function SystemMessageTile({ content }: { content: string }) {
@@ -127,16 +129,6 @@ export interface MessageTileContextMenuHandlers {
   onReaction?: (message: ChatMessageItem, type: 'like' | 'dislike') => void;
 }
 
-/** 流式内容是否「未成形」：空、仅 <、或未闭合标签，避免展示裸 < + 光标 */
-function isStreamingContentIncomplete(content: string | undefined): boolean {
-  if (content == null) return true;
-  const t = content.trim();
-  if (t.length === 0) return true;
-  if (t === '<') return true;
-  if (/^\s*<[^>]*\s*$/.test(t)) return true;
-  return false;
-}
-
 /** Element 风格气泡消息：用户右对齐、助手/他人左对齐，含头像/发送者/时间/状态/已读/反应/编辑 */
 function BubbleMessageTile({
   message,
@@ -152,9 +144,6 @@ function BubbleMessageTile({
   const isUser = message.role === 'user';
   const ts = message.createdAt ?? Date.now();
   const h = contextMenuHandlers;
-  const [thinkingOpen, setThinkingOpen] = useState(false);
-  const hasThinking = !isUser && message.thinking != null && message.thinking.trim() !== '';
-
   return (
     <ContextMenu>
       <div
@@ -174,7 +163,7 @@ function BubbleMessageTile({
           ) : (
             <Avatar className="h-8 w-8 border-2 border-zinc-200 dark:border-zinc-600">
               <AvatarFallback className="text-xs bg-muted">
-                {message.sources?.[0]?.label?.slice(0, 1) ?? (message.role === 'assistant' ? '助' : '?')}
+                {message.sources?.[0]?.label?.slice(0, 1) ?? (message.role === 'assistant' ? AI_ASSISTANT_LABEL.slice(0, 1) : '?')}
               </AvatarFallback>
             </Avatar>
           )}
@@ -182,11 +171,11 @@ function BubbleMessageTile({
       )}
 
       <div className={cn('flex min-w-0 max-w-[85%] flex-col', isUser ? 'items-end' : 'items-start')}>
-        {/* 对侧：名称行；仅当 sources 标明为 bot 且无 label 时兜底「AI 助手」，其余用 sources[0].label（联系人/机器人显示名由 Space 从 Matrix 解析） */}
+        {/* 对侧：名称行；仅当 sources 标明为 bot 且无 label 时兜底助手名，其余用 sources[0].label */}
         {!isUser && (
           <div className="flex min-h-8 w-full items-center">
             <span className="text-[11px] font-medium text-foreground">
-              {message.sources?.[0]?.label ?? (message.sources?.[0]?.type === 'bot' ? 'AI 助手' : '')}
+              {message.sources?.[0]?.label ?? (message.sources?.[0]?.type === 'bot' ? AI_ASSISTANT_LABEL : '')}
             </span>
           </div>
         )}
@@ -228,52 +217,13 @@ function BubbleMessageTile({
                   引用消息
                 </div>
               )}
-              {hasThinking && (
-                <div className="mb-3">
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => setThinkingOpen((o) => !o)}
-                    aria-expanded={thinkingOpen}
-                  >
-                    <ChevronRight
-                      className={cn('h-3.5 w-3.5 shrink-0 transition-transform duration-200', thinkingOpen && 'rotate-90')}
-                      aria-hidden
-                    />
-                    <span>思考过程</span>
-                  </button>
-                  {thinkingOpen && (
-                    <div className="mt-1.5 rounded-lg border border-border bg-muted/50 dark:bg-zinc-800/50 px-3 py-2 text-xs text-muted-foreground whitespace-pre-wrap break-words">
-                      {message.thinking}
-                    </div>
-                  )}
-                </div>
-              )}
-              {message.role === 'assistant' && message.id === '__waiting__' ? (
-                <p className="chat-session-content-text flex items-center gap-2 py-2 px-3 text-muted-foreground" role="status">
-                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-                  <span>正在思考…</span>
-                </p>
+              {!isUser ? (
+                <AssistantMessageContent message={message} />
               ) : message.formattedContent ? (
                 <div
                   className="chat-session-content-text chat-formatted-html text-xs break-words"
                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(message.formattedContent, { ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'code', 'pre', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'blockquote', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'hr'] }) }}
                 />
-              ) : message.role === 'assistant' && message.id === '__streaming__' ? (
-                isStreamingContentIncomplete(message.content) ? (
-                  <p className="chat-session-content-text flex items-center gap-2 py-2 px-0 text-muted-foreground" role="status">
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" aria-hidden />
-                    <span>正在输出…</span>
-                  </p>
-                ) : (
-                  <p className="chat-session-content-text whitespace-pre-wrap break-words">
-                    {message.content}
-                    <span
-                      className="inline-block h-4 w-0.5 align-middle bg-current ml-0.5 animate-[streaming-cursor_1s_ease-in-out_infinite]"
-                      aria-hidden
-                    />
-                  </p>
-                )
               ) : (
                 <div className="chat-session-content-text chat-markdown text-xs break-words">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content || ''}</ReactMarkdown>

@@ -16,6 +16,7 @@
 | Monorepo（apps/packages） | `docs/MONOREPO_APPS_PACKAGES.md` |
 | 重构计划（阶段/步骤/技术栈确认） | `docs/REFACTOR_PLAN.md` |
 | apps/web 组件源 | **coss 为最高优先级**；主界面已用 Frame/Empty 与 coss 对齐 |
+| 验证 api 接口（仅本地） | `apps/api/scripts/README.md` — 本地测试脚本约定；涉及认证时可绕过或写明需求（如 Cookie 环境变量） |
 | 其它 | 会话持久化 `SESSION_PERSISTENCE.md`；滚动参考 `CHAT_SCROLL_IMPROVEMENTS.md`；提交 `.cursor/rules/git-commit.mdc`；任务执行与提交 `.cursor/rules/task-execution.mdc`（下一步任务时先 commit、每步完成给检验方式与效果说明） |
 
 ## 目录与职责

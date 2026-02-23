@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AI_ASSISTANT_LABEL } from '@/components/chat/assistantConstants';
 
 export type Contact = { id: string; name: string; avatar?: string };
 export type Bot = { id: string; name: string; description?: string; avatar?: string };
 
 /** 与 frontend 一致：内置 AI 助手 */
 export const BOTS: Bot[] = [
-  { id: 'assistant', name: 'AI 助手', description: '通用对话与任务' },
+  { id: 'assistant', name: AI_ASSISTANT_LABEL, description: '通用对话与任务' },
 ];
 
 /** 与中间层 messageTextProcessor 一致：指令块 [@id="..." label="..."] */

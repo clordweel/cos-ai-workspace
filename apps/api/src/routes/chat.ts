@@ -372,8 +372,9 @@ export async function chatRoutes(app: FastifyInstance): Promise<void> {
     const send: (event: string, data: Record<string, unknown>) => void = (event, data) => {
       try {
         reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-      } catch {
-        /* 客户端已断开（如刷新），忽略写入失败，继续消费 Dify 流以便完成后写入 Matrix */
+      } catch (e) {
+        /* 客户端已断开（如刷新）时写入会失败；记录便于排查「仅首字/首包到达 web」类问题 */
+        req.log.warn({ err: e, event }, 'SSE write 失败，客户端可能已断开');
       }
     };
     const flush = () => {

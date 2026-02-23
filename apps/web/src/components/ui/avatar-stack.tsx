@@ -3,13 +3,14 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AiAssistantAvatarIcon } from '@/components/icons/AiAssistantAvatarIcon';
 import { cn } from '@/lib/utils';
+import { AI_ASSISTANT_LABEL, isAiAssistantSender } from '@/components/chat/assistantConstants';
 
 /** 单条用于堆叠展示的用户信息（与 coss Group Avatars 一致） */
 export interface AvatarStackItem {
   id?: string;
   name?: string | null;
   avatar?: string | null;
-  /** 为 bot 且 id 含 ai-assistant 或 name 为 AI 助手时，头像为空则用占位图标 */
+  /** 为 bot 且为 AI 助手（见 assistantConstants）时，头像为空则用占位图标 */
   kind?: 'user' | 'bot';
 }
 
@@ -49,7 +50,7 @@ export function AvatarStack({ items, max = 4, size = 'sm', className }: AvatarSt
       aria-label={items.length > 0 ? `共 ${items.length} 人` : undefined}
     >
       {display.map((item, i) => {
-        const isAiAssistantBot = !item.avatar && item.kind === 'bot' && (item.id?.toLowerCase().includes('ai-assistant') || item.name === 'AI 助手');
+        const isAiAssistantBot = !item.avatar && item.kind === 'bot' && (item.id ? isAiAssistantSender(item.id) : item.name === AI_ASSISTANT_LABEL);
         return (
           <span
             key={item.id ?? i}

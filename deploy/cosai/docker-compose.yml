@@ -34,6 +34,7 @@ services:
       - LOGTO_APP_SECRET=${LOGTO_APP_SECRET:-}
       - LOGTO_M2M_APP_ID=${LOGTO_M2M_APP_ID:-}
       - LOGTO_M2M_APP_SECRET=${LOGTO_M2M_APP_SECRET:-}
+      # 生产环境暂时使用 mock 演示数据；改为 matrix 可接入真实会话
       - CHAT_PROVIDER=${CHAT_PROVIDER:-mock}
       - MATRIX_BASE_URL=${MATRIX_BASE_URL:-}
       - MATRIX_SERVER_NAME=${MATRIX_SERVER_NAME:-}

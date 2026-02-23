@@ -1,24 +1,104 @@
 import { useCallback } from 'react';
+import { createActor } from 'xstate';
+import { streamPhaseMachine } from '../machines/streamPhaseMachine';
+import type { StreamPhase } from '../machines/streamPhaseMachine';
+
+export interface StreamChatOptions {
+  conversationId?: string;
+  signal?: AbortSignal;
+  botIds?: string[];
+  onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void;
+  onThinking?: (delta: string) => void;
+  onThinkingFull?: (fullText: string) => void;
+  /** 流阶段变化（connecting → thinking → streaming → completed），便于 UI 展示「思考中/流式中」 */
+  onPhaseChange?: (phase: StreamPhase) => void;
+  /** API 下发的 status 事件（如 status: thinking），早于首条 thinking delta */
+  onStatus?: (status: string) => void;
+  /** Dify 事件（agent_thought、tool_call 等），用于展示「正在调用工具」等 */
+  onDifyEvent?: (ev: { type: string; data: Record<string, unknown> }) => void;
+}
+
+function dispatchStreamEvent(
+  eventType: string,
+  data: Record<string, unknown>,
+  actor: ReturnType<typeof createActor<typeof streamPhaseMachine>>,
+  callbacks: {
+    onDelta: (delta: string) => void;
+    onPhaseChange?: (phase: StreamPhase) => void;
+    onThinking?: (delta: string) => void;
+    onThinkingFull?: (fullText: string) => void;
+    onStatus?: (status: string) => void;
+    onDifyEvent?: (ev: { type: string; data: Record<string, unknown> }) => void;
+  }
+): { fullTextDelta?: string; shouldThrow?: Error } {
+  const send = actor.send.bind(actor);
+  const phase = () => (actor.getSnapshot().value as StreamPhase);
+  const notifyPhase = () => callbacks.onPhaseChange?.(phase());
+
+  if (eventType === 'error') {
+    const msg = data?.message != null ? String(data.message) : '请求失败';
+    send({ type: 'ERROR', message: msg });
+    notifyPhase();
+    return { shouldThrow: new Error(msg) };
+  }
+
+  if (eventType === 'session_created') {
+    // 不改变流阶段，由调用方 onSessionCreated 处理
+    return {};
+  }
+
+  if (eventType === 'status') {
+    const status = data?.status != null ? String(data.status) : '';
+    send({ type: 'STATUS', status });
+    notifyPhase();
+    callbacks.onStatus?.(status);
+    return {};
+  }
+
+  if (eventType === 'thinking') {
+    send(data?.fullText != null ? { type: 'THINKING_FULL' } : { type: 'THINKING_DELTA' });
+    notifyPhase();
+    if (data?.delta != null) callbacks.onThinking?.(String(data.delta));
+    if (data?.fullText != null) callbacks.onThinkingFull?.(String(data.fullText));
+    return {};
+  }
+
+  if (eventType === 'message') {
+    if (data?.delta == null) return {};
+    const delta = String(data.delta);
+    send({ type: 'MESSAGE_DELTA' });
+    notifyPhase();
+    callbacks.onDelta(delta);
+    return { fullTextDelta: delta };
+  }
+
+  if (eventType === 'message_end') {
+    send({ type: 'MESSAGE_END' });
+    notifyPhase();
+    return {};
+  }
+
+  if (eventType === 'dify_event') {
+    const type = (data?.type != null ? String(data.type) : '') as string;
+    const evData = (data?.data != null && typeof data.data === 'object' ? data.data : {}) as Record<string, unknown>;
+    send({ type: 'DIFY_EVENT', payload: { type, data: evData } });
+    notifyPhase();
+    callbacks.onDifyEvent?.({ type, data: evData });
+    return {};
+  }
+
+  return {};
+}
 
 /**
- * 调用 POST /api/chat/stream，解析 SSE，与现 frontend useChatStream 行为对照
+ * 调用 POST /api/chat/stream，解析 SSE，按事件类型严格分发并驱动流阶段状态机
  */
 export function useChatStream() {
   const streamChat = useCallback(
     async (
       message: string,
       onDelta: (delta: string) => void,
-      options?: {
-        conversationId?: string;
-        signal?: AbortSignal;
-        /** 消息中 @ 的机器人 id 列表（如 assistant），有则走 Dify 流式回复 */
-        botIds?: string[];
-        onSessionCreated?: (payload: { session_id: string; backend_session_id?: string }) => void;
-        /** 深度思考过程（<think> 标签内容）增量 */
-        onThinking?: (delta: string) => void;
-        /** 深度思考过程完整文本（流结束时的 fullText） */
-        onThinkingFull?: (fullText: string) => void;
-      }
+      options?: StreamChatOptions
     ): Promise<string> => {
       const body: Record<string, unknown> = {
         message,
@@ -46,75 +126,77 @@ export function useChatStream() {
         throw new Error(msg);
       }
       if (!res.body) throw new Error('无法读取流');
+
+      const actor = createActor(streamPhaseMachine).start();
+      actor.send({ type: 'START' });
+      options?.onPhaseChange?.(actor.getSnapshot().value as StreamPhase);
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
       let lastEvent = '';
       let fullText = '';
-      while (true) {
-        if (options?.signal?.aborted) break;
-        let chunk: ReadableStreamReadResult<Uint8Array>;
-        try {
-          chunk = await reader.read();
-        } catch (e) {
-          throw new Error(e instanceof Error ? e.message : '连接中断，请重试');
-        }
-        const { done, value } = chunk;
-        if (value) buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() ?? '';
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            lastEvent = line.slice(6).trim();
-            continue;
+      const callbacks = {
+        onDelta,
+        onPhaseChange: options?.onPhaseChange,
+        onThinking: options?.onThinking,
+        onThinkingFull: options?.onThinkingFull,
+        onStatus: options?.onStatus,
+        onDifyEvent: options?.onDifyEvent,
+      };
+
+      try {
+        while (true) {
+          if (options?.signal?.aborted) {
+            actor.send({ type: 'ABORT' });
+            options?.onPhaseChange?.(actor.getSnapshot().value as StreamPhase);
+            break;
           }
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6)) as Record<string, unknown>;
-              if (lastEvent === 'error' && data?.message != null) {
-                throw new Error(String(data.message));
+          let chunk: ReadableStreamReadResult<Uint8Array>;
+          try {
+            chunk = await reader.read();
+          } catch (e) {
+            actor.send({ type: 'ERROR', message: e instanceof Error ? e.message : '连接中断' });
+            options?.onPhaseChange?.(actor.getSnapshot().value as StreamPhase);
+            throw new Error(e instanceof Error ? e.message : '连接中断，请重试');
+          }
+          const { done, value } = chunk;
+          if (value) buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() ?? '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              lastEvent = line.slice(6).trim();
+              continue;
+            }
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6)) as Record<string, unknown>;
+                const result = dispatchStreamEvent(lastEvent, data, actor, callbacks);
+                if (result.shouldThrow) throw result.shouldThrow;
+                if (result.fullTextDelta != null) fullText += result.fullTextDelta;
+              } catch (e) {
+                if (e instanceof Error && e.message !== undefined && e.name === 'Error') throw e;
               }
-              if (lastEvent === 'session_created' && data?.session_id) {
-                options?.onSessionCreated?.({
-                  session_id: String(data.session_id),
-                  backend_session_id: data.backend_session_id != null ? String(data.backend_session_id) : undefined,
-                });
-              } else if (lastEvent === 'message' && data?.delta != null) {
-                const delta = String(data.delta);
-                fullText += delta;
-                onDelta(delta);
-              } else if (lastEvent === 'thinking') {
-                if (data?.delta != null) options?.onThinking?.(String(data.delta));
-                if (data?.fullText != null) options?.onThinkingFull?.(String(data.fullText));
-              } else if (data?.delta != null) {
-                const delta = String(data.delta);
-                fullText += delta;
-                onDelta(delta);
-              }
-            } catch (e) {
-              if (e instanceof Error && e.message !== undefined && e.name === 'Error') throw e;
-              // 忽略非 JSON 行
             }
           }
+          if (done) break;
         }
-        if (done || options?.signal?.aborted) break;
-      }
-      if (buffer.startsWith('data: ')) {
-        try {
-          const data = JSON.parse(buffer.slice(6)) as Record<string, unknown>;
-          if (lastEvent === 'error' && data?.message != null) throw new Error(String(data.message));
-          if (lastEvent === 'thinking') {
-            if (data?.delta != null) options?.onThinking?.(String(data.delta));
-            if (data?.fullText != null) options?.onThinkingFull?.(String(data.fullText));
-          } else if (lastEvent === 'message' && data?.delta != null) {
-            const delta = String(data.delta);
-            fullText += delta;
-            onDelta(delta);
+
+        if (buffer.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(buffer.slice(6)) as Record<string, unknown>;
+            const result = dispatchStreamEvent(lastEvent, data, actor, callbacks);
+            if (result.shouldThrow) throw result.shouldThrow;
+            if (result.fullTextDelta != null) fullText += result.fullTextDelta;
+          } catch (e) {
+            if (e instanceof Error && e.message) throw e;
           }
-        } catch (e) {
-          if (e instanceof Error && e.message) throw e;
         }
+      } finally {
+        actor.stop();
       }
+
       return fullText;
     },
     []

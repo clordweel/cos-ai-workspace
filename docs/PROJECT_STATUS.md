@@ -83,6 +83,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 | **前端视觉/UI** | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` | 统一按钮/输入/圆角/颜色，Agent 与开发按同一风格开发组件 |
 | **业务/安全** | `docs/API_SPEC.md`、`docs/STREAM_AND_SAFETY.md` | cos API、SSE 与写入安全 |
 | **变更与规则** | `logs/CHANGELOG.md`、`.cursor/rules/*.mdc` | 变更记录、提交与前端规则 |
+| **状态机与本地状态** | `docs/STATE_MACHINES_AND_LOCAL_STATE.md` | 何时用 xstate 状态机、何时用 useState/useReducer |
 | **研究/选型归档** | `docs/archive/research/`、`docs/archive/mas/` | 配置与认证研究、会话选型、MAS 调研等 |
 
 ---

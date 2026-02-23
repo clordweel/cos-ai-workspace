@@ -1,9 +1,23 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import * as store from '../stores/messagesByRoomStore';
+import { useMockMode } from './useMockMode';
+import { getMockMessagesForSession } from '@/data/mockSessions';
 
 export type Message = store.Message;
 
+function mockMessagesToStore(mockList: ReturnType<typeof getMockMessagesForSession>): Message[] {
+  return mockList.map((m) => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    formattedContent: m.formattedContent,
+    thinking: m.thinking,
+    createdAt: m.createdAt,
+  }));
+}
+
 export function useMessages(sessionId: string | undefined) {
+  const isMockMode = useMockMode();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,6 +30,12 @@ export function useMessages(sessionId: string | undefined) {
   const fetchMessages = useCallback(async () => {
     if (!sessionId) {
       store.setMessages('', []);
+      return;
+    }
+    if (isMockMode) {
+      const mockList = getMockMessagesForSession(sessionId);
+      store.setMessages(sessionId, mockMessagesToStore(mockList));
+      setLoading(false);
       return;
     }
     setLoading(true);
@@ -38,7 +58,7 @@ export function useMessages(sessionId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId]);
+  }, [sessionId, isMockMode]);
 
   useEffect(() => {
     fetchMessages();

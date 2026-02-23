@@ -8,7 +8,7 @@ import { HistoryPlugin } from '@lexical/react/LexicalHistoryPlugin';
 import { OnChangePlugin } from '@lexical/react/LexicalOnChangePlugin';
 import { RichTextPlugin } from '@lexical/react/LexicalRichTextPlugin';
 import { $getRoot, $createParagraphNode } from 'lexical';
-import { KEY_ENTER_COMMAND, COMMAND_PRIORITY_LOW } from 'lexical';
+import { KEY_ENTER_COMMAND, COMMAND_PRIORITY_HIGH } from 'lexical';
 import type { ReactNode } from 'react';
 import { useRef, useEffect, useCallback } from 'react';
 import { ChatMentionsPlugin } from './ChatMentionsPlugin';
@@ -171,14 +171,16 @@ function EnterSubmitPlugin({
         const markdown = getMarkdownWithMentions(editor);
         if (enterToSend) {
           if (event?.shiftKey) return false;
+          event?.preventDefault();
           onSubmit?.(markdown);
           return true;
         }
         if (!event?.ctrlKey) return false;
+        event?.preventDefault();
         onSubmit?.(markdown);
         return true;
       },
-      COMMAND_PRIORITY_LOW
+      COMMAND_PRIORITY_HIGH
     );
   }, [editor, onSubmit, disabled, enterToSend]);
   return null;
