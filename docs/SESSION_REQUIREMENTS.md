@@ -1,6 +1,6 @@
 # 会话部分功能需求梳理
 
-> 会话/聊天相关的能力边界、已实现项、未实现项与扩展方向。与 FRONTEND_API_REQUIREMENTS、SESSION_MESSAGE_ABSTRACTION_FEASIBILITY 配合；选型类见 `docs/archive/research/`。
+> 会话/聊天相关的能力边界、已实现项、未实现项与扩展方向。选型类见 `docs/archive/research/`。
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **会话**：用户在工作台内看到的「会话列表」中的一项，对应一条可收发的消息流。
 - **消息**：会话中的单条记录，有发送方（用户 / 助手 / 其他用户）、内容、可选状态（已读、思考过程等）。
-- **本需求范围**：会话与消息的**创建、展示、发送、历史拉取、多端/多用户**等能力，不包含认证登录、物料确认、导出 Markdown 等独立接口（见 FRONTEND_API_REQUIREMENTS）。
+- **本需求范围**：会话与消息的**创建、展示、发送、历史拉取、多端/多用户**等能力，不包含认证登录、物料确认、导出 Markdown 等独立接口（见 API_SPEC）。
 
 ---
 
@@ -112,9 +112,8 @@
 
 ## 八、文档索引
 
-- **前端对中间层 API 的总体需求**：`FRONTEND_API_REQUIREMENTS.md`（流式对话、物料确认、导出 Markdown）。
+- **API 契约**：流式对话、物料确认、导出等见 `docs/API_SPEC.md`。适配器与类型见 `apps/api/src/adapters/types.ts`。
 - **会话后端选型**：`docs/archive/research/SESSION_BACKEND_AND_IM_OPTIONS.md`。
-- **标准化与多后端适配器设计**：`SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md`（领域模型、适配器接口、能力矩阵、实施顺序）。
 - **Dify 适配器验收**：`DIFY_ADAPTER_ACCEPTANCE.md`（验收步骤与通过标准）。
 - **会话后端服务选择**：`docs/archive/research/SESSION_BACKEND_SERVICE_SELECTION.md`。
 - **会话适配器选型：Matrix 优先**：`SESSION_ADAPTER_MATRIX.md`（核心流程与 Matrix 映射、适配器契约与实现要点）。

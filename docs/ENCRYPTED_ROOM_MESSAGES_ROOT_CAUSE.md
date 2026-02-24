@@ -94,8 +94,8 @@
 
 | 用途 | 文件 / 链接 |
 |------|-------------|
-| 中间层拉取房间消息 | `middleware/src/adapters/matrixClient.ts`（getRoomMessages 及过滤） |
-| 前端 Sync 与时间线填充 | `frontend/composables/useMatrixSyncClient.ts`（fillMessagesFromSyncTimeline、ClientEvent.Event） |
-| 何时补数 | `frontend/composables/useSpacePage.ts`（watch chatId / syncReady、onMounted 中 loadSessionMessages 后 getMessages(id).length === 0 时 fillMessagesFromSyncTimeline） |
+| 后端拉取房间消息 | apps/api：matrixClient（getRoomMessages 及过滤） |
+| 前端 Sync 与时间线填充 | apps/web：useMatrixSyncClient（fillMessagesFromSyncTimeline、ClientEvent） |
+| 何时补数 | apps/web Space 页：sessionId/syncReady 时 loadMessages 后若空则 fillMessagesFromSyncTimeline |
 | Cinny 问题与修复思路 | [cinnyapp/cinny#742](https://github.com/cinnyapp/cinny/issues/742) |
 | matrix-js-sdk Room 事件 | [RoomEvent](https://matrix-org.github.io/matrix-js-sdk/enums/matrix.RoomEvent.html)（含 TimelineRefresh） |

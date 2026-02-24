@@ -76,7 +76,7 @@
 
 **目标**：Token 过期前主动刷新，避免 401 错误
 
-**文件**：`middleware/src/services/matrixSessionToken.ts`、`middleware/src/routes/auth.ts`
+**文件**：`apps/api/src/services/matrixSessionToken.ts`、`apps/api/src/routes/auth.ts`
 
 **实现要点**：在 `ensureMatrixTokenForSession` 开头，若 `matrixTokenExpiresAt < Date.now() + BUFFER_MS`（如 5 分钟），清空 `matrixAccessToken` 并重新获取。
 
@@ -86,7 +86,7 @@
 
 **方案**：中间层维护房间最后活动缓存（推荐）；或利用 Matrix Sync 的 Room.timeline 缓存最后事件时间。
 
-**文件**：`middleware/src/adapters/matrix.ts`、`frontend/composables/useChatSessions.ts`
+**文件**：`apps/api/src/adapters/`（matrix）、`apps/web` 会话 hooks（useSessions 等）
 
 ### 阶段二：会话列表优化（2-3 天）
 
@@ -162,7 +162,7 @@
 
 ### 8.1 对照要点
 
-- **时间轴**：分页策略 PAGE_SIZE（常量 `TIMELINE_PAGE_SIZE`，前端 `frontend/constants/timeline.ts`、中间层 `middleware/src/constants.ts`，默认 50，可调为 80 等）、向上加载、与 listMessages 对接；高度补偿用 scrollBy(0,x)。
+- **时间轴**：分页策略 PAGE_SIZE（常量，前端 apps/web、后端 apps/api 中定义，默认 50，可调为 80 等）、向上加载、与 listMessages 对接；高度补偿用 scrollBy(0,x)。
 - **房间列表**：已覆盖分类与 Sticky；补充搜索过滤缓存与「共 N 条」展示。
 - **消息类型**：时间轴与存储支持 m.call.* 等，用于展示「语音/视频通话」记录。
 - **房间头部**：ChatHeader 预留语音/视频按钮位。

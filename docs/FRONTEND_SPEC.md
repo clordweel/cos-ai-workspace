@@ -1,18 +1,20 @@
-# 前端规范（Nuxt 3 + 对话流 + 任务卡片）
+# 前端规范（对话流 + 任务卡片）
+
+> **当前实现**：**apps/web**（React 18 + Webpack 5 + Tailwind + shadcn-ui）。以下为布局与交互规范，与 apps/web 的 WorkspaceLayout、AppViewContext 等对应。
 
 ## 技术栈
 
-- **Vue 3** + **Nuxt 3** + **Tailwind CSS** + **Shadcn-vue**
-- 跨端：**Tauri**（桌面）/ **Capacitor**（移动/PWA）
+- **apps/web**：React 18 + TypeScript + Tailwind CSS + shadcn-ui（Radix）
+- 跨端：**Tauri**（桌面）/ **Capacitor**（移动/PWA）可选
 
-## UI 布局（当前实现）
+## UI 布局
 
-主界面采用 **workspace 布局**（`layouts/workspace.vue`），全屏 `h-screen`、背景 `bg-zinc-50`，主体为横向 flex + 内边距 `p-3`。
+主界面采用 **workspace 布局**（apps/web：WorkspaceLayout），全屏、背景 `bg-zinc-50`，主体为横向 flex + 内边距。
 
 ### 整体结构
 
 - **左侧：会话区**  
-  - 由 layout 的 `<slot />` 渲染（一般为 `pages/space/[[id]].vue`）。  
+  - 由 layout 渲染（apps/web：/space、/space/:id）。  
   - 当应用区打开且内容区展开时，会话区宽度限制为 `max-w-sm`，右侧留出应用区；当应用区关闭或仅侧栏可见时，会话区占满剩余宽度。
 
 - **右侧：应用区**（可选）  
@@ -56,12 +58,10 @@
 
 ### 状态与注入
 
-- **useAppView**：  
-  - 面板与内容：`isPanelOpen`、`isContentVisible`、`currentView`、`openPanel`、`openNavPage`、`closePanel`、`toggleContentPanel`。  
-  - 侧栏悬浮/固定：`isSidebarPinned`、`isSidebarHovered`、`toggleSidebarPinned`、`setSidebarHovered`；  
-  - 侧栏延迟逻辑：`scheduleSidebarExpand()`（nav mouseenter 时调用）、`scheduleSidebarLeave()`（nav/工具栏 mouseleave）、`cancelSidebarLeave()`（工具栏 mouseenter，取消延迟收起）。  
-  - 卡片栈：`appStack`、`pushCard`、`goBack`、`removeCard`、`canGoBack`。  
-- Layout 向子组件 provide **`isSessionExpanded`**（computed：当应用区关闭或应用内容区折叠时为 true），用于 space 页切换列表/聊天布局。
+- **应用区状态**（apps/web：AppViewContext）：  
+  - 面板与内容：`isPanelOpen`、`isContentVisible`、`currentView`、`openView`、`switchTab`、`closeTab`。  
+  - 侧栏悬浮/固定与延迟展开逻辑见 apps/web WorkspaceLayout。  
+- Layout 向子组件提供 **`isSessionExpanded`**，用于 space 页切换列表/聊天布局。
 - **认证与用户偏好**：认证用 `useAuth()`（唯一入口 Logto）；用户偏好用 `useUserPreferences()`（主题、字体、通知），登录后与 Logto customData 同步。详见 **`docs/AUTH_AND_USER_CONFIG.md`**。
 
 ## UX 原则（De-ERP）
@@ -89,62 +89,26 @@ const decoder = new TextDecoder();
 // 解析 SSE 行，根据 event 类型更新 UI：message → 追加文本；tool_result → 渲染任务卡片
 ```
 
-## 目录与源码组织（Nuxt 3）
+## 目录与源码组织（apps/web）
 
 ```
-frontend/
-├── app.vue, app.config.ts, nuxt.config.ts, tailwind.config.ts
-├── layouts/
-│   ├── default.vue        # 备用布局（无会话区时）
-│   └── workspace.vue      # 工作台布局：会话区 + 应用区（useWorkspaceLayout 驱动 grid）
-├── pages/
-│   ├── index.vue          # 入口，重定向至 /space（可带 app、with 等 query）
-│   ├── logto.vue           # Logto 登录发起（前端承载时 302 到 Logto）
-│   ├── logto-callback.vue  # Logto 回调（收 code 后 302 到中间层换 token）
-│   └── space/
-│       └── [[id]].vue      # 会话页（列表 + 聊天），layout: workspace
-├── components/
-│   ├── SessionListHeader.vue, SessionListItem.vue, SessionListThumb.vue
-│   ├── SessionListBottomNav.vue, SessionSearchBar.vue
-│   ├── space/                  # 会话区子组件
-│   │   ├── SessionListContent.vue, SessionSidebar.vue
-│   │   ├── ChatPane.vue, AppDrawer.vue
-│   │   └── SessionListSettings.vue
-│   ├── ChatHeader.vue, ChatMessageBubble.vue, ChatInputPanel.vue, ChatEmptyState.vue
-│   ├── WorkspaceAppNav.vue     # 应用侧栏（标签式、折叠、固定）
-│   ├── AppPanel.vue            # 应用内容区（currentView: home|contacts|bots|settings|auth|app）
-│   ├── AppPlaceholder.vue       # 扩展占位
-│   ├── Logo.vue
-│   ├── TaskCard/               # 任务卡片（订单、库存、BOM、物料确认）
-│   │   ├── OrderProgress.vue, InventorySummary.vue, BomStatus.vue, MaterialConfirm.vue
-│   └── ui/                     # Shadcn-vue 组件（仅通过 CLI 安装）
-│       ├── select/, checkbox/, button/, dropdown-menu/, accordion/, slider/, tooltip/, empty/
-├── composables/
-│   ├── useAppView.ts       # 应用区（tabs、currentView、openAuthTab、addTab…）
-│   ├── useWorkspaceLayout.ts   # 布局模式与 grid 列宽（layoutMode、appPanelMaxWidthCss）
-│   ├── useChatSessions.ts, useChatSessionsApi.ts
-│   ├── useChatStream.ts    # SSE 流式对话
-│   ├── useAuth.ts, usePermissions.ts
-│   ├── useAppExtensions.ts, useAppFavorites.ts
-│   ├── useContactsAndBots.ts, useTheme.ts, useBreakpoint.ts
-│   ├── useApiBase.ts, useUISettings.ts, useWorkspaceOptions.ts
-│   └── useMockSessions.ts  # Mock 会话（开发/MSW）
-├── types/
-│   └── app-extensions.ts   # AppExtension 等
-├── plugins/
-│   ├── theme.client.ts, app-extensions.ts
-│   ├── mock-worker.client.ts, ssr-width.client.ts, suppress-anonymous-warn.ts
-└── mock/                    # MSW 与占位数据（可选）
+apps/web/src/
+├── components/        # 布局、会话区、聊天、应用侧栏、UI（shadcn-ui）
+├── pages/              # 路由页：Space、Logto、LogtoCallback 等
+├── contexts/           # AppViewContext、WorkspaceLayout 等
+├── hooks/              # useAuth、useSessions、useMessages、useChatStream、useTheme、useMatrixSyncClient 等
+├── stores/             # 会话、消息等状态（Zustand）
+├── lib/                # utils、API base
+└── index.css           # Tailwind 与主题
 ```
 
 ### 命名与组织约定
 
-- **组件**：大驼峰（PascalCase），语义清晰（SessionListHeader、WorkspaceAppNav、ChatMessageBubble）。通用 UI 放在 `components/ui/` 下按原子组件分子目录（如 `ui/select/`、`ui/checkbox/`）。
-- **页面**：`pages/` 下按路由划分；入口用 `index.vue`，动态路由用 `[[id]].vue` 等，避免冗余中间页（如已删除的 `list.vue` 由 index 的 query 处理）。
-- **Composables**：`use` 前缀 + 功能名（useAppView、useChatSessions），单文件单职责。
-- **废弃与清理**：未再被引用的组件或页面应及时移除，避免死代码（如已移除的 ChatFlow.vue、WorkspaceSessionList.vue）。扩展开发见 `docs/APP_EXTENSIONS.md`；鉴权与权限见 `docs/FRONTEND_AUTH_AND_PERMISSIONS.md`。
+- **组件**：大驼峰（PascalCase），语义清晰；通用 UI 使用 shadcn-ui（React），放在 `components/ui/`。
+- **页面**：按 React Router 路由划分（/space、/space/:id、/logto、/logto-callback）。
+- **Hooks/状态**：`use` 前缀或 store，单职责。扩展见 `docs/APP_EXTENSIONS.md`；鉴权见 `docs/FRONTEND_AUTH_AND_PERMISSIONS.md`。
 
 ## 主题
 
-- 当前布局与组件为**浅色**实现（如 `bg-zinc-50`、`border-zinc-200`、白底卡片）；可扩展**深色**切换。
-- 与 Shadcn-vue 主题变量一致，保证对比度与可访问性。
+- 当前为**浅色**实现（如 `bg-zinc-50`、`border-zinc-200`）；支持深色/跟随系统切换（useTheme）。
+- 与 `docs/UI_DESIGN_SYSTEM.md` 及 shadcn-ui 主题变量一致，保证对比度与可访问性。

@@ -89,7 +89,7 @@
 
 ## 5. 路由与页面级保护（可选）
 
-- 若整页必须登录：在 **Nuxt 路由中间件** 或 **layout** 中调用 `fetchUser()`，若未登录则 `requireAuth()` 并 `abortNavigation()` 或重定向到首页。
+- 若整页必须登录：在**路由守卫**或**布局**中调用 `fetchUser()`（或 useAuth 的加载态），若未登录则 `requireAuth()` 并重定向到首页。apps/web 为 React Router，可在路由 loader 或布局中做登录校验。
 - 当前项目多为「单页 + 应用区」形态，未强制路由级保护，而是在具体操作与 401 时统一 `requireAuth()`；若后续增加纯需登录子路由，可采用上述中间件方式。
 
 ---

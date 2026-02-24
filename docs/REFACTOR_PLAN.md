@@ -33,8 +33,8 @@
 | 议题 | 选项 | 待确认 |
 |------|------|--------|
 | **包名** | 不与现有 `ai-workbench-middleware` 混淆，例如：`@cosai/api`、`@cosai/gateway`、`cosai-server` 等 | 需定一个**新包名**及对应目录名（如 `apps/api`、`apps/gateway`）。 |
-| **运行时/框架** | **A. 保持 Node.js + Fastify**（与现 middleware 同栈，对照迁移成本低）。**B. Node.js + 其他**（Express、Hono、Nest 等）。**C. 换运行时**（如 Go、Rust、Bun 等） | 换栈需评估：API 契约、Logto/Matrix/cos 等集成、部署与运维。建议先确认「是否必须换栈」及候选范围。 |
-| **API 契约** | 与现 middleware 的 `/api/*` 保持兼容（便于前端逐步切流量） vs 新设计一版再提供适配层 | 若保持兼容，可先按现有路由与请求/响应形态对照实现，再逐步优化。 |
+| **运行时/框架** | **A. 保持 Node.js + Fastify**（与原有中间层同栈（Node + Fastify），对照迁移成本低）。**B. Node.js + 其他**（Express、Hono、Nest 等）。**C. 换运行时**（如 Go、Rust、Bun 等） | 换栈需评估：API 契约、Logto/Matrix/cos 等集成、部署与运维。建议先确认「是否必须换栈」及候选范围。 |
+| **API 契约** | 与现有 `/api/*` 契约保持兼容（便于前端逐步切流量） vs 新设计一版再提供适配层 | 若保持兼容，可先按现有路由与请求/响应形态对照实现，再逐步优化。 |
 
 ### 2.3 共享与 Monorepo
 
@@ -50,7 +50,7 @@
 | 类别 | 结论 | 说明 |
 |------|------|------|
 | **新后端包名** | `@cosai/api`，目录 `apps/api` | 与现 `ai-workbench-middleware` 区分，后续根脚本 `dev:api`。 |
-| **新后端框架** | Node.js + Fastify + TypeScript | 与现 middleware 同栈，便于对照迁移；API 与现 `/api/*` 保持兼容。 |
+| **新后端框架** | Node.js + Fastify + TypeScript | 与原有中间层同栈（Node + Fastify），便于对照迁移；API 与现 `/api/*` 保持兼容。 |
 | **新前端包名** | `@cosai/web`，目录 `apps/web` | 根脚本 `dev:web`。 |
 | **新前端框架** | React 18 + TypeScript | 与 REFONTEND_REACT_WEBPACK_MIGRATION 一致。 |
 | **新前端构建** | Webpack 5 | matrix-js-sdk CJS 友好；与 Element 对齐。 |
@@ -83,7 +83,7 @@
 |------|------|----------------|
 | 0.1 | **技术栈确认**：根据 §二 完成讨论，在本文档或 CHANGELOG 中记录结论（前端 UI、构建、后端框架与包名等）。 | 无未决选型再开工。 |
 | 0.2 | **新后端脚手架**：在 `apps/` 下创建新目录（如 `apps/api` 或 `apps/gateway`），新包名（如 `@cosai/api`）；选定框架（Fastify 或其他）初始化，健康检查 `GET /health` 可访问。 | `pnpm --filter <新包名> run dev` 能起、/health 返回 200。 |
-| 0.3 | **新前端脚手架**：在 `apps/` 下创建新前端（如 `apps/web`），React + 选定构建工具 + 路由占位（/、/space、/logto、/logto-callback），代理 `/api` 到新后端或现 middleware。 | `pnpm --filter <前端包名> run dev` 能起、访问 / 不报错、/api 代理正确。 |
+| 0.3 | **新前端脚手架**：在 `apps/` 下创建新前端（如 `apps/web`），React + 选定构建工具 + 路由占位（/、/space、/logto、/logto-callback），代理 `/api` 到新后端（apps/api）。 | `pnpm --filter <前端包名> run dev` 能起、访问 / 不报错、/api 代理正确。 |
 | 0.4 | **根脚本与文档**：根 `package.json` 增加 `dev:api`、`dev:web` 等；`docs/MONOREPO_APPS_PACKAGES.md`、`apps/README.md` 更新为新应用名与职责。 | 从根目录能一条命令起新前端、新后端。 |
 
 **产出**：技术栈结论文档；`apps/<backend>`、`apps/<web>` 可运行；文档与脚本更新。
@@ -92,12 +92,12 @@
 
 ## 五、阶段 1：新后端核心能力
 
-**目标**：新后端提供鉴权与用户信息，与现 middleware 行为可对照；不要求立刻切流量。
+**目标**：新后端提供鉴权与用户信息，与现有 API 行为可对照；不要求立刻切流量。
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
-| 1.1 | **环境与配置**：从工作区根或本应用目录加载 `.env`；配置项与现 middleware 对齐（Logto、Matrix、cos 等），可先实现子集。 | 配置读取正确、无硬编码敏感信息。 |
-| 1.2 | **Logto 回调与会话**：实现 `GET /api/auth/logto/callback`、会话存储（内存或与现 middleware 同方案）、写 Cookie；与现 middleware 行为对照。 | 用同一 Logto 应用、同一 redirect_uri 能登录并写 Cookie。 |
+| 1.1 | **环境与配置**：从工作区根或本应用目录加载 `.env`；配置项与 apps/api 配置对齐（Logto、Matrix、cos 等），可先实现子集。 | 配置读取正确、无硬编码敏感信息。 |
+| 1.2 | **Logto 回调与会话**：实现 `GET /api/auth/logto/callback`、会话存储（内存或与现 middleware 同方案）、写 Cookie；与现有回调行为对照。 | 用同一 Logto 应用、同一 redirect_uri 能登录并写 Cookie。 |
 | 1.3 | **GET /api/auth/me**：带 Cookie 请求返回 user、userId、preferences、matrixSyncToken、matrix_base_url、matrix_user_id、matrix_device_id 等，与现 middleware 响应结构对齐。 | 现有前端或 Postman 调新后端 /me 能得到与现网一致的可比结构。 |
 | 1.4 | **健康与可观测**：`GET /health`、启动/错误日志；可选简单请求日志中间件。 | 便于部署与排错，无敏感信息泄露。 |
 
@@ -112,7 +112,7 @@
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
 | 2.1 | **认证流**：/logto 跳转 Logto；/logto-callback 收 code 后重定向到**新后端** callback；登录后请求新后端 GET /api/auth/me（credentials: 'include'）。 | 能完成登录并拿到 /me 数据；Cookie 域名/路径正确。 |
-| 2.2 | **布局**：Workspace 布局（会话区 + 应用区）与 `useWorkspaceLayout` 逻辑对照；主题（浅色/深色）与 `docs/UI_DESIGN_SYSTEM.md` 一致。 | 布局与现前端视觉和断点行为可对照。 |
+| 2.2 | **布局**：Workspace 布局（会话区 + 应用区）与 WorkspaceLayout 逻辑对照；主题（浅色/深色）与 `docs/UI_DESIGN_SYSTEM.md` 一致。 | 布局与现前端视觉和断点行为可对照。 |
 | 2.3 | **路由**：/、/space、/space/:id、/logto、/logto-callback 占位；未登录时可重定向或展示登录入口。 | 路由与现前端一致，无 404。 |
 | 2.4 | **UI 组件**：按确认的 UI 库（如 shadcn-ui React）安装并实现登录页、顶栏、占位内容区；与设计令牌一致。 | 无样式错乱、无障碍基本可用。 |
 
@@ -126,7 +126,7 @@
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
-| 3.1 | **后端适配器**：参考现 `middleware/src/adapters/` 实现会话列表、历史、发消息、SSE 流式（mock 或 matrix）；API 路径与请求/响应与现 middleware 对齐。 | 用现有前端或 Postman 调新后端，行为与现网可对照。 |
+| 3.1 | **后端适配器**：在 `apps/api/src/adapters/` 实现会话列表、历史、发消息、SSE 流式（mock 或 matrix）；API 路径与请求/响应与 apps/api 配置对齐。 | 用现有前端或 Postman 调新后端，行为与现网可对照。 |
 | 3.2 | **新前端会话列表与聊天区**：调用新后端 GET /api/sessions、GET /api/sessions/:id/messages、POST /api/chat/stream；展示列表、消息列表、输入框与发送。 | 能创建会话、拉历史、发消息并收到流式回复。 |
 | 3.3 | **SSE 与错误**：流式解析、打字机效果、错误态与重试；与现前端 useChatStream 行为对照。 | 流式不卡顿、断线或 4xx/5xx 有明确反馈。 |
 
@@ -140,7 +140,7 @@
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
-| 4.1 | **新后端**：/api/auth/me 继续返回 matrixSyncToken、matrix_base_url、matrix_user_id、matrix_device_id（与现 middleware 一致）。 | 新前端用 /me 能拿到 Matrix 相关字段。 |
+| 4.1 | **新后端**：/api/auth/me 继续返回 matrixSyncToken、matrix_base_url、matrix_user_id、matrix_device_id（与 apps/api /me 一致）。 | 新前端用 /me 能拿到 Matrix 相关字段。 |
 | 4.2 | **新前端 Sync**：参考现 `useMatrixSyncClient`，用 React Hooks 包装 matrix-js-sdk；startClient、ClientEvent、RoomEvent、TimelineRefresh、fillMessagesFromSyncTimeline 等。 | 新消息实时、加密房间解密后刷新、typing/已读可用。 |
 | 4.3 | **构建**：按确认的构建工具（Webpack）配置 matrix-js-sdk 与 WASM；参考 Element 或官方文档，避免 CJS/WASM 404。 | 开发与生产构建无报错、Sync 正常。 |
 
@@ -154,7 +154,7 @@
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
-| 5.1 | **应用区**：标签列表、currentView 切换、侧栏折叠/固定；与 useAppView、useWorkspaceLayout 行为对照。 | 布局与交互与现前端一致。 |
+| 5.1 | **应用区**：标签列表、currentView 切换、侧栏折叠/固定；与 AppViewContext、WorkspaceLayout 行为对照。 | 布局与交互与现前端一致。 |
 | 5.2 | **设置与偏好**：PATCH /api/auth/me/preferences、主题/字体/通知等；与 useUserPreferences 对照。 | 修改偏好后刷新或新开 tab 仍生效。 |
 | 5.3 | **任务卡片**：物料确认等卡片与 POST /api/material/confirm 等接口；与现前端 TaskCard 对照。 | 确认流程与错误态完整。 |
 | 5.4 | **扩展**：应用扩展注册与入口；与 useAppExtensions 对照。 | 扩展列表与打开行为一致。 |
@@ -169,7 +169,7 @@
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
-| 6.1 | **契约与回归**：整理新后端与现 middleware 的 API 差异；全量回归（登录、会话、流式、Matrix、设置、任务卡片）。 | 无 P0/P1 遗漏。 |
+| 6.1 | **契约与回归**：整理 apps/api 与原有 API 契约的差异；全量回归（登录、会话、流式、Matrix、设置、任务卡片）。 | 无 P0/P1 遗漏。 |
 | 6.2 | **切换**：若需切流量，通过路由/反向代理或前端入口将请求指到新应用；保留回滚方式。 | 回滚步骤明确且演练过。 |
 | 6.3 | **文档**：ARCHITECTURE、PROJECT_STATUS、FRONTEND_SPEC、API_SPEC 等更新为新应用名与路径；CHANGELOG 记录切换与下线项。 | 新人能按文档跑通新前后端。 |
 
@@ -184,7 +184,7 @@
 | 措施 | 说明 |
 |------|------|
 | **每阶段验收** | 每阶段结束前做步骤内验收（见各阶段表格），不通过不进入下一阶段。 |
-| **契约对齐** | 新后端与现 middleware 的 API 路径、请求/响应结构保持可对照；差异列在文档或 ADR 中。 |
+| **契约对齐** | apps/api 与现有 API 路径、请求/响应结构保持可对照；差异列在文档或 ADR 中。 |
 | **回归清单** | 在 `docs/` 或 `.cursor/plans/` 维护「重构回归清单」（登录、/me、会话 CRUD、流式、Matrix Sync、设置、任务卡片等），每阶段更新并勾选。 |
 | **日志与健康** | 新后端具备 /health、请求日志、错误日志；新前端关键路径有错误态与用户提示。 |
 | **技术栈先确认** | §二 中选项在阶段 0 完成确认并记录，避免实现到一半换栈或换 UI 库。 |

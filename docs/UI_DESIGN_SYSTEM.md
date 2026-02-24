@@ -3,7 +3,7 @@
 本文档是**前端组件与样式的单一事实来源**，供人工与 Agent 开发时遵循，避免按钮、输入框、圆角、颜色等散乱不一。
 
 - **目标**：统一视觉语言，便于全局调整主题与无障碍；新组件与改版时按规范实现。
-- **与现有文档关系**：布局与状态见 `FRONTEND_SPEC.md`、`frontend-spec.mdc`；本文档专注**视觉与原子组件使用约定**。
+- **与现有文档关系**：布局与状态见 `FRONTEND_SPEC.md`、`frontend-spec.mdc`；本文档专注**视觉与原子组件使用约定**。当前实现为 **apps/web**（React + shadcn-ui）。
 
 ---
 
@@ -23,7 +23,7 @@
 | 当前选中/成功 | `emerald` 系 | `dark:emerald-*` | 当前会话高亮、成功态 |
 | 危险/删除 | `red` 系 | `dark:red-*` | 删除、错误 |
 
-主色在 `frontend/assets/css/tailwind.css` 的 `@theme` 中定义（如 `--color-primary-600`），组件中优先使用 `primary` / `primary-foreground` 语义类，避免硬编码 hex。
+主色在 apps/web 的样式（如 `src/index.css` 的 `@theme`）中定义（如 `--color-primary-600`），组件中优先使用 `primary` / `primary-foreground` 语义类，避免硬编码 hex。
 
 ### 1.2 圆角
 
@@ -111,7 +111,7 @@
 
 ## 六、参考文件
 
-- 主题与主色：`frontend/assets/css/tailwind.css`
-- 按钮变体定义：`frontend/components/ui/button/index.ts`（`buttonVariants`）
+- 主题与主色：apps/web 的 `src/index.css`（@theme）
+- 按钮变体定义：apps/web 的 `src/components/ui/button.tsx`（`buttonVariants`）
 - 布局与状态：`docs/FRONTEND_SPEC.md`、`.cursor/rules/frontend-spec.mdc`
 - 组件安装约束：`.cursor/rules/shadcn-vue-cli.mdc`

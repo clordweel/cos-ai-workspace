@@ -8,7 +8,6 @@
 |------|------|
 | 架构与状态 | `docs/ARCHITECTURE.md`、`docs/PROJECT_STATUS.md` |
 | 阶段梳理与下一步 | `docs/PROJECT_PHASE_SUMMARY.md` — 目录职责、阶段进度、清理建议、下一步优先级 |
-| 已移除包说明 | `docs/DEPRECATED_PACKAGES.md` — frontend/、middleware/ 已从仓库移除，由 apps/web、apps/api 替代 |
 | 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
 | 前端视觉/UI 组件 | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` |

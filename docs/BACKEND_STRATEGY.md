@@ -1,6 +1,6 @@
 # 后端逻辑落点研究：Nuxt Server vs Middleware vs 其他框架
 
-> 结论：**业务与敏感逻辑继续放在独立 Middleware（Fastify）**；Nuxt Server 仅作轻量 BFF（可选）。无需为当前规模引入 NestJS 等重框架，Fastify 分层已足够支撑业务开发。
+> **当前**：frontend、middleware 已移除；**业务与敏感逻辑在 apps/api（Fastify）**，前端为 apps/web（React）。结论仍适用：独立后端 Fastify，无需 NestJS。本文保留作架构参考。
 
 ---
 
@@ -8,11 +8,10 @@
 
 | 位置 | 内容 | 说明 |
 |------|------|------|
-| **frontend (Nuxt)** | 纯 UI、状态、调用 apiBase | 不持有机密，不直连 Dify/ERP |
-| **middleware (Fastify)** | 鉴权、SSE 流式、Dify 代理、cos 编排、写入确认 | 持有机密，独立进程 |
-| **frontend/server** | 无 | 此前 export-markdown 已迁至 middleware |
+| **apps/web** | 纯 UI、状态、调用 /api | 不持有机密，不直连 Dify/ERP |
+| **apps/api (Fastify)** | 鉴权、SSE 流式、Dify 代理、cos 编排、写入确认 | 持有机密，独立进程 |
 
-所有「业务后端」逻辑目前均在 **middleware**；Nuxt 仅做前端与代理配置。
+所有「业务后端」逻辑在 **apps/api**；apps/web 仅做前端与 /api 代理。
 
 ---
 
@@ -20,7 +19,7 @@
 
 ### 2.1 方案 A：以 Nuxt Server（Nitro）为主后端
 
-**做法**：在 `frontend/server/api/` 实现流式对话、物料确认、导出等，Dify/ERP 密钥放在 Nuxt 环境变量，前端通过同源 `/api/*` 或服务端直调。
+**做法**：在前端同源 server（如 Nuxt server）实现流式、物料确认等，密钥放环境变量。当前架构不采用此方案。
 
 | 优点 | 缺点 |
 |------|------|
@@ -65,15 +64,15 @@
 
 ## 3. Nuxt Server 的合理用途（可选）
 
-在**不把敏感与流式核心迁回 Nuxt** 的前提下，Nuxt Server 仍可用于：
+在不把敏感与流式核心放在前端的的前提下，前端同源 server 仍可用于：
 
-- **纯无状态、无密钥的转换**：例如在 Nuxt 内实现「会话 → Markdown」的导出（仅做格式转换），再通过 Nuxt 代理或前端直连 middleware 的其它接口。  
+- **纯无状态、无密钥的转换**：例如在前端侧做「会话 → Markdown」的格式转换，再通过代理或直连 apps/api 的其它接口。  
   当前导出已统一在 middleware，便于一处维护，**保留现状即可**。
 - **与渲染强相关的 API**：如按 SEO/预渲染需要，在服务端请求 middleware 或 Dify 再吐 HTML。  
   当前以对话流为主，需求不强。
-- **开发期代理**：已有 `vite.server.proxy` 把 `/api` 指到 middleware，无需再用 Nuxt Server 做一层代理。
+- **开发期代理**：apps/web 的 devServer 将 `/api` 指到 apps/api，无需再叠一层代理。
 
-因此：**不要求**用 Nuxt Server 承载主要业务；若后续有「仅前端相关、无密钥、无长连接」的小接口，再在 `server/api` 按需增加即可。
+因此：**不要求**用 Nuxt Server 承载主要业务；若后续有「仅前端相关、无密钥、无长连接」的小接口，可再按需增加。
 
 ---
 
@@ -81,9 +80,9 @@
 
 | 问题 | 建议 |
 |------|------|
-| 后端逻辑放 Nuxt 还是 Middleware？ | **以 Middleware 为主**：流式、鉴权、Dify、cos 全部保留在独立 Fastify 服务。 |
-| Nuxt Server 要不要用？ | **可选、从简**：仅用于与前端强相关的轻量接口；当前不强制使用。 |
+| 后端逻辑落点 | **以 apps/api 为主**：流式、鉴权、Dify、cos 全部在 Fastify 服务。 |
+| 前端同源 server | **可选、从简**：当前 apps/web 不承载业务接口。 |
 | 是否换成 NestJS/其他框架？ | **不换**：继续用 Fastify，通过现有分层（routes/services/lib）支撑业务；团队或规模明显变大时再评估 Nest。 |
 | 密钥与长连接？ | **一律在 Middleware**：前端仅通过 apiBase 访问，不持有机密，不直连 Dify/ERP。 |
 
-整体策略：**业务与安全敏感逻辑集中在 Middleware（Fastify），Nuxt 以前端 + 可选轻量 BFF 为主，不引入更重后端框架**。这样与现有架构文档、安全规范（STREAM_AND_SAFETY、ARCHITECTURE）一致，也便于后续扩展（如更多 cos 接口、审计、限流等）。
+整体策略：**业务与安全敏感逻辑集中在 apps/api（Fastify），apps/web 以前端为主**。与 ARCHITECTURE、STREAM_AND_SAFETY 一致，便于后续扩展（cos、审计、限流等）。

@@ -31,7 +31,7 @@
 
 ## 三、Matrix 会话适配器契约要点
 
-适配器需实现现有 **ChatBackendAdapter** 接口（见 `middleware/src/adapters/types.ts`），并将 Matrix 的 Room / Event 映射为 NormalizedSession / NormalizedMessage。在「Matrix 优先」的前提下，建议契约与能力做如下对齐与扩展。
+适配器需实现 **ChatBackendAdapter** 接口（见 `apps/api/src/adapters/types.ts`），并将 Matrix 的 Room / Event 映射为 NormalizedSession / NormalizedMessage。在「Matrix 优先」的前提下，建议契约与能力做如下对齐与扩展。
 
 ### 3.1 已有契约（必须实现）
 
@@ -98,7 +98,7 @@
 ## 五、实现与运维注意点（与现有文档衔接）
 
 - Matrix 运维与选型评估见 `docs/archive/research/SESSION_BACKEND_AND_IM_OPTIONS.md`；建议单实例内网先行。
-- **SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md** 中的标准化模型（NormalizedSession、NormalizedMessage）与适配器接口保持不变；Matrix 适配器作为 `provider: 'matrix'` 的一种实现，将 Room/Event 映射到该模型，并与现有 `GET /api/sessions`、`GET /api/sessions/:id/messages`、`POST /api/chat/stream`（或 send）等 API 对接。
+- 标准化模型（NormalizedSession、NormalizedMessage）与适配器接口见 `apps/api/src/adapters/types.ts`；Matrix 适配器作为 `provider: 'matrix'` 的一种实现，将 Room/Event 映射到该模型，并与现有 `GET /api/sessions`、`GET /api/sessions/:id/messages`、`POST /api/chat/stream` 等 API 对接。
 - **流式与 AI**：若 AI 回复来自 Dify 等三方服务，流式输出仍在中间层以 SSE 给前端；采用**存 Dify 消息指针**时，Matrix 仅写入指针（及可选摘要），不写入完整正文；完整内容由 Dify 侧保留，按需拉取。若未来 Matrix 侧有 bot 或应用服务发流式消息，可再扩展适配器或事件订阅。
 
 ---
@@ -108,7 +108,7 @@
 - **会话核心流程与参与模式**：[SESSION_REQUIREMENTS.md](SESSION_REQUIREMENTS.md) 第二节。
 - **适配器体系（会话 / 认证 / 应用数据 / 三方）**：[SESSION_REQUIREMENTS.md](SESSION_REQUIREMENTS.md) 第七节。
 - **会话后端选型**：`docs/archive/research/SESSION_BACKEND_AND_IM_OPTIONS.md`。
-- **标准化模型与适配器接口**：[SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md](SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md)。
-- **适配器类型定义**：`middleware/src/adapters/types.ts`。
-- **部署与管理台**：`deploy/matrix/`（Synapse + PostgreSQL，内网单实例；管理台 GUI 见该目录 README「管理台 GUI」小节）。
-- **中间层实现**：`middleware/src/adapters/matrix.ts`、`matrixClient.ts`；环境变量见根目录 `.env.example` 与 `middleware/README.md`。
+- **标准化模型与适配器接口**：`apps/api/src/adapters/types.ts`。
+- **适配器类型定义**：`apps/api/src/adapters/types.ts`。
+- **部署与管理台**：`deploy/matrix/`（Synapse + PostgreSQL，内网单实例；管理台 GUI 见该目录 README）。
+- **实现**：`apps/api/src/adapters/matrixChat.ts`、`matrixClient.ts`；环境变量见 `apps/api/.env.example`。

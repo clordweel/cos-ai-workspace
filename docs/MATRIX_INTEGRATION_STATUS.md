@@ -11,7 +11,7 @@
 ```
 ┌─────────────┐    Logto     ┌─────────────┐   Cookie/Session   ┌─────────────────┐
 │   前端       │ ←─────────→ │  中间层      │ ←───────────────→  │ Session Store   │
-│  (Nuxt 3)   │   OIDC      │ (Fastify)   │                    │ (memory/Redis)  │
+│ (apps/web)  │   OIDC      │ (apps/api)  │                    │ (memory/Redis)  │
 └─────────────┘              └──────┬──────┘                    └─────────────────┘
                                      │
                     ┌────────────────┼────────────────┐
@@ -138,9 +138,9 @@
 | 认证流程 | `docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 用户名映射 | `docs/LOGTO_MATRIX_USERNAME_MAPPING.md` |
 | 会话设计 vs Matrix | `docs/SESSION_MATRIX_ANALYSIS.md` |
-| Token 获取 | `middleware/src/services/matrixSessionToken.ts` |
-| 用户同步 | `middleware/src/services/matrixUserSync.ts` |
-| 配置 | `middleware/src/config.ts` |
+| Token 获取 | `apps/api/src/services/matrixSessionToken.ts` |
+| 用户同步 | `apps/api/src/services/matrixUserSync.ts` |
+| 配置 | `apps/api/src/config.ts` |
 | 部署 | `deploy/matrix/README.md` |
 
 ---
@@ -156,7 +156,7 @@
 | **CHAT_PROVIDER 非 matrix** | 确认 `.env` 中 `CHAT_PROVIDER=matrix`；为 `mock` 时后端不返回 sync 用字段，前端不会启动 sync。 |
 | **未登录或 /me 未带 Cookie** | 使用 Logto 登录；确保请求 `/api/auth/me` 时带 `credentials: 'include'`，且会话有效。 |
 | **后端未返回 matrixSyncToken** | `/api/auth/me` 仅在 `config.chat?.provider === 'matrix'` 且能拿到 `matrixAccessToken` 时写入 `matrixSyncToken`。若 `ensureMatrixTokenForSession` 失败（用户未同步、已停用、无密码等），则不会返回 token。查看中间层日志中 `ensureMatrixUser` / `ensureMatrixTokenForSession` 相关错误。 |
-| **前端 startClient 失败** | 开发环境下打开浏览器控制台，若看到 `[MatrixSync] startClient 失败，实时消息不可用:` 则说明 `matrix-js-sdk` 的 `startClient()` 抛错。若报错为「does not provide an export named 'default'」或「does not provide an export named 'EventEmitter'」等，属 **CJS/ESM 互操作**：将报错路径中的包名（如 `events`、`loglevel`）加入 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps.include`，清缓存后重试。详见 `docs/MATRIX_SYNC_FRONTEND_APPROACH.md`。其他报错根据内容修正（CORS、baseUrl、token 等）。 |
+| **前端 startClient 失败** | 开发环境下打开浏览器控制台，若看到 `[MatrixSync] startClient 失败，实时消息不可用:` 则说明 `matrix-js-sdk` 的 `startClient()` 抛错。若报错为「does not provide an export named 'default'」或「does not provide an export named 'EventEmitter'」等，属 **CJS/ESM 互操作**：将报错路径中的包名加入 apps/web 的 Webpack 配置（或见 `docs/MATRIX_SYNC_FRONTEND_APPROACH.md`）。apps/web 使用 Webpack，CJS 兼容性较好。其他报错根据内容修正（CORS、baseUrl、token 等）。 |
 | **Sync 进入 ERROR 状态** | 控制台出现 `[MatrixSync] sync state ERROR` 表示与服务器的长轮询/同步出错，需检查网络与 Matrix 服务可用性。 |
 | **initialSyncLimit 过小** | 前端默认 `initialSyncLimit: 50`；若房间很多且当前房间未在首屏 sync 中，可适当增大或后续用 filter 优化。 |
 

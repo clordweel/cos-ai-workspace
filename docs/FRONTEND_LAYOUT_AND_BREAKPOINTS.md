@@ -1,6 +1,6 @@
-# 原 frontend 界面布局与响应式断点（参照）
+# 界面布局与响应式断点（参照）
 
-供 apps/web 及后续前端对齐用。原实现见 `frontend/layouts/workspace.vue`、`frontend/composables/useWorkspaceLayout.ts`、`frontend/composables/useBreakpoint.ts`。
+供 **apps/web** 对齐用。原 frontend 已移除，以下为规范与断点约定；实现见 apps/web 的 WorkspaceLayout、断点与媒体查询。
 
 ## 断点定义（useBreakpoint）
 
@@ -15,7 +15,7 @@
 | 2xl | 超宽 | `min-width: 1536px` |
 
 - xxs 为 **max-width**，其余为 **min-width**。
-- Tailwind 的 `theme.extend.screens` 与上述一致（见 `frontend/tailwind.config.ts`）。
+- Tailwind 的 `theme.extend.screens` 与上述一致（见 apps/web 的 Tailwind/PostCSS 配置）。
 
 ## 主布局 Grid（左栏会话区 | 右栏应用区）
 
@@ -52,10 +52,10 @@
 
 ## 与 apps/web 的对应
 
-| 原 frontend | apps/web |
-|-------------|----------|
-| useBreakpoint('md') | useMediaMd()，768px |
+| 约定/能力 | apps/web |
+|-----------|----------|
+| md 断点 | useMediaMd()，768px |
 | isSessionExpanded | WorkspaceLayoutContext.isSessionExpanded（!showAppPanel \|\| !isContentVisible） |
 | 会话列 max 940px（xl 或有 chat） | 会话区容器应用区展开时 max-w-sm |
-| 列表 w-72 | Space 展开时列表 w-64（可改为 w-72 与 frontend 一致） |
+| 列表宽度 | Space 展开时列表 w-64（可调为 w-72） |
 | showFooter（md+） | 底栏 md+ 显示 |

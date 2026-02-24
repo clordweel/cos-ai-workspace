@@ -18,7 +18,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/composables/useContactsAndBots.ts` | 提供 `contacts`、`bots`（当前为**硬编码**）；类型 `Contact` / `Bot` 含 id、name、description、avatar 等。 |
+| apps/web 联系人/机器人数据 | 提供 `contacts`、`bots`（可硬编码或接口）；类型 `Contact` / `Bot` 含 id、name、description、avatar 等。 |
 
 当前机器人示例：
 
@@ -32,7 +32,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/components/ChatInputPanel.vue` | 输入 `@` 后解析光标前文本，弹出 **mention 候选列表**（联系人 + 机器人），支持键盘上下键选择；选择后插入 `@名称 `；`parseAtMention`、`insertMention`、`onMentionSelect`。 |
+| apps/web 输入区组件 | 输入 `@` 后解析光标前文本，弹出 **mention 候选列表**（联系人 + 机器人），支持键盘上下键选择；选择后插入 `@名称 `。 |
 | 同上 | **showAssistantToolbar**：`computed` 当 `modelValue` 包含任意 `@${b.name}` 时为 true，用于控制是否显示与「助手」相关的工具栏。 |
 
 提及候选与输入框为同一套逻辑，联系人显示「联系人」标签，机器人显示「机器人」标签（Bot 图标）。
@@ -41,7 +41,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/composables/useSpaceChatPane.ts` | **messageContainsBotMention(text)**：`bots.some(b => text.includes(\`@${b.name}\`))`，用于判断消息是否 @ 了机器人。 |
+| apps/web 聊天/消息逻辑 | **messageContainsBotMention(text)**：判断消息是否 @ 了机器人。 |
 | 同上 | **send()**：先 append 一条 user 消息，再调用 `streamReply(id, text, messageContainsBotMention(text), replyToId)`。 |
 | 同上 | **streamReply(id, text, hasBotMention, replyToMessageId)**：无论 hasBotMention 与否都会调用 `streamChat(...)` 请求 SSE；只有 **hasBotMention === true** 时才会在收到流前/流中执行 **ensureAssistantMessage()**，即创建「思考中…」的 assistant 占位并仅更新该条。 |
 
@@ -54,7 +54,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/composables/useChatStream.ts` | **streamChat(message, onDelta, options)** 请求 `POST /api/chat/stream`，body 仅：`message`、`conversation_id`、`user_id`、`reply_to_message_id`。 |
+| apps/web useChatStream | 请求 `POST /api/chat/stream`，body：`message`、`conversation_id`、`user_id`、`reply_to_message_id`。 |
 
 前端**未**向中间层传递「被 @ 的机器人 id/name」或「是否 @ 了机器人」等字段；后端若需按机器人路由，只能从 `message` 文本中自行解析 `@机器人名`。
 
@@ -62,7 +62,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/components/ChatMessageBubble.vue` | 支持消息来源 `sources` 含 `type: 'bot'`，展示机器人图标与「机器人」标签；引用、思考过程、流式展示等与是否 @ 机器人无直接耦合。 |
+| apps/web 消息气泡组件 | 支持消息来源 `sources` 含 `type: 'bot'`，展示机器人图标与「机器人」标签；引用、思考过程、流式展示等。 |
 
 ---
 
@@ -72,8 +72,8 @@
 
 | 文件 | 说明 |
 |------|------|
-| `middleware/src/routes/chat.ts` | **POST /api/chat/stream**：从 body 取 `message`、`conversation_id`、`reply_to_message_id`（及可选的 user_id）；调用 `adapter.streamMessage({ sessionId, message, userId, send, flush, replyToMessageId, ... })`。 |
-| `middleware/src/adapters/types.ts` | **StreamMessageParams** 仅包含：sessionId、backendSessionId、message、userId、send、flush、replyToMessageId、matrixAccessToken、currentUserMxid；**无 bot_id / bot_name / mention 等字段**。 |
+| apps/api routes/chat | **POST /api/chat/stream**：从 body 取 `message`、`conversation_id`、`reply_to_message_id` 等；调用 adapter.streamMessage。 |
+| apps/api adapters/types | **StreamMessageParams** 含 sessionId、message、userId、send、flush、replyToMessageId、matrixAccessToken、currentUserMxid 等；无 bot_id/mention 字段。 |
 
 即：中间层与适配器**不接收**「被 @ 的机器人」信息，只收到原始 `message` 文本。
 
@@ -87,15 +87,15 @@
 
 | 文件 | 说明 |
 |------|------|
-| `middleware/src/adapters/matrix.ts` | **streamMessage**：仅把用户消息通过 `sendRoomMessage` 写入 Matrix 房间，然后 **return**，不发起任何 Dify/流式回复。注释写明：「AI 回复后续接入」；与 `docs/MATRIX_INTEGRATION_STATUS.md` 中「助手回复仅经 SSE 推给前端，不写入 Matrix」一致。 |
+| apps/api adapters/matrix | **streamMessage**：将用户消息写入 Matrix 房间后 return，不发起 Dify/流式回复；助手回复经 SSE 推给前端，不写入 Matrix。 |
 
 因此当前 Matrix 下，@ 机器人后前端会创建助手占位并等待 SSE，但中间层不会推送任何助手流，占位会一直处于「思考中…」或空内容，直到前端超时或占位文案处理。
 
 ### 3.4 Dify 相关（未接入当前 At 流程）
 
-- `middleware/src/adapters/dify.ts` 存在，但**未在 `adapters/index.ts` 中注册**；`getChatAdapter()` 仅返回 mock 或 matrix。
-- `middleware/src/services/difyStream.ts` 提供 `runStreamWithParams`，可供未来「按应用 id 调用 Dify 流」使用。
-- `middleware/src/routes/options.ts` 有 **GET /api/dify-apps**，可返回 Dify 应用列表（id、name），前端若要动态拉取「可 @ 的机器人」列表可考虑复用或扩展。
+- apps/api 中 Dify 适配器可选的；`getChatAdapter()` 当前返回 mock 或 matrix。
+- apps/api 的 difyStream 服务提供 `runStreamWithParams`，可供未来「按应用 id 调用 Dify 流」使用。
+- 若有 **GET /api/dify-apps** 可返回 Dify 应用列表，前端可动态拉取「可 @ 的机器人」列表。
 
 ---
 

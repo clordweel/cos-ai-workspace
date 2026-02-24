@@ -44,7 +44,6 @@
 | 架构与数据流 | `docs/ARCHITECTURE.md` |
 | 状态总览（多维度） | `docs/PROJECT_STATUS.md` |
 | 本阶段总结与下一步 | `docs/PROJECT_PHASE_SUMMARY.md`（本文） |
-| 已废弃包约定 | `docs/DEPRECATED_PACKAGES.md` |
 | 重构阶段与步骤 | `docs/REFACTOR_PLAN.md` |
 | Monorepo 与 env | `docs/MONOREPO_APPS_PACKAGES.md` |
 | 认证与用户配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
@@ -66,43 +65,24 @@
 
 ---
 
-## 六、清理建议（为下一步做准备）
+## 六、清理建议（已执行或待办）
 
-1. **根脚本**
-   - 当前 `dev` 仍为 `dev:middleware` + `dev:frontend`（旧栈）。建议增加 `dev:all` = `dev:api` + `dev:web`，并在 README/AGENTS 中注明「日常开发推荐 `pnpm run dev:api` + `pnpm run dev:web`」。
-   - `dev:matrix` 当前为 middleware + apps/web；若全面切新栈，可改为 api + web，或保留现行为并文档注明「过渡用」。
-
-2. **验证文档**
-   - `docs/MATRIX_SESSION_VERIFICATION.md` 中「一键启动」仍写 middleware + apps/web。建议改为**默认**使用 apps/api + apps/web（`dev:api` + `dev:web`），并保留「过渡：使用 middleware」小节。
-
-3. **PROJECT_STATUS.md**
-   - 将「前端 / 中间层」表格中的技术栈描述改为以 **apps/web**、**apps/api** 为准；保留「已废弃包」说明；更新「最后更新」日期。
-
-4. **apps/README.md**
-   - 更新为「当前后端/前端为 apps/api、apps/web；阶段 0–4 已完成，阶段 5 部分完成」，与 REFACTOR_PLAN 一致。
-
-5. **废弃包**
-   - 保持不删、不引用；若 CI 或根脚本仍 build frontend/middleware，可注明「仅历史/对照用」，避免新人误以为主栈。
-
-6. **CHANGELOG**
-   - 本阶段梳理可记一条：`docs: 阶段性梳理总结与清理建议（PROJECT_PHASE_SUMMARY）`。
+- **根脚本、验证文档、PROJECT_STATUS、apps/README、废弃包**：已在分支 `chore/remove-deprecated` 中完成（dev = api+web，frontend/middleware 已移除，文档已更新）。
+- **文档持续清理**：将 docs 中残留的 `frontend/`、`middleware/` 路径与「现 frontend/middleware」表述改为 **apps/web**、**apps/api** 或「原实现已移除，见 apps/web/apps/api」；迁移/历史类文档可保留上下文并加一句「当前实现为 apps/web、apps/api」。
 
 ---
 
 ## 七、下一步建议（优先级）
 
 1. **补齐阶段 5 剩余**
-   - **5.3**：任务卡片（物料确认等）与 POST /api/material/confirm 等对接，与 frontend TaskCard 对照。
-   - **5.4**：应用扩展注册与入口，与 useAppExtensions 对照。
+   - **5.3**：任务卡片（物料确认等）与 POST /api/material/confirm 等对接，与设计/文档中的 TaskCard 对照。
+   - **5.4**：应用扩展注册与入口，与 APP_EXTENSIONS 文档对照。
 
 2. **建立重构回归清单**
    - 在 `docs/REFACTOR_REGRESSION_CHECKLIST.md` 或 `.cursor/plans/refactor-regression.md` 中列出：登录、GET /me、会话 CRUD、流式、Matrix Sync、设置与偏好、任务卡片、扩展；每阶段/每迭代勾选。
 
-3. **执行清理（可选）**
-   - 按「六、清理建议」更新根脚本、MATRIX_SESSION_VERIFICATION、PROJECT_STATUS、apps/README、CHANGELOG。
-
-4. **阶段 6 准备**
-   - 整理 apps/api 与现 middleware 的 API 差异；全量回归后再做流量切换与文档收尾。
+3. **阶段 6 准备**
+   - 整理 apps/api 与原有 API 契约的差异；全量回归后再做流量切换与文档收尾。
 
 ---
 

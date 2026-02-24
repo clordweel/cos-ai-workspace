@@ -49,5 +49,5 @@
 
 ## SDK 使用
 
-- **中间层**：使用 `@logto/api` 的 `createManagementApi` 调用 Logto Management API（如修改用户密码）。自建实例需配置 `baseUrl`、`apiIndicator`（见 `middleware/src/services/logtoManagement.ts`）。
-- **前端**：使用 `@logto/nuxt` 模块，提供 `useLogtoUser()`、`useLogtoClient()` 等；当前登录流程仍为「/logto → Logto → /logto-callback → 中间层回调写 Cookie」，与模块 pathnames（/sign-in、/callback）分离，避免冲突。若日后改为由模块处理回调，可启用 `POST /api/auth/logto/sync-session` 将 Nuxt 侧 Logto session 同步为中间层 Cookie。
+- **中间层**：使用 `@logto/api` 的 `createManagementApi` 调用 Logto Management API（如修改用户密码）。自建实例需配置 `baseUrl`、`apiIndicator`（见 apps/api 的 Logto 相关服务）。
+- **前端**：apps/web 登录流程为「/logto → Logto → /logto-callback → 后端回调写 Cookie」；用户信息经 `GET /api/auth/me` 获取。

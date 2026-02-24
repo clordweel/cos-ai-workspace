@@ -2,9 +2,9 @@
 
 ## 现状
 
-- **存储**：`middleware/src/services/auth/sessionStore.ts` 支持 **memory**（默认）、**redis**、**file** 三种 store。Cookie 仅存 `sessionId`，会话数据在对应 store 中。
+- **存储**：`apps/api/src/services/sessionStore.ts` 支持 **memory**（默认）、**redis**、**file** 三种 store。Cookie 仅存 `sessionId`，会话数据在对应 store 中。
 - **memory**：进程内存 Map，重启后清空 → 401，需重新登录。
-- **file**：单文件 JSON（`sessionStoreFile.ts`），`SESSION_STORE=file` 且可选 `SESSION_FILE_PATH`，启动加载、变更防抖写回，重启后会话保留。
+- **file**：单文件 JSON（若实现 `sessionStoreFile.ts`），`SESSION_STORE=file` 且可选 `SESSION_FILE_PATH`，启动加载、变更防抖写回，重启后会话保留。
 - **redis**：`SESSION_STORE=redis` 且 `REDIS_URL`，多实例共享。
 
 ## 目标
@@ -106,4 +106,4 @@
 - **可选**：**前端存储 token**：Logto 的 token 由前端保存并带 `Authorization: Bearer`，中间层无状态、重启不影响；需权衡 XSS、并实现 refresh 与（若保留 Frappe 登录）双路径鉴权。  
 - **不推荐**：把完整 session（含 token）放进 Cookie 的无状态方案。
 
-文档与实现可放在：`docs/SESSION_PERSISTENCE.md`（本文）、`middleware/src/services/auth/sessionStore.ts`（接口 + 内存实现）、`middleware/src/services/auth/sessionStoreFile.ts`（文件实现，可选新建）。
+文档与实现：`docs/SESSION_PERSISTENCE.md`（本文）、`apps/api/src/services/sessionStore.ts`（接口 + 内存实现）；文件 store 可选实现。

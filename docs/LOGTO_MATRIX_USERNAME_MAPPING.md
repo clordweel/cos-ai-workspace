@@ -53,5 +53,5 @@
 
 ## 四、相关文件
 
-- 映射逻辑：`middleware/src/services/matrixUserSync.ts`（`getMatrixUserId`、`getMatrixUserIdForSession`、`toMatrixLocalpart`、`ensureMatrixUser` 409 恢复）
-- Session：`middleware/src/services/auth/sessionStore.ts`（`getStableUserId`、`matrixUserId`）
+- 映射逻辑：`apps/api/src/services/matrixUserSync.ts`（`getMatrixUserId`、`ensureMatrixUser` 等）
+- Session：`apps/api/src/services/sessionStore.ts`（`getStableUserId`、`matrixUserId`）

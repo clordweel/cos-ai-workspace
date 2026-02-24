@@ -116,9 +116,9 @@
 
 | 用途 | 文件 |
 |------|------|
-| 前端 Sync Client（deviceId + initRustCrypto） | `frontend/composables/useMatrixSyncClient.ts` |
-| 前端 auth 读取 matrix_device_id | `frontend/composables/useAuth.ts` |
-| 中间层 /api/auth/me 下发 matrix_device_id | `middleware/src/routes/auth.ts` |
-| whoami 取 device_id、session 存 matrixDeviceId | `middleware/src/adapters/matrixClient.ts`（getMatrixWhoami）、`matrixSessionToken.ts`、`sessionStore.ts` |
+| 前端 Sync Client（deviceId + initRustCrypto） | apps/web：useMatrixSyncClient |
+| 前端 auth 读取 matrix_device_id | apps/web：useAuth |
+| 后端 /api/auth/me 下发 matrix_device_id | apps/api：routes/auth |
+| whoami 取 device_id、session 存 matrixDeviceId | apps/api：matrixClient、matrixSessionToken、sessionStore |
 | 加密房间根因与 TimelineRefresh 修复 | `docs/ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE.md` |
 | matrix-js-sdk createClient 与 E2EE | [ICreateClientOpts](https://matrix-org.github.io/matrix-js-sdk/interfaces/matrix.ICreateClientOpts.html)（deviceId、cryptoStore、pickleKey 等） |

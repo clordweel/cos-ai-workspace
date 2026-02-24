@@ -6,6 +6,23 @@
 
 ## 2026-02-24
 
+### docs: 删除废弃文档并更新引用
+
+- **删除**：`DEPRECATED_PACKAGES.md`、`FRONTEND_API_REQUIREMENTS.md`、`ZULIP_MIGRATION_EVALUATION.md`、`SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md`、`CHAT_INPUT_REFACTOR_PLAN.md`。
+- **PROJECT_STATUS**：增加「frontend、middleware 已从仓库移除」一句。
+- **PROJECT_PHASE_SUMMARY、AGENTS**：移除对 DEPRECATED_PACKAGES 的索引。
+- **SESSION_ADAPTER_MATRIX、SESSION_REQUIREMENTS、MATRIX_JS_SDK_RESEARCH、ERP_DIFY_INTEGRATION**：已删文档的引用改为 API_SPEC、adapters/types 或「已删除/选型见 archive」。
+
+### docs: 继续清理 docs 中过时路径与表述
+
+- **PROJECT_PHASE_SUMMARY**：清理建议改为「已执行或待办」；下一步中「现 middleware」改为「原有 API 契约」；frontend TaskCard 改为设计/文档对照。
+- **FRONTEND_LAYOUT_AND_BREAKPOINTS**：标题与开头改为「供 apps/web 对齐」，原 frontend 路径改为「见 apps/web」。
+- **FRONTEND_SPEC**：标题与技术栈改为 apps/web（React）；目录与源码组织改为 apps/web 结构；useAppView 等改为 AppViewContext。
+- **FRONTEND_REACT_WEBPACK_MIGRATION**：增加「迁移已落于 apps/web」说明。
+- **UI_DESIGN_SYSTEM**、**SESSION_PERSISTENCE**、**FRONTEND_AUTH_AND_PERMISSIONS**：frontend/middleware 路径改为 apps/web、apps/api；Nuxt 表述改为 React/路由守卫。
+- **REFACTOR_PLAN**：多处「现 middleware」改为「apps/api」或「原有 API/行为」；原则与阶段六、十二已在前序提交更新。
+- **MATRIX_***、**LOGTO_***、**SESSION_***、**BACKEND_STRATEGY**、**ERP_CLIENT_SDK**、**REVERSE_PROXY_***、**AT_BOT_***、**MATRIX_MARKDOWN**、**CHAT_INPUT_REFACTOR**、**ENCRYPTED_***、**MIDDLEWARE_MATRIX_REVIEW**：路径 `middleware/src`、`frontend/` 改为 `apps/api`、`apps/web` 或对应说明。
+
 ### chore: 移除废弃包 frontend、middleware 并清理文档（分支 chore/remove-deprecated）
 
 - **删除**：从仓库移除 **frontend/**、**middleware/** 目录及全部文件。

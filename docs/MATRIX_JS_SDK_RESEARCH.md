@@ -8,7 +8,7 @@
 
 ### 1.1 现象与根因
 
-- **现象**：在 Nuxt 3 + Vite 下，开发或构建时出现：
+- **现象**：在 Vue/Nuxt + Vite 下（apps/web 已改用 Webpack，可作参考），开发或构建时出现：
   - `does not provide an export named 'default'`（如 unhomoglyph、loglevel）
   - `does not provide an export named 'EventEmitter'`（如 events）
   - 或 `@matrix-org/matrix-sdk-crypto-wasm` 预构建后 WASM 404
@@ -22,7 +22,7 @@
 
 ### 1.3 本项目当前应对与局限
 
-- **应对**：在 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps` 中：
+- **应对**：在 Nuxt 项目的 `nuxt.config.ts` 的 `vite.optimizeDeps` 中（apps/web 使用 Webpack，见其配置）：
   - **include**：matrix-js-sdk 及除 WASM 外的直接依赖（events、loglevel、unhomoglyph、content-type、matrix-events-sdk、matrix-widget-api、jwt-decode、oidc-client-ts、p-retry、sdp-transform、another-json、bs58、uuid 等），由 Vite 统一预构建并做 CJS→ESM 互操作；
   - **exclude**：`@matrix-org/matrix-sdk-crypto-wasm`，因其通过 `import('./pkg/xxx.wasm')` 动态加载 WASM，预构建后 WASM 不会复制到 deps 目录导致 404。
 - **局限**：
@@ -106,7 +106,7 @@
 - **当前**：matrix-js-sdk@39.4.0（见 pnpm-lock.yaml），直接依赖含 @matrix-org/matrix-sdk-crypto-wasm@15.3.0、matrix-events-sdk@0.0.1、matrix-widget-api、oidc-client-ts 等。
 - **升级风险**：每次升级可能带来：（1）新的 CJS 依赖需加入 optimizeDeps.include；（2）WASM 包路径或加载方式变化；（3）类型或事件名变更，导致 useMatrixSyncClient 中的断言或事件名失效。
 
-### 5.2 故障排查成本（来自 MATRIX_INTEGRATION_STATUS、ZULIP_MIGRATION_EVALUATION）
+### 5.2 故障排查成本（来自 MATRIX_INTEGRATION_STATUS）
 
 - **前端 startClient 失败**：需区分 CJS/ESM 报错、WASM 404、CORS、baseUrl/token 错误等；文档已归纳在「§ 六、前端实时消息（Sync）不可用排查」。
 - **加密房间不展示**：需区分「未启用 E2EE（无 deviceId/initRustCrypto）」「本设备无 Megolm 密钥」「未监听 TimelineRefresh」等，见 ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE、MATRIX_E2EE_PRINCIPLE_AND_PROJECT_STATUS。
@@ -146,12 +146,12 @@
 | 主题 | 文件 |
 |------|------|
 | Sync 方案与 CJS 应对 | `docs/MATRIX_SYNC_FRONTEND_APPROACH.md` |
-| 前端 Sync 实现 | `frontend/composables/useMatrixSyncClient.ts` |
-| 前端 Matrix 客户端（可选登录） | `frontend/composables/useMatrixClient.ts` |
-| 构建配置 | `frontend/nuxt.config.ts`（optimizeDeps、transpile） |
+| 前端 Sync 实现 | apps/web：useMatrixSyncClient |
+| 前端 Matrix 客户端（可选登录） | apps/web 对应 hooks |
+| 构建配置 | apps/web 使用 Webpack（见 matrix-js-sdk、WASM 配置） |
 | 加密房间根因与 TimelineRefresh | `docs/ENCRYPTED_ROOM_MESSAGES_ROOT_CAUSE.md` |
 | E2EE 原理与现状 | `docs/MATRIX_E2EE_PRINCIPLE_AND_PROJECT_STATUS.md` |
 | 整合状态与排查 | `docs/MATRIX_INTEGRATION_STATUS.md` |
 | 最佳实践（429、分页、token） | `docs/MATRIX_CLIENT_BEST_PRACTICES.md` |
 | 会话设计与 SDK 放置 | `docs/SESSION_MATRIX_ANALYSIS.md`、`docs/MATRIX_SDK_PLACEMENT.md` |
-| 迁移评估（Zulip） | `docs/ZULIP_MIGRATION_EVALUATION.md` |
+| 迁移评估（Zulip） | 已删除；选型见 docs/archive/research/ |

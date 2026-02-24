@@ -7,7 +7,7 @@
 ## 一、当前方案（方案二/三 · Sync 已实现）
 
 - **做法**：前端在拿到 `/api/auth/me` 下发的 `matrixSyncToken`、`matrix_base_url`、`matrix_user_id` 后，用 **matrix-js-sdk** 创建 Client、`startClient()`，通过 `ClientEvent.Event` 接收新消息并 append 到当前会话；typing/已读经 `useMatrixSyncClient` 的 `sendTyping`/`sendReadReceipt` 在 `useSpaceChatPane` 中调用。
-- **入口**：`frontend/composables/useMatrixSyncClient.ts`；在 `useSpacePage` 中当 `hasSyncToken` 为 true 时调用 `startSyncClient()`，失败时单次 2.5s 后重试；登出或 token 清空时 `stopSyncClient()`。
+- **入口**：apps/web 的 `useMatrixSyncClient`；当 `hasSyncToken` 为 true 时调用 `startSyncClient()`，失败时单次 2.5s 后重试；登出或 token 清空时 `stopSyncClient()`。
 - **baseUrl**：优先使用 API 下发的 `matrix_base_url`，为空时回退到 `NUXT_PUBLIC_MATRIX_BASE_URL`（便于浏览器直连时使用公网/代理地址）。
 - **优点**：实时路径短、不占用中间层长连接；与 Element 等客户端的「前端 sync」模式一致；资源占用最优（方案二/三）。
 
@@ -26,7 +26,7 @@ matrix-js-sdk 虽声明 `"type": "module"`，但**部分依赖**仍是 CommonJS�
 
 ## 三、当前应对：optimizeDeps.include 逐个纳入
 
-在 `frontend/nuxt.config.ts` 的 `vite.optimizeDeps` 中，**一次性纳入 matrix-js-sdk 及其除 WASM 外的直接依赖**，由 Vite 统一预构建并做 CJS→ESM 互操作；**`@matrix-org/matrix-sdk-crypto-wasm` 必须放在 `exclude`**，因其通过 `import('./pkg/xxx.wasm')` 加载 WASM，预构建后 WASM 不会复制到 deps 目录会导致 404。
+在 Nuxt 项目中为 `vite.optimizeDeps`（apps/web 使用 Webpack，见其 resolve/experiments 配置），**一次性纳入 matrix-js-sdk 及其除 WASM 外的直接依赖**，由 Vite 统一预构建并做 CJS→ESM 互操作；**`@matrix-org/matrix-sdk-crypto-wasm` 必须放在 `exclude`**，因其通过 `import('./pkg/xxx.wasm')` 加载 WASM，预构建后 WASM 不会复制到 deps 目录会导致 404。
 
 ```ts
 optimizeDeps: {
@@ -49,7 +49,7 @@ optimizeDeps: {
   exclude: ['@matrix-org/matrix-sdk-crypto-wasm'],
 },
 ```
-注：不包含 `@babel/runtime`，因其无 `"."` 入口，作为 optimizeDeps 顶层条目会触发 "Missing . specifier"；预构建 matrix-js-sdk 时会自动拉入。修改 optimizeDeps 后若仍出现 WASM 404，可删除 `frontend/node_modules/.vite` 与 `frontend/.nuxt` 后重跑 `pnpm dev`。
+注：不包含 `@babel/runtime`，因其无 `"."` 入口，作为 optimizeDeps 顶层条目会触发 "Missing . specifier"；预构建 matrix-js-sdk 时会自动拉入。修改 optimizeDeps 后若仍出现 WASM 404，可清理 apps/web 的构建缓存后重跑 `pnpm run dev:web`。
 
 **曾单独暴露问题的包**（已包含在上述列表中）：
 
@@ -86,6 +86,6 @@ optimizeDeps: {
 
 | 文件 | 说明 |
 |------|------|
-| `frontend/nuxt.config.ts` | `vite.optimizeDeps.include` 配置 |
-| `frontend/composables/useMatrixSyncClient.ts` | Sync 客户端启动与事件处理 |
+| apps/web Webpack 配置 | resolve、experiments.asyncWebAssembly 等 |
+| apps/web useMatrixSyncClient | Sync 客户端启动与事件处理 |
 | `docs/MATRIX_INTEGRATION_STATUS.md` | § 六 前端实时消息不可用排查 |

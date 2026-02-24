@@ -32,13 +32,13 @@
 - **前端**：  
   - 有 `message.formattedBody` 时，用 `useMarkdownRender().renderFormattedBody()` 净化后以 HTML 渲染（用户/助手气泡均支持）。  
   - 无 `formattedBody` 时，对 `message.content` 做 Markdown 解析 + 净化后渲染（当前仅助手消息，用户消息亦可复用同一逻辑）。  
-- 详见 `docs/MESSAGE_MARKDOWN_RENDERING.md` 与 `frontend/composables/useMarkdownRender.ts`。
+- 详见 `docs/MESSAGE_MARKDOWN_RENDERING.md` 与 apps/web 的 Markdown 渲染逻辑。
 
 ---
 
 ## 四、发送端（已实现：中间层独立处理）
 
-中间层提供 **独立的消息文本处理能力**（`middleware/src/services/messageTextProcessor.ts`），在发送到 Matrix 前统一处理：
+apps/api 提供 **消息文本处理**（如 messageTextProcessor），在发送到 Matrix 前统一处理：
 
 1. **指令解析**：识别并解析如 `[@id="assistant" label="AI 助手"]` 的指令块（支持 `key="value"` 属性），产出结构化 `instructions` 供业务使用；在 `body` 中用 `label` 或 `id` 替代，在 `formatted_body` 中渲染为带 `data-id`/`data-label` 的 `<span class="msg-instruction">`。
 2. **Markdown → HTML**：对非指令的文本段用 markdown-it 转 HTML，再经 DOMPurify 白名单净化。

@@ -8,7 +8,7 @@
 
 ### 1. msisdn 3PID 格式违反规范 ✅ 已修复
 
-**位置**：`middleware/src/services/matrixUserSync.ts` 第 119 行
+**位置**：`apps/api/src/services/matrixUserSync.ts` 第 119 行
 
 **问题**：Matrix 规范明确要求 msisdn 的 `address` 字段**不得包含前导 `+`**（"MSISDNs do not include a leading '+' character"）。`toE164()` 返回 `+8613800138000` 格式，直接传入会导致 3PID 绑定失败或与规范不一致。
 
@@ -16,7 +16,7 @@
 
 ### 2. 消息分页 `beforeId` 与 Matrix `from` 语义不符
 
-**位置**：`middleware/src/adapters/matrix.ts` `listMessages` → `getRoomMessages`
+**位置**：`apps/api/src/adapters/matrixChat.ts` 或 matrix `listMessages` → `getRoomMessages`
 
 **问题**：Matrix API `/rooms/{roomId}/messages` 的 `from` 参数要求的是**分页 token**（上一页响应的 `end` / `prev_batch`），不是 `event_id`。当前适配器将 `beforeId` 直接映射为 `from`。若前端将来实现「加载更多」并传 `event_id` 作为 `before_id`，会得到错误结果。
 
@@ -27,7 +27,7 @@
 
 ### 3. Admin token 缓存永不过期
 
-**位置**：`middleware/src/adapters/matrixClient.ts` `cachedToken` / `getAccessToken()`
+**位置**：`apps/api/src/adapters/matrixClient.ts` `cachedToken` / `getAccessToken()`
 
 **问题**：`cachedToken` 一经设置永不清理。若 `MATRIX_ACCESS_TOKEN` 过期，中间层会持续使用无效 token 请求，导致 401，且无自动重试。
 

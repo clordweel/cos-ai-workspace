@@ -12,7 +12,7 @@
 |------|----------|------|
 | 流式对话 | `useChatStream.ts` → `POST /api/chat/stream` | 消费 SSE，打字机效果 |
 | 思考过程 | `thinking` 事件（delta / fullText），`onThinkingDone` 保留完整内容 | 支持 `<think>` 解析（含 HTML 实体等） |
-| 状态与事件 | `status`（如 thinking）、`message`（delta）、`dify_event`、`message_end`、`error` | 规范见 FRONTEND_API_REQUIREMENTS |
+| 状态与事件 | `status`（如 thinking）、`message`（delta）、`dify_event`、`message_end`、`error` | 规范见 API_SPEC、STREAM_AND_SAFETY |
 | 会话多轮 | `conversation_id` 传入流式接口；前端 `useChatSessions` 管理 chatId | 需将 Dify 返回的 `conversation_id` 持久化到前端会话 |
 
 ### 1.2 任务卡片（UI 已就绪，数据路径待打通）

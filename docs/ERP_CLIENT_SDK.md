@@ -83,7 +83,7 @@ const { message: item } = await call.post('cos.api.material.create_from_draft', 
 cd middleware && pnpm add frappe-js-sdk
 ```
 
-在 `middleware/src/services/cosClient.js`（或新建 `cosSdk.js`）中初始化一次 FrappeApp，对外暴露封装好的方法（如 `createFromDraft`、`createDraft`、`findByParams` 等），路由层继续调用这些方法即可。
+在 apps/api 的 cos 相关服务（如 `cosClient` 或 `cosSdk`）中初始化一次 FrappeApp，对外暴露封装好的方法（如 `createFromDraft`、`createDraft`、`findByParams` 等），路由层继续调用这些方法即可。
 
 ---
 

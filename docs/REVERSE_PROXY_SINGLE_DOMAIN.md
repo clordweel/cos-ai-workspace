@@ -10,7 +10,7 @@
 用户浏览器
     ↓ 始终访问 https://your-app.com
 反向代理（Nginx / Caddy / 等）
-    ├── /          → 前端（Nuxt，如 3001）
+    ├── /          → 前端（apps/web，如 3001）
     └── /api       → 中间层（Fastify，如 3000）
 
 Logto 回调：https://your-app.com/api/auth/logto/callback  → 代理到中间层
@@ -34,7 +34,7 @@ server {
     listen 443 ssl;
     server_name your-app.com;
 
-    # 前端（Nuxt）
+    # 前端（apps/web）
     location / {
         proxy_pass http://127.0.0.1:3001;
         proxy_http_version 1.1;
@@ -95,7 +95,7 @@ your-app.com {
 
 ## 4. Logto 控制台配置
 
-**方式 A：Nuxt 承载 Logto（推荐）**  
+**方式 A：前端承载 Logto（推荐）**  
 前端发起登录并接收回调，Redirect URI 填**前端主地址**下的回调路径：
 
 - `https://your-app.com/logto-callback`
