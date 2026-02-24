@@ -1,17 +1,18 @@
 # Agent 导航（AI 编码助手用）
 
-本仓库为 **AI 驱动交互工作台** 的 monorepo：前端（Nuxt 3）、中间层（Fastify）、文档与日志。以下帮助 Agent 快速定位上下文，减少无关文件加载。
+本仓库为 **AI 驱动交互工作台** 的 monorepo：当前前端 **apps/web**（React + Webpack）、当前中间层 **apps/api**（Fastify）、文档与日志。以下帮助 Agent 快速定位上下文，减少无关文件加载。
 
 ## 先读什么
 
 | 目的 | 文件 |
 |------|------|
 | 架构与状态 | `docs/ARCHITECTURE.md`、`docs/PROJECT_STATUS.md` |
+| 阶段梳理与下一步 | `docs/PROJECT_PHASE_SUMMARY.md` — 目录职责、阶段进度、清理建议、下一步优先级 |
 | 已废弃包（勿改勿引用） | `docs/DEPRECATED_PACKAGES.md` — frontend/、middleware/ 由 apps/web、apps/api 替代 |
 | 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
 | 前端视觉/UI 组件 | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` |
-| Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MATRIX_JS_SDK_RESEARCH.md`（SDK 困境多角度调研）；**会话功能验证** `docs/MATRIX_SESSION_VERIFICATION.md`（middleware + apps/web 联调步骤与 `pnpm run dev:matrix`） |
+| Matrix | `docs/MATRIX_INTEGRATION_STATUS.md`、`docs/MATRIX_CLIENT_BEST_PRACTICES.md`、`docs/MATRIX_JS_SDK_RESEARCH.md`（SDK 困境多角度调研）；**会话功能验证** `docs/MATRIX_SESSION_VERIFICATION.md`（推荐 apps/api + apps/web 联调，`dev:api` + `dev:web`） |
 | 前端迁移（Vue→React+Webpack） | `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` |
 | Monorepo（apps/packages） | `docs/MONOREPO_APPS_PACKAGES.md` |
 | 重构计划（阶段/步骤/技术栈确认） | `docs/REFACTOR_PLAN.md` |

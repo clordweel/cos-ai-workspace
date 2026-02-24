@@ -1,6 +1,6 @@
 # 项目状态总览
 
-当前状态与入口索引，便于上手与迭代。最后更新：2026-02-13。
+当前状态与入口索引，便于上手与迭代。最后更新：2026-02-24。
 
 ---
 
@@ -110,7 +110,8 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 
 ## 7. 快速入口
 
-- 新人：`PROJECT.md`、`ARCHITECTURE.md` → `README.md` 安装启动。
+- **阶段梳理与下一步**：`docs/PROJECT_PHASE_SUMMARY.md`（目录职责、阶段进度、清理建议、下一步优先级）。
+- 新人：`PROJECT.md`、`ARCHITECTURE.md` → `README.md` 安装启动；**当前开发与运行以 apps/api + apps/web 为准**。
 - 前端：`docs/FRONTEND_SPEC.md`、`.cursor/rules/frontend-spec.mdc`；鉴权 `frontend-auth.mdc`。
-- 中间层：适配器 `adapters/`，配置 `config.ts`，路由 `routes/`。
+- 中间层：适配器 `adapters/`，配置 `config.ts`，路由 `routes/`（均指 **apps/api**）。
 - 提交：`.cursor/rules/git-commit.mdc`（type(scope): 描述）。

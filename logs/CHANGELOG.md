@@ -4,6 +4,18 @@
 
 ---
 
+## 2026-02-24
+
+### docs: 阶段性梳理总结与清理整理
+
+- **PROJECT_PHASE_SUMMARY.md**：新增阶段性梳理总结文档，含项目定位、目录与职责、重构阶段 0–6 进度、文档索引、技术债与待办、清理建议、下一步建议与快速命令。
+- **PROJECT_STATUS.md**：更新「最后更新」日期；快速入口增加「阶段梳理与下一步」指向 PROJECT_PHASE_SUMMARY，并注明当前开发以 apps/api + apps/web 为准。
+- **MATRIX_SESSION_VERIFICATION.md**：推荐验证方式改为 **apps/api + apps/web**（两终端 dev:api + dev:web）；「一键启动」改为过渡方案（dev:matrix）；前提与故障排查中「middleware」改为「后端」或「apps/api / middleware」。
+- **apps/README.md**：更新为当前后端/前端即 apps/api、apps/web，并指向 REFACTOR_PLAN 与 PROJECT_PHASE_SUMMARY。
+- **AGENTS.md**：首句与 Matrix 验证说明改为以 apps/web、apps/api 为准；先读什么表增加「阶段梳理与下一步」条目。
+
+---
+
 ## 2026-02-15
 
 ### Matrix 在 apps/api 内完整迁移（不依赖 middleware）
