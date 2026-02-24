@@ -16,7 +16,7 @@ alwaysApply: true
 
 ## 会话长度与新会话
 - **对话轮次较多（约 20+）或开新功能时**：建议**新开会话**，用「基于某 commit/PR 继续」或 @ 文件接棒，避免上下文膨胀与遗忘。
-- **单次会话 scope 尽量单一**：例如只改 `frontend` 或只改 `middleware`。
+- **单次会话 scope 尽量单一**：例如只改 `apps/web` 或只改 `apps/api`。
 
 ## 与项目规则的配合
 - 上述与 `project-global.mdc` 中「会话与上下文」一致；本规则侧重 Plan、动态上下文与断点续传。

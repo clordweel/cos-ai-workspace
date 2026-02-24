@@ -1,24 +1,20 @@
-# Monorepo 标准结构：apps/ 与 packages/ 引入说明
+# Monorepo 标准结构：apps/ 与 packages/
 
-> 以 Element 等成熟项目为参考，引入 pnpm monorepo 标准目录 `apps/`、`packages/`，**现有 frontend 与 middleware 保持不变**。最后更新：2026-02-15。
+> 以 Element 等成熟项目为参考，采用 pnpm monorepo 标准目录 `apps/`、`packages/`。原 frontend、middleware 已移除，当前仅保留 apps/* 与 packages/*。最后更新：2026-02-24。
 
 ---
 
-## 一、结论：可行且已落地
+## 一、结论：已落地
 
-- **可行**：在不动现有 `frontend`、`middleware` 的前提下，仅扩展 pnpm workspace 的 `packages` 列表，新增 `apps/*` 与 `packages/*`，即可形成「根目录保留现有应用 + 标准 apps/packages 目录」的混合结构。
-- **已做**：已更新 `pnpm-workspace.yaml`，并创建 `apps/`、`packages/` 目录及占位内容；根目录 `dev` / `dev:frontend` / `dev:middleware` 脚本不变，行为与引入前一致。
+- **当前结构**：pnpm workspace 仅包含 `apps/*` 与 `packages/*`；根目录 `pnpm run dev` 同时启动 apps/api 与 apps/web。
+- **环境变量**：apps/api 与 apps/web 仅加载各自目录下的 `.env`，不读取根目录 `.env`。部署/开发时需在各 app 目录配置对应变量，见各目录 `.env.example`。
 
 ---
 
 ## 二、参考：Element 的约定
 
-- **Element Web**（element-hq/element-web）采用 pnpm workspace，`pnpm-workspace.yaml` 中：
-  - `packages: [".", "packages/*"]`：根目录 `"."` 即主应用，`packages/*` 为共享包。
-  - 使用 `nodeLinker: hoisted`、`linkWorkspacePackages: true`、`catalog` 统一部分依赖版本。
-- **本仓库**：需要保留根目录下的 `frontend`、`middleware` 不移动，因此采用「显式列出现有应用 + 标准 glob」的方式：
-  - `packages: [frontend, middleware, "apps/*", "packages/*"]`
-  - 现有应用仍在根目录；新应用放入 `apps/`，共享能力放入 `packages/`。
+- **Element Web**（element-hq/element-web）采用 pnpm workspace，`packages: [".", "packages/*"]`。
+- **本仓库**：`packages: ["apps/*", "packages/*"]`，无根目录应用包。
 
 ---
 
@@ -26,35 +22,26 @@
 
 | 路径 | 说明 |
 |------|------|
-| **frontend** | 现有 Nuxt/Vue 前端，**不移动**；仍为 workspace 一员，根脚本 `dev:frontend`、`build:frontend` 继续指向此处。 |
-| **middleware** | 现有 Fastify 中间层，**不移动**；仍为 workspace 一员，根脚本 `dev:middleware`、`build:middleware` 继续指向此处。 |
-| **apps/** | 标准「应用」目录；含 **apps/api**（`@cosai/api`，重构版后端）、**apps/web**（`@cosai/web`，重构版 React 前端）；见 `docs/REFACTOR_PLAN.md` 阶段 0。 |
-| **packages/** | 标准「共享包」目录；已含占位包 `packages/tsconfig-base`，供各应用扩展共享 TS 配置；可继续增加 eslint-config、shared-types 等。 |
+| **apps/** | 应用目录；**apps/api**（`@cosai/api`，当前后端）、**apps/web**（`@cosai/web`，当前前端）。 |
+| **packages/** | 共享包目录；含 `packages/tsconfig-base` 等；可扩展 eslint-config、shared-types。 |
 
 ---
 
-## 四、pnpm-workspace.yaml 变更
+## 四、pnpm-workspace.yaml
 
 ```yaml
 packages:
-  - frontend
-  - middleware
   - "apps/*"
   - "packages/*"
 ```
-
-- 保留 `frontend`、`middleware` 两项，确保现有 filter 与脚本无需修改。
-- 新增 `"apps/*"`、`"packages/*"`，此后在 `apps/`、`packages/` 下新增的带 `package.json` 的子目录会自动成为 workspace 包。
 
 ---
 
 ## 五、使用约定
 
-- **引用共享包**：在 frontend、middleware 或 apps/* 的 `package.json` 中可添加依赖，例如  
-  `"@cosai/tsconfig-base": "workspace:*"`，用于继承 `packages/tsconfig-base` 的配置。
-- **根脚本**：已增加 `dev:api`、`dev:web`、`build:api`、`build:web`；原 `dev:frontend`、`dev:middleware` 不变。
-- **环境变量**：根目录 `.env` 与 `apps/api`、`apps/web` 的 `.env` **彻底隔离**。apps/api 与 apps/web 仅加载各自目录下的 `.env`，不读取根目录 `.env`；根目录 `.env` 供 middleware、frontend (Nuxt)、根目录脚本等使用。部署/开发时需分别在根目录与各 app 目录配置对应变量，见各目录 `.env.example`。
-- **CI/文档**：若 CI 或文档中有「前端路径」「中间层路径」的假设，仍以 `frontend`、`middleware` 为准；新应用以 `apps/<name>` 为准。
+- **引用共享包**：在 apps/* 的 `package.json` 中可添加依赖，例如 `"@cosai/tsconfig-base": "workspace:*"`。
+- **根脚本**：`dev`、`dev:api`、`dev:web`、`dev:matrix`（同 dev）、`build:api`、`build:web`。
+- **CI/文档**：前端路径为 `apps/web`，中间层路径为 `apps/api`。
 
 ---
 
@@ -62,8 +49,8 @@ packages:
 
 | 文件 | 说明 |
 |------|------|
-| `pnpm-workspace.yaml` | workspace 包列表（含 apps/*、packages/*） |
+| `pnpm-workspace.yaml` | workspace 包列表 |
 | `apps/README.md` | apps/ 目录用途说明 |
 | `packages/README.md` | packages/ 目录用途说明 |
-| `packages/tsconfig-base/` | 共享 TS 基础配置占位包 |
-| `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` | 前端迁移方案（React+Webpack，可落于 apps/web） |
+| `docs/REFACTOR_PLAN.md` | 重构阶段与步骤 |
+| `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` | 前端迁移方案（已落于 apps/web） |

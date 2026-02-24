@@ -25,8 +25,8 @@ alwaysApply: true
 
 | 变更范围     | scope        |
 |-------------|--------------|
-| 前端代码     | `frontend`   |
-| 中间层       | `middleware` |
+| 前端代码     | `apps/web`   |
+| 中间层       | `apps/api`   |
 | 文档         | `docs`       |
 | 日志/CHANGELOG | `logs`     |
 | 根目录/多模块 | 可省略或 `root` |

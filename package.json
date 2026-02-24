@@ -4,15 +4,11 @@
   "description": "AI 驱动交互工作台 — 多项目根",
   "scripts": {
     "install:all": "npm install && pnpm install",
-    "dev": "concurrently \"npm run dev:middleware\" \"npm run dev:frontend\"",
-    "dev:middleware": "pnpm --filter ai-workbench-middleware run dev",
-    "dev:frontend": "pnpm --filter ai-workbench-frontend run dev",
+    "dev": "concurrently \"pnpm run dev:api\" \"pnpm run dev:web\"",
     "dev:api": "pnpm --filter @cosai/api run dev",
     "dev:web": "pnpm --filter @cosai/web run dev",
     "dev:web:invite": "pnpm --filter @cosai/web run dev:invite",
-    "dev:matrix": "concurrently \"pnpm run dev:middleware\" \"pnpm run dev:web\"",
-    "build:frontend": "pnpm --filter ai-workbench-frontend run build",
-    "build:middleware": "pnpm --filter ai-workbench-middleware run start",
+    "dev:matrix": "concurrently \"pnpm run dev:api\" \"pnpm run dev:web\"",
     "build:api": "pnpm --filter @cosai/api run build",
     "build:web": "pnpm --filter @cosai/web run build"
   },

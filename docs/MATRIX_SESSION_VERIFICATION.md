@@ -2,15 +2,14 @@
 
 用于优先通过 Matrix 会话相关功能验证：会话列表、历史消息、发消息、流式回复、前端 Sync。
 
-- **目标**：Matrix 相关能力已在 **apps/api** 中迁移实现；验证时**推荐**使用 **apps/api + apps/web** 联调，无需启动 middleware。
-- **过渡**：若仍需用旧后端，可暂时用「middleware + apps/web」联调（见下文「过渡：使用 middleware 验证」）。
+- **目标**：Matrix 相关能力在 **apps/api** 中实现；验证使用 **apps/api + apps/web** 联调，根目录 `pnpm run dev` 或 `pnpm run dev:matrix` 可同时启动两者。
 
 ---
 
 ## 前提
 
 - Synapse 已部署并可访问（见 [MATRIX_INTEGRATION_GUIDE.md](./MATRIX_INTEGRATION_GUIDE.md) 第一、二步）。
-- 后端环境变量：使用 **apps/api** 时在 **apps/api/.env** 配置；使用 middleware 时在根目录 `.env` 配置。需包含：
+- 后端环境变量：在 **apps/api/.env** 配置。需包含：
   - `CHAT_PROVIDER=matrix`
   - `MATRIX_BASE_URL`、`MATRIX_SERVER_NAME`、`MATRIX_USER_ID`、`MATRIX_PASSWORD`（或 `MATRIX_ACCESS_TOKEN`）
   - Logto：`LOGTO_ENDPOINT`、`LOGTO_APP_ID`、`LOGTO_APP_SECRET` 等
@@ -38,17 +37,7 @@ pnpm run dev:web
 
 默认将 `/api` 代理到 `http://localhost:3000`（api）。浏览器打开：**http://localhost:3001/space**。
 
----
-
-## 一键启动（过渡：middleware + apps/web）
-
-若仍使用旧中间层作为后端，在项目根目录执行：
-
-```bash
-pnpm run dev:matrix
-```
-
-会同时启动 **middleware**（3000）与 **apps/web**（3001）。启动完成后访问 http://localhost:3001/space 。
+**一键启动**：在根目录执行 `pnpm run dev` 或 `pnpm run dev:matrix`，会同时启动 api（3000）与 web（3001）。
 
 ---
 
@@ -63,18 +52,18 @@ pnpm run dev:matrix
 
 - 打开浏览器开发者工具 → Network，刷新或进入 /space。
 - 找到请求 `GET /api/auth/me`，查看响应 JSON。
-- **预期**：当后端（apps/api 或 middleware）配置了 `CHAT_PROVIDER=matrix` 且当前用户已同步到 Matrix 时，响应中应包含：
+- **预期**：当 **apps/api** 配置了 `CHAT_PROVIDER=matrix` 且当前用户已同步到 Matrix 时，响应中应包含：
   - `matrix_base_url`
   - `matrixSyncToken`（access_token，用于前端 Sync）
   - `matrix_user_id`
   - `matrix_device_id`（若已下发）
-- 若无 `matrixSyncToken`：检查 api/middleware 日志中 `ensureMatrixUser` / `ensureMatrixTokenForSession` 相关错误；或用户尚未被同步到 Matrix（见 [AUTH_AND_USER_CONFIG.md](./AUTH_AND_USER_CONFIG.md)、[LOGTO_MATRIX_AUTH_FLOW.md](./LOGTO_MATRIX_AUTH_FLOW.md)）。
+- 若无 `matrixSyncToken`：检查 apps/api 日志中 `ensureMatrixUser` / `ensureMatrixTokenForSession` 相关错误；或用户尚未被同步到 Matrix（见 [AUTH_AND_USER_CONFIG.md](./AUTH_AND_USER_CONFIG.md)、[LOGTO_MATRIX_AUTH_FLOW.md](./LOGTO_MATRIX_AUTH_FLOW.md)）。
 
 ### 3. 会话列表（Matrix 房间）
 
 - 在 /space 左侧「会话列表」区域查看。
 - **预期**：能拉取到会话列表（来自 Matrix 房间）；若为空，可先发一条消息产生新会话后再看。
-- 若显示「拉取会话列表失败」：检查 Network 中 `GET /api/sessions` 状态与响应；确认后端（apps/api 或 middleware）的 Matrix 配置与 Synapse 可达。
+- 若显示「拉取会话列表失败」：检查 Network 中 `GET /api/sessions` 状态与响应；确认 apps/api 的 Matrix 配置与 Synapse 可达。
 
 ### 4. 发消息与流式回复
 
@@ -103,12 +92,6 @@ pnpm run dev:matrix
 | 前端 404 / 白屏 | 确认访问的是 http://localhost:3001/space 且 dev:web 已启动。 |
 | /api 请求 404 或未代理 | 确认 dev:web 的 proxy target 为后端（3000）；检查 `apps/web/.env` 或环境变量 `WEBPACK_PROXY_TARGET`。 |
 | 401 未登录 | 先完成 Logto 登录；检查后端 Cookie 与 Logto 回调配置。 |
-| /api/sessions 502 或 501 | 后端未用 Matrix 或 Matrix 未配置：确认 **apps/api/.env**（或根目录 `.env` 若用 middleware）中 `CHAT_PROVIDER=matrix` 且 `MATRIX_*` 正确，重启后端。 |
+| /api/sessions 502 或 501 | 后端未用 Matrix 或 Matrix 未配置：确认 **apps/api/.env** 中 `CHAT_PROVIDER=matrix` 且 `MATRIX_*` 正确，重启 apps/api。 |
 | /api/auth/me 无 matrixSyncToken | 用户未同步到 Matrix 或 token 获取失败：查后端日志；确认 Logto 与 Matrix 同步流程（见 [LOGTO_MATRIX_AUTH_FLOW.md](./LOGTO_MATRIX_AUTH_FLOW.md)）。 |
 | 流式一次性蹦出 | 见项目 CHANGELOG / 阶段 3.3：前端需关闭 devServer 压缩（`compress: false`）；后端可加 `Cache-Control: no-transform`、`X-Accel-Buffering: no`。 |
-
----
-
-## 过渡：使用 middleware 验证
-
-若需用 **middleware** 作为后端做同样验证：执行 `pnpm run dev:matrix`（同时启动 middleware + apps/web），或手动启动 middleware 与 dev:web，将 web 代理指向 middleware（3000）。配置使用根目录 `.env`。

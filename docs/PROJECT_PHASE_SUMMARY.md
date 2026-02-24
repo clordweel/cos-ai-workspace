@@ -6,7 +6,7 @@
 
 ## 一、项目定位与主栈（一句话）
 
-**AI 驱动交互工作台**：前端（React + Webpack，`apps/web`）与中间层（Fastify，`apps/api`）经 SSE 流式对话、Logto 认证、Matrix 会话后端，对接 ERPNext/cos；**当前开发与运行以 apps/api + apps/web 为准**，原 frontend/middleware 已废弃、仅作参考。
+**AI 驱动交互工作台**：前端（React + Webpack，`apps/web`）与中间层（Fastify，`apps/api`）经 SSE 流式对话、Logto 认证、Matrix 会话后端，对接 ERPNext/cos；**当前开发与运行以 apps/api + apps/web 为准**，原 frontend/middleware 已从仓库移除。
 
 ---
 
@@ -16,8 +16,6 @@
 |------|------|------|
 | **apps/api** | ✅ 当前后端 | `@cosai/api`，鉴权、/api/auth/me、会话与聊天适配器（mock + matrix）、SSE 流式、用户偏好、Matrix 同步；端口 3000。 |
 | **apps/web** | ✅ 当前前端 | `@cosai/web`，React 18 + Webpack 5，Workspace 布局、认证流、会话列表与聊天、Matrix Sync、应用区标签与设置；端口 3001。 |
-| **frontend/** | ⛔ 已废弃 | 原 Nuxt/Vue 前端，**禁止修改或引用**，仅作迁移对照。 |
-| **middleware/** | ⛔ 已废弃 | 原 Fastify 中间层，**禁止修改或引用**，仅作迁移对照。 |
 | **packages/** | 共享包 | `tsconfig-base` 等；可扩展 shared-types、eslint-config。 |
 | **docs/** | 文档 | 架构、状态、API、认证、Matrix、前端规范、重构计划等。 |
 | **.cursor/rules/** | 规则 | 全局、前端、提交、工作流、产品化等 Agent 约定。 |
@@ -114,6 +112,5 @@
 |------|------|
 | 仅后端 | `pnpm run dev:api`（端口 3000） |
 | 仅前端 | `pnpm run dev:web`（端口 3001，/api 代理到 3000） |
-| 联调（推荐） | 终端 1：`pnpm run dev:api`；终端 2：`pnpm run dev:web` |
-| 当前一键脚本 | `pnpm run dev:matrix`（middleware + apps/web，过渡用） |
+| 联调（推荐） | `pnpm run dev` 或 `pnpm run dev:matrix`（同时启动 api + web） |
 | 构建 | `pnpm run build:api`、`pnpm run build:web` |

@@ -1,6 +1,6 @@
 # 重构计划：阶段、步骤与技术栈确认
 
-> 原则：**原 frontend、middleware 不移动、不直接改**，仅作**迁移参照**；重构**不启动、不依赖**旧 frontend/middleware，所有能力在 **apps/** 下**重新实现**（如 Matrix 会话与 token 在 apps/api 中迁移实现）。技术栈更换需**先讨论确认**后再执行，各阶段设验证点以降低漏检故障。最后更新：2026-02-15。
+> 原则：重构产物为 **apps/** 下新应用（apps/api、apps/web）；原 frontend、middleware **已从仓库移除**。技术栈更换需**先讨论确认**后再执行，各阶段设验证点以降低漏检故障。最后更新：2026-02-24。
 
 ---
 
@@ -8,8 +8,8 @@
 
 | 原则 | 说明 |
 |------|------|
-| **仅作迁移参照** | `frontend/`、`middleware/` 保留在根目录，**仅作对照与参考**；重构不依赖、不运行旧应用，不牵扯其代码。 |
-| **新建应用** | 重构产物为 **apps/** 下新应用：新包名（后端 apps/api）、可选用新框架与构建工具；Matrix 等能力在 api 包内**重新迁移实现**。 |
+| **apps 为唯一应用** | 前端为 **apps/web**，后端为 **apps/api**；无根目录 frontend/middleware。 |
+| **新建应用** | 新能力在 **apps/** 下实现；Matrix、鉴权、会话等均在 apps/api / apps/web 内完成。 |
 | **技术栈先确认** | 涉及框架/UI/后端选型时，**先在本文档或专门讨论中确认**，再进入实现阶段，避免中途大改。 |
 | **可介入修复** | 每阶段设**验收/回归步骤**与可观测点（构建、冒烟、接口契约、日志），便于及时发现问题并介入修复。 |
 
@@ -165,7 +165,7 @@
 
 ## 十、阶段 6：切换与收尾
 
-**目标**：可选切换流量至新前后端；文档与运维就绪；原 frontend、middleware 保留作参考或只读。
+**目标**：可选切换流量至新前后端；文档与运维就绪；原 frontend、middleware 已移除。
 
 | 步骤 | 内容 | 验收 / 故障点 |
 |------|------|----------------|
@@ -173,7 +173,7 @@
 | 6.2 | **切换**：若需切流量，通过路由/反向代理或前端入口将请求指到新应用；保留回滚方式。 | 回滚步骤明确且演练过。 |
 | 6.3 | **文档**：ARCHITECTURE、PROJECT_STATUS、FRONTEND_SPEC、API_SPEC 等更新为新应用名与路径；CHANGELOG 记录切换与下线项。 | 新人能按文档跑通新前后端。 |
 
-**产出**：可选的流量切换；文档与运维更新；原应用保留不删。
+**产出**：可选的流量切换；文档与运维更新。
 
 ---
 
@@ -195,9 +195,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` | 前端 Vue→React+Webpack 迁移范围与建议（可对应 apps/web）。 |
-| `docs/MONOREPO_APPS_PACKAGES.md` | apps/、packages/ 与现有 frontend、middleware 的关系。 |
+| `docs/FRONTEND_REACT_WEBPACK_MIGRATION.md` | 前端 Vue→React+Webpack 迁移范围与建议（已落于 apps/web）。 |
+| `docs/MONOREPO_APPS_PACKAGES.md` | apps/、packages/ 当前结构（frontend、middleware 已移除）。 |
 | `docs/MATRIX_JS_SDK_RESEARCH.md` | matrix-js-sdk 困境与参考（构建、类型、E2EE）。 |
-| `docs/UI_DESIGN_SYSTEM.md` | 设计令牌与组件约定（新前端需遵循）。 |
-| `middleware/` | 现有中间层，**仅作参考**，不修改。 |
-| `frontend/` | 现有前端，**仅作参考**，不修改。 |
+| `docs/UI_DESIGN_SYSTEM.md` | 设计令牌与组件约定（apps/web 需遵循）。 |

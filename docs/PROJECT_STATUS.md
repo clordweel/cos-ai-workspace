@@ -4,18 +4,12 @@
 
 ---
 
-## 0. 已废弃包（请勿修改或引用）
-
-- **frontend/**、**middleware/** 已废弃，由 **apps/web**、**apps/api** 替代。开发与 Agent 不得修改或引用该两包内容，详见 `docs/DEPRECATED_PACKAGES.md`。
-
----
-
 ## 1. 架构与数据流
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **前端** | Vue 3 + Nuxt 3 + Tailwind + Shadcn-vue | 对话流 + 任务卡片，浅色主题（可深色）；不直连 Frappe/Dify |
-| **中间层** | Node.js (Fastify) + TypeScript | SSE 流式、聊天适配器（mock/matrix）、Logto 鉴权、cos/物料 |
+| **前端** | apps/web：React 18 + Webpack 5 + Tailwind + shadcn-ui | 对话流 + 任务卡片，浅色主题（可深色）；不直连 Frappe/Dify |
+| **中间层** | apps/api：Node.js (Fastify) + TypeScript | SSE 流式、聊天适配器（mock/matrix）、Logto 鉴权、cos/物料 |
 | **聊天后端** | 适配器驱动 | 当前注册：**mock**（默认）、**matrix**；Dify 适配器已移除，可后续扩展 |
 | **认证** | Logto 唯一入口 | 前端可承载登录/回调（`/logto`、`/logto-callback`），中间层用 code 换 token 与 Cookie |
 | **ERP** | ERPNext v16 + cos App | Headless，仅经中间层调用 cos REST API；写入路径：草稿 → 确认 → 权限校验 → 写入 |
@@ -24,30 +18,30 @@
 
 ---
 
-## 2. 前端
+## 2. 前端（apps/web）
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **布局** | workspace | `layouts/workspace.vue` + `useWorkspaceLayout`（grid、layoutMode）；会话区 + 应用区 |
-| **会话页** | `pages/space/[[id]].vue` | 列表 + 聊天；会话/消息状态：`useChatSessions`、`useChatSessionsApi` |
+| **布局** | workspace | WorkspaceLayout（会话区 + 应用区）、AppViewProvider |
+| **会话页** | /space、/space/:id | 列表 + 聊天；会话/消息状态：useSessions、useMessages、useChatStream |
 | **应用区** | 标签式 | `useAppView`：tabs、currentView（`home` \| `contacts` \| `bots` \| `settings` \| `auth` \| `app`） |
-| **认证** | 仅 Logto | `useAuth().login()` 跳转 Logto；未登录时可选强制打开「认证登录」标签；401 统一 `requireAuth()` |
-| **权限** | 预留 | `usePermissions().can()`、`canAccessApp()`；后端 `/api/auth/me` 尚未返回 permissions |
-| **扩展** | 应用扩展 | `useAppExtensions`、`types/app-extensions.ts`；首页卡片与侧栏标签；见 `docs/APP_EXTENSIONS.md` |
-| **主题** | 浅色为主 | 可切换深色/跟随系统；`useTheme`、`theme.client.ts` |
+| **认证** | 仅 Logto | useAuth 跳转 Logto；未登录时可选打开登录入口；401 统一处理 |
+| **权限** | 预留 | 后端 `/api/auth/me` 尚未返回 permissions |
+| **扩展** | 应用扩展 | AppViewContext、标签与侧栏；见 `docs/APP_EXTENSIONS.md` |
+| **主题** | 浅色为主 | 可切换深色/跟随系统；useTheme |
 
 目录与约定见 `docs/FRONTEND_SPEC.md`；鉴权见 `docs/FRONTEND_AUTH_AND_PERMISSIONS.md`。
 
 ---
 
-## 3. 中间层
+## 3. 中间层（apps/api）
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **语言** | TypeScript | `src/**/*.ts`，构建输出 `dist/`，dev 用 `tsx watch` |
 | **适配器** | mock + matrix | `adapters/index.ts` 注册；`CHAT_PROVIDER` 默认 `mock`；无 Dify 注册 |
 | **路由** | auth, chat, material, health, options | 认证、流式聊天、物料确认、健康、选项（另有 diagnostics API） |
-| **配置** | 环境变量 | `config.ts` 读 `.env`；chat、matrix、cos、logto 等 |
+| **配置** | 环境变量 | `config.ts` 读 **apps/api/.env**；chat、matrix、cos、logto 等 |
 | **会话** | Cookie | Logto 登录后写 Cookie；遗留 Frappe 登录/Token 路由（前端已不调用） |
 
 Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或编排使用；当前流式对话完全经适配器（mock/matrix）。
@@ -58,7 +52,7 @@ Dify 相关：`services/difyStream.ts` 仍存在，供未来 Dify 适配器或�
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **用户可见** | 仅 Logto | 前端唯一入口「登录」→ Logto；认证页可提供 Matrix 登录（用户名/邮箱/手机号+密码），需配置 `NUXT_PUBLIC_MATRIX_BASE_URL` |
+| **用户可见** | 仅 Logto | 前端唯一入口「登录」→ Logto；认证页可提供 Matrix 登录（用户名/邮箱/手机号+密码），需配置前端环境变量（见 apps/web） |
 | **中间层** | Logto + 保留 Frappe 接口 | `/api/auth/logto`、callback、/me、logout 已用；`GET /api/auth/me` 在 Logto 且配置 M2M 时附带 `preferences`；`PATCH /api/auth/me/preferences` 部分更新 Logto customData（先 GET 再合并再 PATCH）；POST login/token 仍在，未移除 |
 | **Session** | 含 type、user、logtoSub、frappeSid/frappeToken 等 | 与 ERPNext 仍耦合；通用化见 `docs/archive/research/AUTH_GENERIC_LOGTO_DESIGN.md` |
 | **系统配置** | 仅 env | 无独立配置库；Matrix 仅作聊天后端，不负责系统配置 |

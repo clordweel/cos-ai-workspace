@@ -1,7 +1,5 @@
-# 标准 monorepo 结构（参考 Element 等）：apps/* + packages/*；现有 frontend、middleware 保持不变
+# 标准 monorepo 结构（参考 Element 等）：apps/* + packages/*；frontend、middleware 已移除
 packages:
-  - frontend
-  - middleware
   - "apps/*"
   - "packages/*"
 

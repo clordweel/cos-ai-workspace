@@ -8,7 +8,7 @@
 |------|------|
 | 架构与状态 | `docs/ARCHITECTURE.md`、`docs/PROJECT_STATUS.md` |
 | 阶段梳理与下一步 | `docs/PROJECT_PHASE_SUMMARY.md` — 目录职责、阶段进度、清理建议、下一步优先级 |
-| 已废弃包（勿改勿引用） | `docs/DEPRECATED_PACKAGES.md` — frontend/、middleware/ 由 apps/web、apps/api 替代 |
+| 已移除包说明 | `docs/DEPRECATED_PACKAGES.md` — frontend/、middleware/ 已从仓库移除，由 apps/web、apps/api 替代 |
 | 认证与配置 | `docs/AUTH_AND_USER_CONFIG.md`、`docs/LOGTO_MATRIX_AUTH_FLOW.md` |
 | 前端 | `.cursor/rules/frontend-spec.mdc`、`docs/FRONTEND_SPEC.md` |
 | 前端视觉/UI 组件 | `docs/UI_DESIGN_SYSTEM.md`、`.cursor/rules/frontend-ui-design.mdc` |
@@ -24,8 +24,6 @@
 
 - **apps/web/** — 当前前端（React + Webpack），对话流与任务卡片；不直连 Frappe/Dify，经 apps/api。
 - **apps/api/** — 当前中间层（Fastify），SSE 流式、鉴权、聊天适配器（Matrix）、cos/物料 API。
-- **frontend/** — **已废弃**。请勿修改或引用；仅作历史参考，由 apps/web 替代。
-- **middleware/** — **已废弃**。请勿修改或引用；仅作历史参考，由 apps/api 替代。
 - **docs/** — 架构、API、认证、前端规范等；先查 `PROJECT_STATUS.md`、`ARCHITECTURE.md`。研究/选型已归档至 `docs/archive/research/`、`docs/archive/mas/`。
 - **.cursor/rules/** — 团队约定与 Agent 规则（全局、前端、提交、Agent 工作流等）。
 - **.cursor/plans/** — 可保存的实现计划，供 Plan Mode 产出与复用。

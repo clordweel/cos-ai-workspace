@@ -24,7 +24,7 @@ alwaysApply: true
 - 中间层负责 CORS 及 `Access-Control-Allow-*` 等头部，确保前后端通信无跨域错误。
 
 ## 环境变量 (.env) 规范
-- **根 .env 与 apps 下 .env 彻底隔离**：**apps/api** 与 **apps/web** 仅加载各自目录下的 `.env`，不读取根目录 `.env`；根目录 `.env` 供 **middleware**、**frontend (Nuxt)**、根目录脚本等使用。
+- **根 .env 与 apps 下 .env 彻底隔离**：**apps/api** 与 **apps/web** 仅加载各自目录下的 `.env`，不读取根目录 `.env`；根目录 `.env` 供根目录脚本等使用；apps 仅读各自目录 `.env`。
 - **apps/api**：配置加载逻辑只读 `apps/api/.env`（见 `apps/api/src/config.ts`）；所需变量全部在 `apps/api/.env.example` 中列出并注释。
 - **apps/web**：构建/开发只读 `apps/web/.env`（如 webpack 的 `path.resolve(__dirname, '.env')`）；所需变量在 `apps/web/.env.example` 中列出。
 - **新增或修改环境变量时**：在对应模块的 `.env.example` 中同步补充或更新说明，保证部署时仅凭该目录 `.env` 即可运行。
@@ -38,24 +38,24 @@ alwaysApply: true
 - **Matrix 参考**：涉及 Matrix 协议、会话、消息、房间等实现时，**允许并鼓励**从 Element、Cinny、FluffyChat、SchildiChat 等 Matrix 开源客户端中搜索、参考实现方案（可用 web_search、mcp_web_fetch 或 Context7 等）。**实现会话相关功能时，可从 Matrix Element 客户端源码调研实现方案**。
 
 ## Agent 任务与 UI 约定
-- **UI 组件**：优先使用 **shadcn-ui 官方推荐方式**安装与使用。`frontend` 使用 shadcn-vue 时仅通过官方 CLI 安装（如 `pnpm dlx shadcn-vue@latest add <组件名>`）；`apps/web` 使用 shadcn-ui（React）时按官方文档安装与添加组件，禁止随意手写或复制未经验证的 UI 组件。
+- **UI 组件**：优先使用 **shadcn-ui 官方推荐方式**安装与使用。`apps/web` 使用 shadcn-ui（React）时按官方文档安装与添加组件，禁止随意手写或复制未经验证的 UI 组件。
 - **下一步 / 下一项任务**：当用户**明确给出**「下一步」「下一项任务」「继续下一项」等指令时，**先提交当前 git 更改**（按 `.cursor/rules/git-commit.mdc` 规范），再继续执行下一项。
-- **前端迁移**：**apps/web 前端重构迁移结束前**，尽可能**还原 `frontend` 包中的设计**（布局、交互、视觉与功能对照），便于对照验收与平滑切换。
+- **前端迁移**：**apps/web 前端重构迁移结束前**，尽可能**还原原前端设计**（参考 docs/FRONTEND_SPEC、迁移文档）（布局、交互、视觉与功能对照），便于对照验收与平滑切换。
 
 ## 前端约定
-- 布局与组件详见 **`.cursor/rules/frontend-spec.mdc`**（在编辑 `frontend/**` 时生效）。主布局为 `layouts/workspace.vue`（会话区 + 应用区），会话页为 `pages/space/[[id]].vue`。
+- 布局与组件详见 **`.cursor/rules/frontend-spec.mdc`**、`docs/FRONTEND_SPEC.md`。当前前端为 apps/web，主布局为 WorkspaceLayout，会话页为 /space、/space/:id。
 - 状态：`useChatSessions.ts` 管理全局会话与消息；`useAppView.ts` 管理应用区（`isPanelOpen`、`isContentVisible`、`currentView`：`home` | `contacts` | `bots` | `settings` | `auth` | `app`）。Layout 向子组件 provide `isSessionExpanded`。认证唯一入口为 Logto；用户偏好用 `useUserPreferences()`，与 Logto customData 同步。
 - 样式：统一浅色主题，圆角容器（如 `rounded-xl`、`border-zinc-200`、`bg-white/80`）。
 
 ## 会话与上下文
-- **单次会话 scope 尽量单一**：例如只改 `frontend` 或只改 `middleware`，避免同一对话里跨多模块、多需求。
+- **单次会话 scope 尽量单一**：例如只改 `apps/web` 或只改 `apps/api`，避免同一对话里跨多模块、多需求。
 - **新需求先看文档再动手**：先看 `docs/PROJECT_STATUS.md` 与 `docs/ARCHITECTURE.md`，再改代码；细节用 @ 引用具体文件或行号，减少无关上下文。
 - **大改动拆子任务**：每个子任务单独会话完成，用 git 提交 / PR 串起来；长会话适时收尾，新会话用「基于某 commit/PR 继续」接棒。
 
 ## 代码结构（便于 Agent 导航）
 - **单文件尽量控制在约 300 行内**：过长时按职责拆成多个模块或 composable，避免单文件堆积过多逻辑。
 - **文件名语义化**：如 `password-hashing.ts`、`sessionStore.ts` 等比泛用 `helpers.ts` 更利于语义搜索与按需加载。
-- **相关文件就近放置**：同领域逻辑放在同一目录（如 `middleware/src/services/auth/`），减少跨目录遍历。
+- **相关文件就近放置**：同领域逻辑放在同一目录（如 `apps/api/src/services/auth/`），减少跨目录遍历。
 
 ## 仓库与文档
 - 默认分支：`develop`。重要变更记录在 `logs/CHANGELOG.md`；多维度状态见 `docs/PROJECT_STATUS.md`；架构与 API 见 `docs/`（ARCHITECTURE、PROJECT_STATUS、STREAM_AND_SAFETY、FRONTEND_SPEC、API_SPEC、AUTH_AND_USER_CONFIG、LOGTO_MATRIX_AUTH_FLOW）；研究类见 `docs/archive/research/`。

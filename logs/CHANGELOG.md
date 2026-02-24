@@ -6,6 +6,14 @@
 
 ## 2026-02-24
 
+### chore: 移除废弃包 frontend、middleware 并清理文档（分支 chore/remove-deprecated）
+
+- **删除**：从仓库移除 **frontend/**、**middleware/** 目录及全部文件。
+- **pnpm-workspace.yaml**：移除 frontend、middleware，仅保留 `apps/*`、`packages/*`。
+- **根 package.json**：`dev`、`dev:matrix` 改为同时启动 apps/api + apps/web；移除 dev:frontend、dev:middleware、build:frontend、build:middleware。
+- **文档**：DEPRECATED_PACKAGES 改为「已移除」说明；PROJECT_STATUS 移除「已废弃包」节，架构表改为 apps/web、apps/api；MONOREPO_APPS_PACKAGES 重写为仅 apps/packages；PROJECT_PHASE_SUMMARY、AGENTS、MATRIX_SESSION_VERIFICATION、REFACTOR_PLAN 去除对 frontend/middleware 的保留与过渡表述。
+- **.cursor/rules**：project-global、agent-workflow、git-commit 中 frontend/middleware 引用改为 apps/web、apps/api。
+
 ### docs: 阶段性梳理总结与清理整理
 
 - **PROJECT_PHASE_SUMMARY.md**：新增阶段性梳理总结文档，含项目定位、目录与职责、重构阶段 0–6 进度、文档索引、技术债与待办、清理建议、下一步建议与快速命令。
