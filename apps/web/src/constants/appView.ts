@@ -9,7 +9,8 @@ export type AppView =
   | 'settings'
   | 'auth'
   | 'profile'
-  | 'app';
+  | 'app'
+  | 'connected-services';
 
 export interface AppTab {
   id: string;
@@ -27,6 +28,7 @@ export const VIEW_TITLES: Record<Exclude<AppView, 'app'>, string> = {
   settings: '设置',
   auth: '认证登录',
   profile: '用户信息',
+  'connected-services': '授权管理',
 };
 
 /** 只能创建一次的视图：再次激活时跳转到已有标签，不新建 */
@@ -34,6 +36,7 @@ export const SINGLE_INSTANCE_VIEWS: readonly AppView[] = [
   'profile',
   'settings',
   'auth',
+  'connected-services',
 ];
 
 export function isSingleInstanceView(view: AppView): boolean {
@@ -48,7 +51,7 @@ export const defaultHomeTab: AppTab = {
 
 /** 已知应用 ID 的展示名（测试应用等） */
 const APP_DISPLAY_NAMES: Record<string, string> = {
-  'memo-test': '测试备忘录',
+  'memo-test': '备忘录',
   'task-test': '测试任务',
 };
 

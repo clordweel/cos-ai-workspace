@@ -6,6 +6,17 @@
 
 ## 2026-02-24
 
+### feat(apps/api, apps/web): 认证授权管理与每用户 ERP 凭证
+
+- **apps/api**：新增 ConnectorCredentialsStore（接口 + Logto customData 实现），按 logtoSub + provider 存 ERPNext/Outline 凭证；新增 connected-services 路由（GET/POST/DELETE）；Memo 路由支持按用户凭证回退（先 config.apiKey，再 ConnectorCredentialsStore.erpnext）。
+- **apps/web**：新增「授权管理」视图与 useConnectedServices；设置页增加「管理已连接服务」入口；ConnectedServicesContent 列表 + 连接/断开弹窗（API Key 录入）。
+
+### feat(apps/api, apps/web): Frappe/ERPNext Memo 试点接入
+
+- **apps/api**：增加 `config.cos`（COS_ERP_BASE、COS_ERP_API_KEY），`.env.example` 补充说明；新增 `frappe-js-sdk`、`frappeClient.ts`（list/get/create/update/delete Memo，默认 DocType ToDo）；新增 `routes/memo.ts`（GET/POST/PATCH/DELETE /api/memos，需登录，单 Key 试跑）；统一 Frappe 错误转 HTTP，日志带 logtoSub。
+- **apps/web**：新增 `useMemos`；备忘录应用改为调用真实 API（列表、新建、503 时提示 ERP 未配置），保留「关联到当前会话」；首页卡片与标签标题改为「备忘录」。
+- **docs**：`ERPNext_INTEGRATION_STATUS.md` 初版与已对接接口、验收清单。
+
 ### docs: 删除废弃文档并更新引用
 
 - **删除**：`DEPRECATED_PACKAGES.md`、`FRONTEND_API_REQUIREMENTS.md`、`ZULIP_MIGRATION_EVALUATION.md`、`SESSION_MESSAGE_ABSTRACTION_FEASIBILITY.md`、`CHAT_INPUT_REFACTOR_PLAN.md`。

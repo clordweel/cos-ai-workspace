@@ -47,4 +47,12 @@ export const config = {
     apiBase: (process.env.DIFY_API_BASE || 'https://api.dify.ai/v1').replace(/\/$/, ''),
     apiKey: (process.env.DIFY_API_KEY || '').trim(),
   },
+  /** Frappe/ERPNext（cos、Memo 等）：仅 apps/api 内使用，前端不直连 */
+  cos: {
+    /** Base URL，如 https://<erpnext-host>/api，末尾无斜杠 */
+    baseUrl: (process.env.COS_ERP_BASE || '').replace(/\/$/, ''),
+    /** 单 Key 试跑时使用；每用户 Key 时由 ConnectorCredentialsStore 按 logtoSub 取 */
+    apiKey: (process.env.COS_ERP_API_KEY || '').trim(),
+    apiSecret: (process.env.COS_ERP_API_SECRET || '').trim(),
+  },
 };

@@ -1,7 +1,7 @@
 'use client';
 
-import { LogOut, RefreshCw } from 'lucide-react';
-import type { AppTab } from '@/constants/appView';
+import { LogOut, RefreshCw, Link2 } from 'lucide-react';
+import type { AppTab, AppView } from '@/constants/appView';
 import { AuthPanel } from '@/components/AuthPanel';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { HomeContent } from '@/components/app/HomeContent';
 import { MemoTestApp } from '@/components/app/testApps/MemoTestApp';
 import { TaskTestApp } from '@/components/app/testApps/TaskTestApp';
+import { ConnectedServicesContent } from '@/components/app/ConnectedServicesContent';
 
 export interface AppContentProps {
   /** 当前选中的标签，为 null 时显示首页占位 */
@@ -19,6 +20,8 @@ export interface AppContentProps {
   onLogout?: () => void;
   /** 打开应用（view=app 时用 appId 打开；首页卡片调用以打开测试应用） */
   onOpenApp?: (appId: string) => void;
+  /** 打开指定视图（如授权管理） */
+  onOpenView?: (view: AppView, appId?: string) => void;
 }
 
 export function AppContent({
@@ -28,6 +31,7 @@ export function AppContent({
   onReAuth,
   onLogout,
   onOpenApp,
+  onOpenView,
 }: AppContentProps) {
   const view = activeTab?.view ?? 'home';
   const appId = activeTab?.appId;
@@ -85,14 +89,37 @@ export function AppContent({
     return <AuthPanel className="min-h-full" />;
   }
 
-  if (view === 'contacts' || view === 'bots' || view === 'settings') {
+  if (view === 'contacts' || view === 'bots') {
     return (
       <div className="flex min-h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
         {view === 'contacts' && '联系人功能开发中'}
         {view === 'bots' && '机器人功能开发中'}
-        {view === 'settings' && '设置功能开发中'}
       </div>
     );
+  }
+
+  if (view === 'settings') {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-sm text-muted-foreground">设置功能开发中</p>
+        {onOpenView && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => onOpenView('connected-services')}
+          >
+            <Link2 className="h-3.5 w-3.5" aria-hidden />
+            管理已连接服务
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (view === 'connected-services') {
+    return <ConnectedServicesContent />;
   }
 
   if (view === 'app') {

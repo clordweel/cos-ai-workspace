@@ -11,7 +11,7 @@ export interface HomeContentProps {
 /** 首页：导航与测试应用入口 */
 export function HomeContent({ onOpenApp }: HomeContentProps) {
   const cards = [
-    { appId: 'memo-test', title: '测试备忘录', description: '验证关联：将备忘录关联到当前会话', icon: FileText },
+    { appId: 'memo-test', title: '备忘录', description: 'ERP 待办列表，新建与关联到当前会话', icon: FileText },
     { appId: 'task-test', title: '测试任务', description: '验证关联：将任务关联到当前会话', icon: ListTodo },
   ];
 

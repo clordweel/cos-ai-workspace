@@ -1120,6 +1120,7 @@ function SpaceContent() {
               onCloseTab={closeTab}
               onNewTab={() => addTab('home')}
               onOpenProfile={() => openView('profile')}
+              onOpenSettings={() => openView('settings')}
               isTagBarExpanded={isTagBarExpanded}
               appAreaCollapsed={appAreaCollapsed}
               onToggleCollapse={setAppAreaCollapsed}
@@ -1135,6 +1136,7 @@ function SpaceContent() {
             >
               <AppContent
                 activeTab={activeTab}
+                onOpenView={openView}
                 user={user}
                 reAuthLoading={reAuthLoading}
                 onReAuth={() => {

@@ -19,6 +19,7 @@
     "dify-client": "^3.0.0",
     "dotenv": "^16.6.1",
     "fastify": "^5.x",
+    "frappe-js-sdk": "^1.12.0",
     "ioredis": "^5.9.2",
     "marked": "^17.0.3",
     "tokenloom": "^1.0.9"
