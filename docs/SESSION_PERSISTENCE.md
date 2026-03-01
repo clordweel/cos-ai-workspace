@@ -4,7 +4,7 @@
 
 - **存储**：`apps/api/src/services/sessionStore.ts` 支持 **memory**（默认）、**redis**、**file** 三种 store。Cookie 仅存 `sessionId`，会话数据在对应 store 中。
 - **memory**：进程内存 Map，重启后清空 → 401，需重新登录。
-- **file**：单文件 JSON（若实现 `sessionStoreFile.ts`），`SESSION_STORE=file` 且可选 `SESSION_FILE_PATH`，启动加载、变更防抖写回，重启后会话保留。
+- **file**：单文件 JSON，已实现于 `sessionStore.ts`（`FileStore`）。`SESSION_STORE=file` 且可选 `SESSION_FILE_PATH`（默认 `apps/api/data/sessions.json`），启动加载、变更防抖写回，重启后会话保留。
 - **redis**：`SESSION_STORE=redis` 且 `REDIS_URL`，多实例共享。
 
 ## 目标

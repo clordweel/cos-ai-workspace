@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { Archive, LogOut, MessageCircle, RefreshCw, Settings, User } from 'lucide-react';
 import { buildChatDisplayItems } from '@/components/chat/buildChatDisplayItems';
 import type { ChatMessageItem } from '@/components/chat/chatMessageTypes';
@@ -86,7 +86,8 @@ function SpaceContent() {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, isAuthenticated, reAuthWithPopup, logout, matrixSyncToken, matrixBaseUrl, matrixUserId, matrixDeviceId, fetchUser } = useAuth();
+  const location = useLocation();
+  const { user, isAuthenticated, isSystemAdmin, reAuthWithPopup, logout, matrixSyncToken, matrixBaseUrl, matrixUserId, matrixDeviceId, fetchUser } = useAuth();
   const { uiFontSizeStep, setUIFontSizeStep, sessionAreaFontScale, FONT_STEP_MIN, FONT_STEP_MAX } = useUISettings();
   const [enterToSend, setEnterToSend] = useState(true);
   const association = useAssociationOptional();
@@ -228,6 +229,16 @@ function SpaceContent() {
   const openUserAppPanel = useCallback(() => {
     openView('profile');
   }, [openView]);
+
+  /** URL open=system-config 时，仅系统管理员打开系统配置标签 */
+  useEffect(() => {
+    if (searchParams.get('open') !== 'system-config' || !isSystemAdmin) return;
+    openView('system-config');
+    const next = new URLSearchParams(searchParams);
+    next.delete('open');
+    const q = next.toString();
+    navigate({ pathname: location.pathname, search: q ? `?${q}` : '' }, { replace: true });
+  }, [searchParams, isSystemAdmin, openView, navigate, location.pathname]);
 
   /** 进入工作区时恢复上次打开的会话（若该会话仍在列表中且当前未选会话） */
   useEffect(() => {
@@ -821,10 +832,25 @@ function SpaceContent() {
                               <span className="truncate text-sm font-medium text-foreground">
                                 {user.name}
                               </span>
+                              {isSystemAdmin ? (
+                                <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                                  超级管理员
+                                </span>
+                              ) : null}
                               {user.email ? (
                                 <span className="truncate text-xs text-muted-foreground">
                                   {user.email}
                                 </span>
+                              ) : null}
+                              {user.roles && user.roles.length > 0 ? (
+                                <div className="mt-1.5 flex flex-wrap justify-center gap-x-1.5 gap-y-0.5">
+                                  <span className="text-xs text-muted-foreground">角色：</span>
+                                  {user.roles.map((r) => (
+                                    <span key={r.id} className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground" title={r.description}>
+                                      {r.name}
+                                    </span>
+                                  ))}
+                                </div>
                               ) : null}
                             </div>
                             <div className="flex w-full flex-col gap-2">
@@ -1138,6 +1164,7 @@ function SpaceContent() {
                 activeTab={activeTab}
                 onOpenView={openView}
                 user={user}
+                isSystemAdmin={isSystemAdmin}
                 reAuthLoading={reAuthLoading}
                 onReAuth={() => {
                   setReAuthLoading(true);

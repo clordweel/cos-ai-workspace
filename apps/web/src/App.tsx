@@ -4,6 +4,7 @@ import Logto from './pages/Logto';
 import LogtoCallback from './pages/LogtoCallback';
 import InviteGate, { getInviteVerified } from './pages/InviteGate';
 import { getAuthParam } from '@/lib/authParam';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { AnchoredToastProvider, ToastProvider } from '@/components/ui/toast';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
@@ -93,17 +94,19 @@ export default function App() {
   }
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <ToastProvider position="bottom-right">
-        <AnchoredToastProvider />
-        <div className="isolate min-h-screen">
-          <AuthPopupCloser />
-          <AuthOkRedirect />
-          <Suspense fallback={<Fallback />}>
-            <MainRoutes />
-          </Suspense>
-        </div>
-      </ToastProvider>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider delayDuration={300}>
+        <ToastProvider position="bottom-right">
+          <AnchoredToastProvider />
+          <div className="isolate min-h-screen">
+            <AuthPopupCloser />
+            <AuthOkRedirect />
+            <Suspense fallback={<Fallback />}>
+              <MainRoutes />
+            </Suspense>
+          </div>
+        </ToastProvider>
+      </TooltipProvider>
+    </AuthProvider>
   );
 }

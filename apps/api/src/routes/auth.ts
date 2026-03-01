@@ -15,6 +15,7 @@ import {
   getLogtoUserCustomData,
   patchLogtoUserCustomData,
 } from '../services/logtoPreferences.js';
+import { getLogtoUserRoles, getLogtoUserRolesViaUserToken, getRolesFromAccessToken } from '../services/logtoUserRoles.js';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -195,12 +196,19 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     }
     const user = session.userProfile ?? { name: session.user };
     const userId = getStableUserId(session);
+    const adminEmail = config.systemAdminEmail;
+    const userEmail = (user as { email?: string }).email;
+    const isSystemAdmin = Boolean(
+      adminEmail && userEmail && userEmail.trim().toLowerCase() === adminEmail
+    );
     const payload: {
       ok: true;
       user: unknown;
       userId: string;
       type: string;
       preferences: Record<string, unknown>;
+      roles: Array<{ id: string; name: string; description?: string }>;
+      isSystemAdmin?: boolean;
       matrixSyncToken?: string;
       matrix_base_url?: string;
       matrix_user_id?: string;
@@ -211,8 +219,28 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
       userId,
       type: session.type,
       preferences: {},
+      roles: [],
+      ...(isSystemAdmin && { isSystemAdmin: true }),
     };
     if (session.logtoSub) {
+      if (session.logtoUserRoles && session.logtoUserRoles.length > 0) {
+        payload.roles = session.logtoUserRoles;
+      } else if (session.logtoAccessToken) {
+        const fromAccessToken = getRolesFromAccessToken(session.logtoAccessToken);
+        if (fromAccessToken.length > 0) {
+          payload.roles = fromAccessToken;
+        } else {
+          const tokenRoles = await getLogtoUserRolesViaUserToken(session.logtoAccessToken, req.log);
+          if (tokenRoles.ok && tokenRoles.roles.length > 0) payload.roles = tokenRoles.roles;
+        }
+      }
+      if (payload.roles.length === 0) {
+        const m2mRolesRes = await getLogtoUserRoles(session.logtoSub, req.log);
+        if (m2mRolesRes.ok && m2mRolesRes.roles.length > 0) payload.roles = m2mRolesRes.roles;
+      }
+      if (payload.roles.length === 0) {
+        (payload as Record<string, unknown>)._rolesHint = '若需角色：Logto 控制台 → 应用 → 权限 授予 role；体验 → 自定义 JWT 启用 ID token 的 roles 声明；用户重新登录';
+      }
       let customData: Record<string, unknown> | null = null;
       const token = session.logtoAccessToken;
       if (token) {

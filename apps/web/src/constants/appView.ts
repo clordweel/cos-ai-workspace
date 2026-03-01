@@ -10,7 +10,10 @@ export type AppView =
   | 'auth'
   | 'profile'
   | 'app'
-  | 'connected-services';
+  | 'connected-services'
+  | 'system-config'
+  | 'user-management'
+  | 'role-management';
 
 export interface AppTab {
   id: string;
@@ -22,13 +25,16 @@ export interface AppTab {
 }
 
 export const VIEW_TITLES: Record<Exclude<AppView, 'app'>, string> = {
-  home: '首页',
+  home: '导航页',
   contacts: '联系人',
   bots: '机器人',
   settings: '设置',
   auth: '认证登录',
   profile: '用户信息',
   'connected-services': '授权管理',
+  'system-config': '系统配置',
+  'user-management': '用户管理',
+  'role-management': '角色管理',
 };
 
 /** 只能创建一次的视图：再次激活时跳转到已有标签，不新建 */
@@ -37,6 +43,9 @@ export const SINGLE_INSTANCE_VIEWS: readonly AppView[] = [
   'settings',
   'auth',
   'connected-services',
+  'system-config',
+  'user-management',
+  'role-management',
 ];
 
 export function isSingleInstanceView(view: AppView): boolean {
@@ -46,7 +55,7 @@ export function isSingleInstanceView(view: AppView): boolean {
 export const defaultHomeTab: AppTab = {
   id: 'tab-home-default',
   view: 'home',
-  title: '首页',
+  title: '导航页',
 };
 
 /** 已知应用 ID 的展示名（测试应用等） */

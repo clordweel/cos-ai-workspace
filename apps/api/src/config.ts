@@ -36,17 +36,23 @@ export const config = {
     botUserId: (process.env.MATRIX_BOT_USER_ID || '').trim(),
     botAccessToken: (process.env.MATRIX_BOT_ACCESS_TOKEN || '').trim(),
   },
-  /** 会话存储：memory（默认，重启丢失）| redis（持久化）。与 middleware 一致，见 docs/SESSION_PERSISTENCE.md */
+  /** 会话存储：memory（默认）| file | redis。file 时单文件 JSON 持久化，见 docs/SESSION_PERSISTENCE.md */
   sessionStore: (() => {
     const v = (process.env.SESSION_STORE || 'memory').toLowerCase();
-    return v === 'redis' ? 'redis' : 'memory';
+    if (v === 'redis') return 'redis' as const;
+    if (v === 'file') return 'file' as const;
+    return 'memory' as const;
   })(),
+  /** SESSION_STORE=file 时会话文件路径，默认 apps/api/data/sessions.json */
+  sessionFilePath: (process.env.SESSION_FILE_PATH || '').trim() || path.resolve(path.dirname(apiEnv), 'data', 'sessions.json'),
   redisUrl: (process.env.REDIS_URL || '').trim(),
   /** Dify：@ 助手时流式回复，与 middleware 一致 */
   dify: {
     apiBase: (process.env.DIFY_API_BASE || 'https://api.dify.ai/v1').replace(/\/$/, ''),
     apiKey: (process.env.DIFY_API_KEY || '').trim(),
   },
+  /** 系统管理员：指定邮箱视为系统管理员（与当前用户 email 忽略大小写比较），GET /api/auth/me 返回 isSystemAdmin: true */
+  systemAdminEmail: (process.env.SYSTEM_ADMIN_EMAIL || '').trim().toLowerCase(),
   /** Frappe/ERPNext（cos、Memo 等）：仅 apps/api 内使用，前端不直连 */
   cos: {
     /** Base URL，如 https://<erpnext-host>/api，末尾无斜杠 */

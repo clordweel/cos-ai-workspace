@@ -27,9 +27,28 @@
 
 | 能力 | 说明 |
 |------|------|
-| `GET /api/auth/me` | 返回当前会话 user、userId、type；**Logto 登录时**并配置 M2M 时，附加 `preferences`（来自 Logto customData）。 |
+| `GET /api/auth/me` | 返回当前会话 user、userId、type；**Logto 登录时**并配置 M2M 时，附加 `preferences`（来自 Logto customData）与 `roles`（来自非 M2M 应用返回的角色，不依赖 M2M）。 |
+| **`roles` 来源** | 优先用非 M2M 应用返回：① session（登录时从 ID token 解析）；② access token（JWT）内 roles；③ userinfo `/oidc/me`。若三者皆无，则回退 **Management API** `GET /api/users/{userId}/roles`（需配置 M2M 且 M2M 应用已分配 Management API 权限）。见 [Permission management](https://docs.logto.io/integrate-logto/third-party-applications/permission-management)。 |
+| **`roles` 仍为空时** | 确认应用已授予 **role** 权限、用户已分配角色并重新登录；或配置 M2M 后由直接查询用户角色回退生效。响应中可能带 `_rolesHint` 提示。 |
+| **可选：User access token 注入 roles** | 在 **体验 > 自定义 JWT** 中选中 **User access token**（用户访问令牌），在脚本里返回 `roles`，则 access token 为 JWT 时中间层会从中解析角色。示例脚本见下。 |
 | `PATCH /api/auth/me/preferences` | 需 Logto 登录；body 部分字段 `theme`、`uiFontSizeStep`、`notificationsEnabled`，部分更新 Logto customData。 |
 | `PATCH /api/auth/me/profile` | 需 Logto 登录且配置 M2M；body 可选 `email`、`phone`，更新 Logto 用户 primaryEmail/primaryPhone，并同步至 Matrix。 |
+
+### 自定义 JWT（User access token）示例：在 access token 中注入 roles
+
+在 Logto 控制台 **体验 > 自定义 JWT** 中，选择 **User access token**，将脚本改为返回用户角色，例如：
+
+```javascript
+const getCustomJwtClaims = async ({ context }) => {
+  const roles = context?.user?.roles;
+  if (Array.isArray(roles) && roles.length > 0) {
+    return { roles };
+  }
+  return {};
+};
+```
+
+若右侧「数据来源」里 `context.user` 没有 `roles` 字段，可先点 **运行测试** 查看实际结构；部分版本需通过 `context` 其他属性或内部 API 获取角色。保存后用户重新登录，中间层会从 access token（JWT）中解析 `roles` 并写入 `GET /api/auth/me` 的响应。
 
 ## 前端
 

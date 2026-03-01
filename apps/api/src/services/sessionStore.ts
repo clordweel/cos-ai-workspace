@@ -1,7 +1,9 @@
 /**
- * 会话存储：内存 Map 或 Redis，与 middleware 对齐；重启后认证持久化需 SESSION_STORE=redis + REDIS_URL
+ * 会话存储：内存 Map、文件（file）或 Redis；file 时单文件 JSON 持久化，重启后会话保留
  * 见 docs/SESSION_PERSISTENCE.md
  */
+import fs from 'fs';
+import path from 'path';
 import { config } from '../config.js';
 import type { Redis } from 'ioredis';
 import { createRedisClient } from '../lib/redisClient.js';
@@ -9,6 +11,7 @@ import { createRedisClient } from '../lib/redisClient.js';
 export const COOKIE_NAME = 'auth_session';
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000; // 3 天
 const REDIS_KEY_PREFIX = 'sess:';
+const FILE_STORE_DEBOUNCE_MS = 2000;
 
 export interface UserProfile {
   name: string;
@@ -16,6 +19,12 @@ export interface UserProfile {
   email?: string;
   phone?: string;
   avatar?: string;
+}
+
+export interface LogtoUserRole {
+  id: string;
+  name: string;
+  description?: string;
 }
 
 export interface SessionData {
@@ -27,6 +36,8 @@ export interface SessionData {
   logtoRefreshToken?: string;
   logtoTokenExpiresAt?: number;
   expiresAt: number;
+  /** 登录时从 ID token 解析的角色（Logto 仅将 roles 放在 ID token，不在 userinfo） */
+  logtoUserRoles?: LogtoUserRole[];
   matrixUserId?: string;
   matrixAccessToken?: string;
   matrixDeviceId?: string;
@@ -41,6 +52,81 @@ interface ISessionStore {
   get(id: string): Promise<SessionData | null>;
   set(id: string, data: SessionData, ttlMs: number): Promise<void>;
   delete(id: string): Promise<void>;
+}
+
+/** 文件存储：单文件 JSON，格式 { [sessionId]: SessionData }，启动加载、变更防抖写回 */
+class FileStore implements ISessionStore {
+  private filePath: string;
+  private map = new Map<string, SessionData>();
+  private writeTimer: ReturnType<typeof setTimeout> | null = null;
+  private loaded = false;
+
+  constructor(filePath: string) {
+    this.filePath = filePath;
+    this.loadSync();
+    setInterval(() => {
+      const now = Date.now();
+      for (const [id, s] of this.map.entries()) {
+        if (s.expiresAt < now) this.map.delete(id);
+      }
+    }, 60 * 60 * 1000);
+  }
+
+  private loadSync(): void {
+    try {
+      const dir = path.dirname(this.filePath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      if (fs.existsSync(this.filePath)) {
+        const raw = fs.readFileSync(this.filePath, 'utf8');
+        const data = JSON.parse(raw) as Record<string, SessionData>;
+        const now = Date.now();
+        for (const [id, s] of Object.entries(data)) {
+          if (s && typeof s === 'object' && s.expiresAt > now) this.map.set(id, s);
+        }
+      }
+    } catch {
+      // 文件不存在或解析失败时从空开始
+    }
+    this.loaded = true;
+  }
+
+  private scheduleWrite(): void {
+    if (this.writeTimer) return;
+    this.writeTimer = setTimeout(() => {
+      this.writeTimer = null;
+      try {
+        const dir = path.dirname(this.filePath);
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        const obj: Record<string, SessionData> = {};
+        const now = Date.now();
+        for (const [id, s] of this.map.entries()) {
+          if (s.expiresAt > now) obj[id] = s;
+        }
+        fs.writeFileSync(this.filePath, JSON.stringify(obj, null, 0), 'utf8');
+      } catch (err) {
+        console.warn('[sessionStore] FileStore 写盘失败:', err);
+      }
+    }, FILE_STORE_DEBOUNCE_MS);
+  }
+
+  async get(id: string): Promise<SessionData | null> {
+    if (!this.loaded) this.loadSync();
+    const s = this.map.get(id);
+    if (!s || s.expiresAt < Date.now()) return null;
+    return s;
+  }
+
+  async set(id: string, data: SessionData, _ttlMs: number): Promise<void> {
+    this.map.set(id, data);
+    this.scheduleWrite();
+  }
+
+  async delete(id: string): Promise<void> {
+    this.map.delete(id);
+    this.scheduleWrite();
+  }
 }
 
 class MemoryStore implements ISessionStore {
@@ -143,6 +229,9 @@ class RedisStore implements ISessionStore {
 function createStore(): ISessionStore {
   if (config.sessionStore === 'redis' && config.redisUrl) {
     return new RedisStore(config.redisUrl);
+  }
+  if (config.sessionStore === 'file' && config.sessionFilePath) {
+    return new FileStore(config.sessionFilePath);
   }
   return new MemoryStore();
 }

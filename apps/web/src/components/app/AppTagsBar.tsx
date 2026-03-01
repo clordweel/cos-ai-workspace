@@ -9,7 +9,9 @@ import {
   Pin,
   Plus,
   Settings,
+  Shield,
   User,
+  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -27,6 +29,9 @@ const VIEW_ICONS: Record<AppView, React.ComponentType<{ className?: string; 'ari
   settings: Settings,
   app: LayoutGrid,
   'connected-services': Settings,
+  'system-config': Shield,
+  'user-management': Users,
+  'role-management': UserCog,
 };
 
 export interface AppTagsBarProps {

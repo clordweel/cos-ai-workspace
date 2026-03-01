@@ -29,3 +29,54 @@
 ## 运行前
 
 确保 api 服务已启动（如 `pnpm run dev`），或 `API_BASE_URL` 指向已运行实例。
+
+---
+
+## Logto 调试：curl 查询用户角色
+
+使用 Logto Management API 查询某用户的角色（需 M2M 应用凭证）。**仅本地调试用**，勿提交真实密钥。
+
+**1. 获取 M2M access token**
+
+自建 Logto（非 \*.logto.app）时 `resource` 用 `https://default.logto.app/api`；Logto Cloud 时用 `https://<租户>.logto.app/api`（与 endpoint 一致加 `/api`）。
+
+```bash
+# 替换为你的 LOGTO_ENDPOINT、LOGTO_M2M_APP_ID、LOGTO_M2M_APP_SECRET
+LOGTO_ENDPOINT="https://your-logto.example.com"
+LOGTO_M2M_APP_ID="your-m2m-app-id"
+LOGTO_M2M_APP_SECRET="your-m2m-app-secret"
+
+# 自建用 default，Cloud 用 ${LOGTO_ENDPOINT}/api
+RESOURCE="https://default.logto.app/api"
+
+curl -s -X POST "${LOGTO_ENDPOINT}/oidc/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" \
+  -d "client_id=${LOGTO_M2M_APP_ID}" \
+  -d "client_secret=${LOGTO_M2M_APP_SECRET}" \
+  -d "resource=${RESOURCE}"
+```
+
+从响应中取出 `access_token`，用于下一步。
+
+**2. 查询用户角色**
+
+用户 ID 为 Logto 用户主键（如控制台用户详情中的 User ID，或 OIDC `sub`，例如 `bm3bzjhdyhon`）。
+
+```bash
+# 上一步拿到的 token
+ACCESS_TOKEN="eyJ..."
+
+# 要查询的用户 ID（Logto 用户详情中的 User ID / sub）
+USER_ID="bm3bzjhdyhon"
+
+# 与 LOGTO_ENDPOINT 一致，不要带末尾斜杠
+LOGTO_ENDPOINT="https://your-logto.example.com"
+
+curl -s -X GET "${LOGTO_ENDPOINT}/api/users/${USER_ID}/roles" \
+  -H "Authorization: Bearer ${ACCESS_TOKEN}"
+```
+
+- 返回 200 + JSON 数组：该用户已分配的角色列表。
+- 返回 403：M2M 应用未分配「Logto Management API access」等含 Management API 权限的角色，或 resource 错误。
+- 返回 404：用户 ID 不存在或写错。

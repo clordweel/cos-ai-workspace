@@ -1,9 +1,11 @@
 /**
  * Logto 回调：code 换 token、拉 /oidc/me、建会话（阶段 1 最小集，无 Matrix/Account API 补全）
  * 并提供授权 URL 供前端 /logto 跳转（阶段 2）。
+ * 角色从 ID token 解析（Logto 仅将 roles 放在 ID token，不在 userinfo）。
  */
 import { config } from '../config.js';
 import { saveSession, type UserProfile } from './sessionStore.js';
+import { getRolesFromIdToken } from './logtoUserRoles.js';
 
 const SESSION_TTL_MS = 3 * 24 * 60 * 60 * 1000;
 
@@ -30,7 +32,7 @@ export function getLogtoAuthUrl(
     client_id: appId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid profile email',
+    scope: 'openid profile email role roles',
     state,
   });
   if (options?.prompt) params.set('prompt', options.prompt);
@@ -68,6 +70,8 @@ export async function handleLogtoCallback(
   });
   const tokenData = (await tokenRes.json().catch(() => ({}))) as {
     access_token?: string;
+    id_token?: string;
+    idToken?: string;
     refresh_token?: string;
     expires_in?: number;
     error?: string;
@@ -80,6 +84,8 @@ export async function handleLogtoCallback(
       error: tokenData.error_description || tokenData.error || '换取 token 失败',
     };
   }
+  const idToken = tokenData.id_token ?? tokenData.idToken;
+  const logtoUserRoles = idToken ? getRolesFromIdToken(idToken) : undefined;
   const meRes = await fetch(`${endpoint}/oidc/me`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -106,6 +112,7 @@ export async function handleLogtoCallback(
     ...(tokenData.refresh_token && { logtoRefreshToken: tokenData.refresh_token }),
     logtoTokenExpiresAt: Date.now() + expiresIn * 1000,
     expiresAt: Date.now() + SESSION_TTL_MS,
+    ...(logtoUserRoles && logtoUserRoles.length > 0 && { logtoUserRoles }),
   });
   return { ok: true, sessionId: session.sessionId, user: displayName };
 }

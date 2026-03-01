@@ -132,6 +132,7 @@ async function getM2mAccessToken(): Promise<string | null> {
     return m2mTokenCache.token;
   }
   try {
+    const resource = endpoint.includes('.logto.app') ? `${endpoint}/api` : 'https://default.logto.app/api';
     const res = await fetch(`${endpoint}/oidc/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -139,6 +140,7 @@ async function getM2mAccessToken(): Promise<string | null> {
         grant_type: 'client_credentials',
         client_id: m2mAppId,
         client_secret: m2mAppSecret,
+        resource,
       }),
     });
     const data = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
