@@ -31,6 +31,14 @@ export interface AppContentToolbarProps {
   activeTab: AppTab | null;
   /** 刷新应用内容区（重新拉取当前视图数据），由父级传入 */
   onRefresh?: () => void;
+  /** 应用内容区后退（仅标签/视图历史，不操作浏览器） */
+  onBack?: () => void;
+  /** 应用内容区前进 */
+  onForward?: () => void;
+  /** 是否可后退 */
+  canGoBack?: boolean;
+  /** 是否可前进 */
+  canGoForward?: boolean;
   /** 可选：点击面包屑「导航页」时切回首页 */
   onGoHome?: () => void;
   /** 可选：菜单「设置」回调 */
@@ -49,6 +57,10 @@ export interface AppContentToolbarProps {
 export function AppContentToolbar({
   activeTab,
   onRefresh,
+  onBack,
+  onForward,
+  canGoBack = false,
+  canGoForward = false,
   onGoHome,
   onOpenSettings,
   onReAuth,
@@ -61,14 +73,6 @@ export function AppContentToolbar({
   const view = activeTab?.view ?? 'home';
   const appId = activeTab?.appId;
   const currentTitle = getViewTitle(view, appId);
-
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  const handleForward = () => {
-    window.history.forward();
-  };
 
   const handleRefresh = () => {
     if (typeof onRefresh === 'function') onRefresh();
@@ -95,8 +99,9 @@ export function AppContentToolbar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:!bg-transparent hover:text-foreground"
-          onClick={handleBack}
+          className="h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:!bg-transparent hover:text-foreground disabled:opacity-50"
+          onClick={onBack}
+          disabled={!canGoBack}
           aria-label="后退"
           title="后退"
         >
@@ -106,8 +111,9 @@ export function AppContentToolbar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:!bg-transparent hover:text-foreground"
-          onClick={handleForward}
+          className="h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:!bg-transparent hover:text-foreground disabled:opacity-50"
+          onClick={onForward}
+          disabled={!canGoForward}
           aria-label="前进"
           title="前进"
         >
@@ -158,24 +164,21 @@ export function AppContentToolbar({
       </Button>
       {onOpenProfile && (
         <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="group flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 transition-colors"
-              aria-label={user ? '用户与账户' : '登录'}
-              title={user ? user.name || user.email || '用户' : '登录'}
-            >
-              {user ? (
-                <Avatar className="h-5 w-5 border-0 ring-1 ring-border opacity-90 transition-opacity group-hover:opacity-100">
-                  {user.avatar ? <AvatarImage src={user.avatar} alt="" /> : null}
-                  <AvatarFallback className="text-[10px]">{user.name?.slice(0, 1) ?? '?'}</AvatarFallback>
-                </Avatar>
-              ) : (
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:text-foreground">
-                  <User className="h-3.5 w-3.5" aria-hidden />
-                </span>
-              )}
-            </button>
+          <PopoverTrigger
+            className="group flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 transition-colors"
+            aria-label={user ? '用户与账户' : '登录'}
+            title={user ? user.name || user.email || '用户' : '登录'}
+          >
+            {user ? (
+              <Avatar className="h-5 w-5 border-0 ring-1 ring-border opacity-90 transition-opacity group-hover:opacity-100">
+                {user.avatar ? <AvatarImage src={user.avatar} alt="" /> : null}
+                <AvatarFallback className="text-[10px]">{user.name?.slice(0, 1) ?? '?'}</AvatarFallback>
+              </Avatar>
+            ) : (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors group-hover:text-foreground">
+                <User className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            )}
           </PopoverTrigger>
           <PopoverContent side="bottom" align="end" sideOffset={6} className="w-64 p-0 overflow-hidden">
             <div className="flex flex-col">

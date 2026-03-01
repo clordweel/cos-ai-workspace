@@ -189,109 +189,121 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
     return reply.send({ contacts: result.contacts });
   });
 
+  const AUTH_ME_TIMEOUT_MS = 20_000;
+
   app.get('/api/auth/me', async (req, reply) => {
-    const session = await getSessionFromCookie(req.headers.cookie);
-    if (!session) {
-      return reply.code(401).send({ ok: false, error: '未登录' });
-    }
-    const user = session.userProfile ?? { name: session.user };
-    const userId = getStableUserId(session);
-    const adminEmail = config.systemAdminEmail;
-    const userEmail = (user as { email?: string }).email;
-    const isSystemAdmin = Boolean(
-      adminEmail && userEmail && userEmail.trim().toLowerCase() === adminEmail
-    );
-    const payload: {
-      ok: true;
-      user: unknown;
-      userId: string;
-      type: string;
-      preferences: Record<string, unknown>;
-      roles: Array<{ id: string; name: string; description?: string }>;
-      isSystemAdmin?: boolean;
-      matrixSyncToken?: string;
-      matrix_base_url?: string;
-      matrix_user_id?: string;
-      matrix_device_id?: string;
-    } = {
-      ok: true,
-      user,
-      userId,
-      type: session.type,
-      preferences: {},
-      roles: [],
-      ...(isSystemAdmin && { isSystemAdmin: true }),
-    };
-    if (session.logtoSub) {
-      if (session.logtoUserRoles && session.logtoUserRoles.length > 0) {
-        payload.roles = session.logtoUserRoles;
-      } else if (session.logtoAccessToken) {
-        const fromAccessToken = getRolesFromAccessToken(session.logtoAccessToken);
-        if (fromAccessToken.length > 0) {
-          payload.roles = fromAccessToken;
-        } else {
-          const tokenRoles = await getLogtoUserRolesViaUserToken(session.logtoAccessToken, req.log);
-          if (tokenRoles.ok && tokenRoles.roles.length > 0) payload.roles = tokenRoles.roles;
-        }
+    const timeoutId = setTimeout(() => {
+      if (!reply.sent) {
+        req.log.warn('GET /api/auth/me 超时，返回 503 避免客户端 499');
+        reply.code(503).send({ ok: false, error: '请求超时，请稍后重试' });
       }
-      if (payload.roles.length === 0) {
-        const m2mRolesRes = await getLogtoUserRoles(session.logtoSub, req.log);
-        if (m2mRolesRes.ok && m2mRolesRes.roles.length > 0) payload.roles = m2mRolesRes.roles;
+    }, AUTH_ME_TIMEOUT_MS);
+    try {
+      const session = await getSessionFromCookie(req.headers.cookie);
+      if (!session) {
+        return reply.code(401).send({ ok: false, error: '未登录' });
       }
-      if (payload.roles.length === 0) {
-        (payload as Record<string, unknown>)._rolesHint = '若需角色：Logto 控制台 → 应用 → 权限 授予 role；体验 → 自定义 JWT 启用 ID token 的 roles 声明；用户重新登录';
-      }
-      let customData: Record<string, unknown> | null = null;
-      const token = session.logtoAccessToken;
-      if (token) {
-        const prefRes = await getLogtoUserCustomDataViaAccountApi(token);
-        if (prefRes.ok) customData = prefRes.customData;
-      }
-      if (customData === null) {
-        const m2mRes = await getLogtoUserCustomData(session.logtoSub);
-        if (m2mRes.ok) customData = m2mRes.customData;
-      }
-      if (customData !== null) {
-        payload.preferences = getPreferencesFromCustomData(customData);
-      }
-    }
-    if (config.chat.provider === 'matrix' && (config.matrix.baseUrl || config.matrix.publicBaseUrl)) {
-      payload.matrix_base_url = config.matrix.publicBaseUrl || config.matrix.baseUrl;
+      const user = session.userProfile ?? { name: session.user };
+      const userId = getStableUserId(session);
+      const adminEmail = config.systemAdminEmail;
+      const userEmail = (user as { email?: string }).email;
+      const isSystemAdmin = Boolean(
+        adminEmail && userEmail && userEmail.trim().toLowerCase() === adminEmail
+      );
+      const payload: {
+        ok: true;
+        user: unknown;
+        userId: string;
+        type: string;
+        preferences: Record<string, unknown>;
+        roles: Array<{ id: string; name: string; description?: string }>;
+        isSystemAdmin?: boolean;
+        matrixSyncToken?: string;
+        matrix_base_url?: string;
+        matrix_user_id?: string;
+        matrix_device_id?: string;
+      } = {
+        ok: true,
+        user,
+        userId,
+        type: session.type,
+        preferences: {},
+        roles: [],
+        ...(isSystemAdmin && { isSystemAdmin: true }),
+      };
       if (session.logtoSub) {
-        const ensureOut = await ensureMatrixUser(
-          session.logtoSub,
-          session.userProfile?.name ?? session.user,
-          session.userProfile?.email,
-          session.userProfile?.phone,
-          session.userProfile?.username
-        );
-        if (ensureOut.ok && ensureOut.matrixUserId) {
-          if (session.matrixUserId !== ensureOut.matrixUserId) {
-            const { updateSession } = await import('../services/sessionStore.js');
-            await updateSession(session.sessionId, { matrixUserId: ensureOut.matrixUserId });
-            session.matrixUserId = ensureOut.matrixUserId;
+        if (session.logtoUserRoles && session.logtoUserRoles.length > 0) {
+          payload.roles = session.logtoUserRoles;
+        } else if (session.logtoAccessToken) {
+          const fromAccessToken = getRolesFromAccessToken(session.logtoAccessToken);
+          if (fromAccessToken.length > 0) {
+            payload.roles = fromAccessToken;
+          } else {
+            const tokenRoles = await getLogtoUserRolesViaUserToken(session.logtoAccessToken, req.log);
+            if (tokenRoles.ok && tokenRoles.roles.length > 0) payload.roles = tokenRoles.roles;
           }
         }
-        const tokenResult = await ensureMatrixTokenForSession(session);
-        if (tokenResult && 'access_token' in tokenResult) {
-          session.matrixAccessToken = tokenResult.access_token;
-          session.matrixUserId = tokenResult.matrix_user_id ?? session.matrixUserId;
-          session.matrixDeviceId = tokenResult.device_id;
-          payload.matrixSyncToken = tokenResult.access_token;
-          payload.matrix_user_id = session.matrixUserId;
-          payload.matrix_device_id = tokenResult.device_id ?? session.matrixDeviceId;
+        if (payload.roles.length === 0) {
+          const m2mRolesRes = await getLogtoUserRoles(session.logtoSub, req.log);
+          if (m2mRolesRes.ok && m2mRolesRes.roles.length > 0) payload.roles = m2mRolesRes.roles;
+        }
+        if (payload.roles.length === 0) {
+          (payload as Record<string, unknown>)._rolesHint = '若需角色：Logto 控制台 → 应用 → 权限 授予 role；体验 → 自定义 JWT 启用 ID token 的 roles 声明；用户重新登录';
+        }
+        let customData: Record<string, unknown> | null = null;
+        const token = session.logtoAccessToken;
+        if (token) {
+          const prefRes = await getLogtoUserCustomDataViaAccountApi(token);
+          if (prefRes.ok) customData = prefRes.customData;
+        }
+        if (customData === null) {
+          const m2mRes = await getLogtoUserCustomData(session.logtoSub);
+          if (m2mRes.ok) customData = m2mRes.customData;
+        }
+        if (customData !== null) {
+          payload.preferences = getPreferencesFromCustomData(customData);
+        }
+      }
+      if (config.chat.provider === 'matrix' && (config.matrix.baseUrl || config.matrix.publicBaseUrl)) {
+        payload.matrix_base_url = config.matrix.publicBaseUrl || config.matrix.baseUrl;
+        if (session.logtoSub) {
+          const ensureOut = await ensureMatrixUser(
+            session.logtoSub,
+            session.userProfile?.name ?? session.user,
+            session.userProfile?.email,
+            session.userProfile?.phone,
+            session.userProfile?.username
+          );
+          if (ensureOut.ok && ensureOut.matrixUserId) {
+            if (session.matrixUserId !== ensureOut.matrixUserId) {
+              const { updateSession } = await import('../services/sessionStore.js');
+              await updateSession(session.sessionId, { matrixUserId: ensureOut.matrixUserId });
+              session.matrixUserId = ensureOut.matrixUserId;
+            }
+          }
+          const tokenResult = await ensureMatrixTokenForSession(session);
+          if (tokenResult && 'access_token' in tokenResult) {
+            session.matrixAccessToken = tokenResult.access_token;
+            session.matrixUserId = tokenResult.matrix_user_id ?? session.matrixUserId;
+            session.matrixDeviceId = tokenResult.device_id;
+            payload.matrixSyncToken = tokenResult.access_token;
+            payload.matrix_user_id = session.matrixUserId;
+            payload.matrix_device_id = tokenResult.device_id ?? session.matrixDeviceId;
+          } else if (session.matrixAccessToken) {
+            payload.matrixSyncToken = session.matrixAccessToken;
+            if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
+            if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
+          }
         } else if (session.matrixAccessToken) {
           payload.matrixSyncToken = session.matrixAccessToken;
           if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
           if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
         }
-      } else if (session.matrixAccessToken) {
-        payload.matrixSyncToken = session.matrixAccessToken;
-        if (session.matrixUserId) payload.matrix_user_id = session.matrixUserId;
-        if (session.matrixDeviceId) payload.matrix_device_id = session.matrixDeviceId;
       }
+      if (!reply.sent) return reply.send(payload);
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return reply.send(payload);
   });
 
   app.patch('/api/auth/me/preferences', async (req, reply) => {

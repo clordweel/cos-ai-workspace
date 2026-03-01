@@ -25,10 +25,6 @@ await fastify.register(chatRoutes, { prefix: '/' });
 await fastify.register(memoRoutes, { prefix: '/' });
 await fastify.register(connectedServicesRoutes, { prefix: '/' });
 
-await ensureMatrixBot().catch((err) => {
-  fastify.log.warn({ err }, 'Matrix bot 自动初始化未完成（可忽略；若需 @ AI 助手 请配置 MATRIX_BOT_* 或见 docs/MATRIX_BOT_ACCOUNT.md）');
-});
-
 try {
   await fastify.listen({ port: config.port, host: '0.0.0.0' });
   fastify.log.info({ port: config.port }, 'API listening');
@@ -36,3 +32,7 @@ try {
   fastify.log.error(err);
   process.exit(1);
 }
+
+ensureMatrixBot().catch((err) => {
+  fastify.log.warn({ err }, 'Matrix bot 自动初始化未完成（可忽略；若需 @ AI 助手 请配置 MATRIX_BOT_* 或见 docs/MATRIX_BOT_ACCOUNT.md）');
+});

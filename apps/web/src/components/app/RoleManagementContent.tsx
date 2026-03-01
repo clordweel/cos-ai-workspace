@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, UserMinus } from 'lucide-react';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { Button } from '@/components/ui/button';
@@ -15,15 +15,16 @@ import {
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
-/** 角色管理：列表来自 GET /api/admin/roles；支持「分配用户」到角色 */
+/** 角色管理：列表来自 GET /api/admin/roles；支持分配用户、从角色移除用户 */
 export function RoleManagementContent() {
-  const { roles, loading, error, refetch, assignRoleToUsers } = useAdminRoles();
+  const { roles, loading, error, refetch, assignRoleToUsers, removeRoleFromUser } = useAdminRoles();
   const [assignRoleId, setAssignRoleId] = useState<string | null>(null);
   const [assignRoleName, setAssignRoleName] = useState('');
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
 
-  const { users, loading: usersLoading } = useAdminUsers({ page_size: 100 });
+  const { users, loading: usersLoading, refetch: refetchUsers } = useAdminUsers({ page_size: 100 });
   const openAssign = (id: string, name: string) => {
     setAssignRoleId(id);
     setAssignRoleName(name);
@@ -35,9 +36,23 @@ export function RoleManagementContent() {
     setSubmitting(true);
     try {
       const ok = await assignRoleToUsers(assignRoleId, Array.from(selectedUserIds));
-      if (ok) setAssignRoleId(null);
+      if (ok) {
+        setAssignRoleId(null);
+        refetchUsers();
+      }
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleRemoveFromRole = async (userId: string) => {
+    if (!assignRoleId) return;
+    setRemovingUserId(userId);
+    try {
+      const ok = await removeRoleFromUser(assignRoleId, userId);
+      if (ok) refetchUsers();
+    } finally {
+      setRemovingUserId(null);
     }
   };
 
@@ -49,6 +64,11 @@ export function RoleManagementContent() {
       return next;
     });
   };
+
+  const currentMembers = assignRoleName
+    ? users.filter((u) => u.roleNames?.includes(assignRoleName))
+    : [];
+  const usersNotInRole = users.filter((u) => !currentMembers.some((m) => m.id === u.id));
 
   return (
     <div className="flex min-h-full flex-col p-4">
@@ -67,16 +87,16 @@ export function RoleManagementContent() {
           {roles.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6">暂无角色数据</p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="space-y-2 text-xs">
               {roles.map((r) => (
                 <li
                   key={r.id}
-                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/20 px-4 py-3"
+                  className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/20 px-4 py-2.5"
                 >
                   <div>
-                    <span className="text-sm font-medium text-foreground">{r.name}</span>
+                    <span className="font-medium text-foreground">{r.name}</span>
                     {r.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
+                      <p className="text-muted-foreground mt-0.5">{r.description}</p>
                     )}
                   </div>
                   <Button
@@ -99,8 +119,45 @@ export function RoleManagementContent() {
           <DialogHeader>
             <DialogTitle>分配用户至「{assignRoleName}」</DialogTitle>
           </DialogHeader>
+          {currentMembers.length > 0 && (
+            <div className="py-2">
+              <Label className="text-xs text-muted-foreground">当前成员（可从角色移除）</Label>
+              <ul className="mt-2 max-h-32 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                {currentMembers.map((u) => (
+                  <li
+                    key={u.id}
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs"
+                  >
+                    <span className="min-w-0 truncate">
+                      {u.name || u.username || u.primaryEmail || u.id.slice(0, 8)}
+                      {u.primaryEmail && (
+                        <span className="ml-1 text-muted-foreground truncate">
+                          {u.primaryEmail}
+                        </span>
+                      )}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleRemoveFromRole(u.id)}
+                      disabled={removingUserId === u.id}
+                    >
+                      {removingUserId === u.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                      ) : (
+                        <UserMinus className="h-3.5 w-3.5" aria-hidden />
+                      )}
+                      <span className="sr-only">从角色移除</span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="py-2">
-            <Label className="text-xs text-muted-foreground">选择用户（可多选）</Label>
+            <Label className="text-xs text-muted-foreground">添加用户（可多选）</Label>
             {usersLoading ? (
               <div className="flex items-center gap-2 py-4 text-muted-foreground text-sm">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -108,11 +165,16 @@ export function RoleManagementContent() {
               </div>
             ) : (
               <ul className="mt-2 max-h-48 overflow-y-auto rounded-lg border border-border divide-y divide-border">
-                {users.map((u) => (
+                {usersNotInRole.length === 0 ? (
+                  <li className="px-3 py-4 text-xs text-muted-foreground text-center">
+                    暂无其他用户可添加
+                  </li>
+                ) : (
+                usersNotInRole.map((u) => (
                   <li key={u.id}>
                     <label
                       className={cn(
-                        'flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/50 text-sm',
+                        'flex items-center gap-2 px-3 py-1.5 cursor-pointer hover:bg-muted/50 text-xs',
                         selectedUserIds.has(u.id) && 'bg-muted/80'
                       )}
                     >
@@ -124,13 +186,14 @@ export function RoleManagementContent() {
                       />
                       <span>{u.name || u.username || u.primaryEmail || u.id.slice(0, 8)}</span>
                       {u.primaryEmail && (
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="text-muted-foreground truncate">
                           {u.primaryEmail}
                         </span>
                       )}
                     </label>
                   </li>
-                ))}
+                ))
+                )}
               </ul>
             )}
           </div>

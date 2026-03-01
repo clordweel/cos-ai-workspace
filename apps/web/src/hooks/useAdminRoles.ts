@@ -68,5 +68,26 @@ export function useAdminRoles() {
     []
   );
 
-  return { roles: data, loading, error, refetch: fetchRoles, assignRoleToUsers };
+  const removeRoleFromUser = useCallback(
+    async (roleId: string, userId: string): Promise<boolean> => {
+      try {
+        const res = await fetch(
+          `/api/admin/roles/${encodeURIComponent(roleId)}/users/${encodeURIComponent(userId)}`,
+          { method: 'DELETE', credentials: 'include' }
+        );
+        const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+        if (!res.ok) {
+          setError(body.error ?? res.statusText);
+          return false;
+        }
+        return true;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+        return false;
+      }
+    },
+    []
+  );
+
+  return { roles: data, loading, error, refetch: fetchRoles, assignRoleToUsers, removeRoleFromUser };
 }

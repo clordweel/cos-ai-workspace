@@ -49,12 +49,15 @@ LOGTO_M2M_APP_SECRET="your-m2m-app-secret"
 # 自建用 default，Cloud 用 ${LOGTO_ENDPOINT}/api
 RESOURCE="https://default.logto.app/api"
 
+# 请求 Management API 时需加 scope=all；部分环境需 Basic 认证头
 curl -s -X POST "${LOGTO_ENDPOINT}/oidc/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
+  -u "${LOGTO_M2M_APP_ID}:${LOGTO_M2M_APP_SECRET}" \
   -d "grant_type=client_credentials" \
   -d "client_id=${LOGTO_M2M_APP_ID}" \
   -d "client_secret=${LOGTO_M2M_APP_SECRET}" \
-  -d "resource=${RESOURCE}"
+  -d "resource=${RESOURCE}" \
+  -d "scope=all"
 ```
 
 从响应中取出 `access_token`，用于下一步。

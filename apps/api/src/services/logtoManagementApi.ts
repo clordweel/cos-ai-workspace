@@ -9,6 +9,10 @@ const resource = (endpoint: string) =>
 
 let m2mTokenCache: { token: string; expiresAt: number } | null = null;
 
+function clearM2mTokenCache(): void {
+  m2mTokenCache = null;
+}
+
 async function getM2mAccessToken(): Promise<string | null> {
   const { endpoint, m2mAppId, m2mAppSecret } = config.logto;
   if (!endpoint || !m2mAppId || !m2mAppSecret) return null;
@@ -16,18 +20,30 @@ async function getM2mAccessToken(): Promise<string | null> {
     return m2mTokenCache.token;
   }
   try {
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials',
+      resource: resource(endpoint),
+      scope: 'all',
+    });
+    const basicAuth = Buffer.from(`${m2mAppId}:${m2mAppSecret}`, 'utf8').toString('base64');
     const res = await fetch(`${endpoint}/oidc/token`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: m2mAppId,
-        client_secret: m2mAppSecret,
-        resource: resource(endpoint),
-      }),
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${basicAuth}`,
+      },
+      body: body.toString(),
     });
-    const data = (await res.json().catch(() => ({}))) as { access_token?: string; expires_in?: number };
-    if (!res.ok || !data.access_token) return null;
+    const data = (await res.json().catch(() => ({}))) as
+      | { access_token?: string; expires_in?: number }
+      | { error?: string; error_description?: string };
+    if (!res.ok) {
+      if (data && typeof data === 'object' && 'error' in data) {
+        console.error('[logtoManagementApi] M2M token error:', (data as { error?: string; error_description?: string }).error_description ?? (data as { error?: string }).error);
+      }
+      return null;
+    }
+    if (!data || !('access_token' in data) || !data.access_token) return null;
     m2mTokenCache = {
       token: data.access_token,
       expiresAt: Date.now() + (Number(data.expires_in) || 3600) * 1000,
@@ -41,6 +57,16 @@ async function getM2mAccessToken(): Promise<string | null> {
 function apiBase(): string {
   const base = config.logto.endpoint?.replace(/\/$/, '');
   return base ? `${base}/api` : '';
+}
+
+/** 将 Logto 403 等错误转为对管理员更友好的中文说明 */
+function normalizeManagementApiError(statusCode: number, rawMessage: string): string {
+  if (statusCode === 403) {
+    if (/forbidden|permission|role/i.test(rawMessage)) {
+      return 'Logto Management API 无权限：请在 Logto 控制台为该 M2M 应用分配「Management API」相关角色/权限。';
+    }
+  }
+  return rawMessage || `Logto API ${statusCode}`;
 }
 
 export function isManagementApiConfigured(): boolean {
@@ -80,8 +106,12 @@ export async function listUsers(params?: {
   const base = apiBase();
   if (!base) return { ok: false, error: '未配置 LOGTO_ENDPOINT', statusCode: 503 };
   const searchParams = new URLSearchParams();
-  if (params?.page != null) searchParams.set('page', String(params.page));
-  if (params?.page_size != null) searchParams.set('page_size', String(params.page_size));
+  if (params?.page != null && params.page >= 0) {
+    searchParams.set('page', String(params.page + 1));
+  }
+  if (params?.page_size != null && params.page_size >= 1) {
+    searchParams.set('page_size', String(Math.min(100, params.page_size)));
+  }
   if (params?.search) searchParams.set('search', params.search);
   const qs = searchParams.toString();
   const url = qs ? `${base}/users?${qs}` : `${base}/users`;
@@ -92,8 +122,9 @@ export async function listUsers(params?: {
       | { code?: string; message?: string }
       | null;
     if (!res.ok) {
-      const msg = data && typeof data === 'object' && 'message' in data ? String((data as { message?: string }).message) : res.statusText;
-      return { ok: false, error: msg || `Logto API ${res.status}`, statusCode: res.status };
+      if (res.status === 403) clearM2mTokenCache();
+      const raw = data && typeof data === 'object' && 'message' in data ? String((data as { message?: string }).message) : res.statusText;
+      return { ok: false, error: normalizeManagementApiError(res.status, raw), statusCode: res.status };
     }
     if (data && typeof data === 'object') {
       const d = data as { data?: LogtoUserListItem[]; totalCount?: number; users?: LogtoUserListItem[] };
@@ -123,8 +154,9 @@ export async function listRoles(): Promise<{
       | { code?: string; message?: string }
       | null;
     if (!res.ok) {
-      const msg = data && typeof data === 'object' && 'message' in data ? String((data as { message?: string }).message) : res.statusText;
-      return { ok: false, error: msg || `Logto API ${res.status}`, statusCode: res.status };
+      if (res.status === 403) clearM2mTokenCache();
+      const raw = data && typeof data === 'object' && 'message' in data ? String((data as { message?: string }).message) : res.statusText;
+      return { ok: false, error: normalizeManagementApiError(res.status, raw), statusCode: res.status };
     }
     if (data && typeof data === 'object') {
       const d = data as { data?: LogtoRoleListItem[] };
@@ -157,9 +189,10 @@ export async function assignRoleToUsers(
       body: JSON.stringify({ userIds: Array.isArray(userIds) ? userIds : [] }),
     });
     if (res.status === 204 || res.ok) return { ok: true };
+    if (res.status === 403) clearM2mTokenCache();
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
-    const msg = data?.message ?? res.statusText;
-    return { ok: false, error: msg || `Logto API ${res.status}`, statusCode: res.status };
+    const raw = data?.message ?? res.statusText;
+    return { ok: false, error: normalizeManagementApiError(res.status, raw), statusCode: res.status };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err), statusCode: 500 };
   }
@@ -181,9 +214,10 @@ export async function removeRoleFromUser(
       { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } }
     );
     if (res.status === 204 || res.ok) return { ok: true };
+    if (res.status === 403) clearM2mTokenCache();
     const data = (await res.json().catch(() => null)) as { message?: string } | null;
-    const msg = data?.message ?? res.statusText;
-    return { ok: false, error: msg || `Logto API ${res.status}`, statusCode: res.status };
+    const raw = data?.message ?? res.statusText;
+    return { ok: false, error: normalizeManagementApiError(res.status, raw), statusCode: res.status };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : String(err), statusCode: 500 };
   }

@@ -10,7 +10,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         className={cn(
-          "w-full caption-bottom in-data-[slot=frame]:border-separate in-data-[slot=frame]:border-spacing-0 text-sm",
+          "w-full caption-bottom in-data-[slot=frame]:border-separate in-data-[slot=frame]:border-spacing-0 text-xs",
           className,
         )}
         data-slot="table"
@@ -105,7 +105,7 @@ function TableCaption({
   return (
     <caption
       className={cn(
-        "in-data-[slot=frame]:my-4 mt-4 text-muted-foreground text-sm",
+        "in-data-[slot=frame]:my-4 mt-4 text-muted-foreground text-xs",
         className,
       )}
       data-slot="table-caption"
