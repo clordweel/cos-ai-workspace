@@ -68,6 +68,7 @@ import { useRoomMentionItems } from '@/hooks/useRoomMentionItems';
 import { useSessionMembers } from '@/hooks/useSessionMembers';
 import { AppTagsBar } from '@/components/app/AppTagsBar';
 import { AppContent } from '@/components/app/AppContent';
+import { AppContentToolbar } from '@/components/app/AppContentToolbar';
 import { getStreamPhaseLabel, isAiAssistantSender, AI_ASSISTANT_LABEL as assistantLabel } from '@/components/chat/assistantConstants';
 import { getAuthParam } from '@/lib/authParam';
 import { getLastChatId, setLastChatId } from '@/lib/chatSessionStorage';
@@ -147,6 +148,7 @@ function SpaceContent() {
   const [chatInputAreaHeightPx, setChatInputAreaHeightPx] = useState<number | null>(null);
   const [appTagsBarPinned, setAppTagsBarPinned] = useState(false);
   const [appAreaCollapsed, setAppAreaCollapsed] = useState(false);
+  const [contentRefreshKey, setContentRefreshKey] = useState(0);
   const [tagBarHovered, setTagBarHovered] = useState(false);
   const [reAuthLoading, setReAuthLoading] = useState(false);
   const [invitedAccepting, setInvitedAccepting] = useState<string | null>(null);
@@ -1146,7 +1148,6 @@ function SpaceContent() {
               onCloseTab={closeTab}
               onNewTab={() => addTab('home')}
               onOpenProfile={() => openView('profile')}
-              onOpenSettings={() => openView('settings')}
               isTagBarExpanded={isTagBarExpanded}
               appAreaCollapsed={appAreaCollapsed}
               onToggleCollapse={setAppAreaCollapsed}
@@ -1157,24 +1158,42 @@ function SpaceContent() {
               user={user}
             />
             <main
-              className="min-h-0 min-w-0 flex-1 overflow-auto rounded-2xl bg-white dark:bg-background"
+              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-white dark:bg-background"
               aria-label="应用内容区"
             >
-              <AppContent
+              <AppContentToolbar
                 activeTab={activeTab}
-                onOpenView={openView}
-                user={user}
-                isSystemAdmin={isSystemAdmin}
-                reAuthLoading={reAuthLoading}
+                onRefresh={() => setContentRefreshKey((k) => k + 1)}
+                onGoHome={() => addTab('home')}
+                onOpenSettings={() => openView('settings')}
                 onReAuth={() => {
                   setReAuthLoading(true);
                   reAuthWithPopup()
                     .finally(() => setReAuthLoading(false))
                     .catch(() => {});
                 }}
+                user={user}
+                onOpenProfile={() => openView('profile')}
                 onLogout={logout}
-                onOpenApp={(appId) => openView('app', appId)}
               />
+              <div className="min-h-0 flex-1 overflow-auto">
+                <AppContent
+                  activeTab={activeTab}
+                  contentRefreshKey={contentRefreshKey}
+                  onOpenView={openView}
+                  user={user}
+                  isSystemAdmin={isSystemAdmin}
+                  reAuthLoading={reAuthLoading}
+                  onReAuth={() => {
+                    setReAuthLoading(true);
+                    reAuthWithPopup()
+                      .finally(() => setReAuthLoading(false))
+                      .catch(() => {});
+                  }}
+                  onLogout={logout}
+                  onOpenApp={(appId) => openView('app', appId)}
+                />
+              </div>
             </main>
           </div>
         </FramePanel>

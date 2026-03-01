@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Loader2, UserCog } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useAdminRoles } from '@/hooks/useAdminRoles';
 import { useAdminUsers } from '@/hooks/useAdminUsers';
 import { Button } from '@/components/ui/button';
@@ -52,14 +52,6 @@ export function RoleManagementContent() {
 
   return (
     <div className="flex min-h-full flex-col p-4">
-      <h2 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
-        <UserCog className="h-4 w-4" aria-hidden />
-        角色管理
-      </h2>
-      <p className="text-xs text-muted-foreground mb-4">
-        查看角色与权限；可将用户分配至角色（数据来自 Logto，仅系统管理员可访问）。
-      </p>
-
       {error && (
         <p className="text-sm text-destructive mb-2" role="alert">
           {error}

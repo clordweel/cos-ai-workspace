@@ -28,9 +28,6 @@ export function HomeContent({ onOpenApp, onOpenView, isSystemAdmin }: HomeConten
 
   return (
     <div className="flex min-h-full flex-col p-6">
-      <h2 className="text-sm font-semibold text-foreground mb-1">导航页</h2>
-      <p className="text-xs text-muted-foreground mb-4">打开下方应用可体验「关联到当前会话」功能。</p>
-
       {isSystemAdmin && onOpenView ? (
         <div className="mb-6">
           <h3 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">

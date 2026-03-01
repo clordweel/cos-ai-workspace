@@ -16,6 +16,8 @@ import { RoleManagementContent } from '@/components/app/RoleManagementContent';
 export interface AppContentProps {
   /** 当前选中的标签，为 null 时显示首页占位 */
   activeTab: AppTab | null;
+  /** 变更时触发有数据请求的子视图重新拉取（工具栏「刷新」） */
+  contentRefreshKey?: number;
   user: { name?: string; email?: string; avatar?: string; roles?: Array<{ id: string; name: string; description?: string }> } | null;
   /** 是否为系统管理员（显示超级管理员标记） */
   isSystemAdmin?: boolean;
@@ -30,6 +32,7 @@ export interface AppContentProps {
 
 export function AppContent({
   activeTab,
+  contentRefreshKey = 0,
   user,
   isSystemAdmin = false,
   reAuthLoading = false,
@@ -40,6 +43,7 @@ export function AppContent({
 }: AppContentProps) {
   const view = activeTab?.view ?? 'home';
   const appId = activeTab?.appId;
+  const contentKey = `${view}-${appId ?? ''}-${contentRefreshKey}`;
 
   if (view === 'profile') {
     if (user) {
@@ -108,8 +112,7 @@ export function AppContent({
   if (view === 'system-config') {
     return (
       <div className="flex min-h-full flex-col items-center justify-center p-6 text-center">
-        <p className="text-sm text-muted-foreground">系统配置</p>
-        <p className="mt-1 text-xs text-muted-foreground">仅系统管理员可访问，后续可在此扩展配置项。</p>
+        <p className="text-sm text-muted-foreground">仅系统管理员可访问，后续可在此扩展配置项。</p>
       </div>
     );
   }
@@ -148,12 +151,12 @@ export function AppContent({
   }
 
   if (view === 'connected-services') {
-    return <ConnectedServicesContent />;
+    return <ConnectedServicesContent key={contentKey} />;
   }
 
   if (view === 'app') {
-    if (appId === 'memo-test') return <MemoTestApp />;
-    if (appId === 'task-test') return <TaskTestApp />;
+    if (appId === 'memo-test') return <MemoTestApp key={contentKey} />;
+    if (appId === 'task-test') return <TaskTestApp key={contentKey} />;
     return (
       <div className="flex min-h-full flex-col items-center justify-center p-6 text-center text-sm text-muted-foreground">
         未找到该应用或扩展已卸载
@@ -172,11 +175,11 @@ export function AppContent({
   }
 
   if (view === 'user-management') {
-    return <UserManagementContent />;
+    return <UserManagementContent key={contentKey} />;
   }
 
   if (view === 'role-management') {
-    return <RoleManagementContent />;
+    return <RoleManagementContent key={contentKey} />;
   }
 
   return <div className="min-h-full p-4" />;

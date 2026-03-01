@@ -16,7 +16,6 @@ import {
   X,
 } from 'lucide-react';
 import type { AppTab, AppView } from '@/constants/appView';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Toggle } from '@/components/ui/toggle';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +40,6 @@ export interface AppTagsBarProps {
   onCloseTab: (id: string, options?: { force?: boolean }) => void;
   onNewTab: () => void;
   onOpenProfile: () => void;
-  onOpenSettings?: () => void;
   isTagBarExpanded: boolean;
   appAreaCollapsed: boolean;
   onToggleCollapse: (pressed: boolean) => void;
@@ -59,7 +57,6 @@ export function AppTagsBar({
   onCloseTab,
   onNewTab,
   onOpenProfile,
-  onOpenSettings,
   isTagBarExpanded,
   appAreaCollapsed,
   onToggleCollapse,
@@ -172,48 +169,6 @@ onClick={(e) => {
           >
             <Plus className="h-4 w-4 shrink-0" aria-hidden />
             {isTagBarExpanded && <span className="truncate">创建新标签</span>}
-          </button>
-          {onOpenSettings && (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className={cn(
-                'flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-left text-[12px] font-medium text-black transition-colors dark:text-white',
-                'hover:text-zinc-500 dark:hover:text-zinc-400',
-                isTagBarExpanded ? 'min-w-0 justify-start' : 'justify-center px-2',
-                activeTabId && tabs.find((t) => t.id === activeTabId)?.view === 'settings' && 'bg-zinc-100 dark:bg-zinc-800/80'
-              )}
-              aria-label="设置"
-            >
-              <Settings className="h-4 w-4 shrink-0" aria-hidden />
-              {isTagBarExpanded && <span className="truncate">设置</span>}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onOpenProfile}
-            className={cn(
-              'flex h-8 w-full cursor-pointer items-center gap-2 rounded-md px-3 text-left text-[12px] font-medium text-black transition-colors dark:text-white',
-              'hover:text-zinc-500 dark:hover:text-zinc-400',
-              isTagBarExpanded ? 'min-w-0 justify-start' : 'justify-center px-2',
-              activeTabId && tabs.find((t) => t.id === activeTabId)?.view === 'profile' && 'bg-zinc-100 dark:bg-zinc-800/80'
-            )}
-            aria-label={user ? '用户配置' : '登录'}
-          >
-            {user ? (
-              <>
-                <Avatar className="h-5 w-5 shrink-0 border-0 ring-2 ring-white dark:ring-zinc-800">
-                  {user.avatar ? <AvatarImage src={user.avatar} alt="" /> : null}
-                  <AvatarFallback className="text-[10px]">{user.name?.slice(0, 1) ?? '?'}</AvatarFallback>
-                </Avatar>
-                {isTagBarExpanded && <span className="truncate">{user.name || user.email || '用户'}</span>}
-              </>
-            ) : (
-              <>
-                <User className="h-4 w-4 shrink-0" aria-hidden />
-                {isTagBarExpanded && <span className="truncate">未登录</span>}
-              </>
-            )}
           </button>
         </div>
       </div>

@@ -46,11 +46,9 @@ export function ConnectedServicesContent() {
 
   return (
     <div className="flex min-h-full flex-col p-4">
-      <h2 className="text-sm font-semibold text-foreground mb-2">授权管理</h2>
       <p className="text-xs text-muted-foreground mb-4">
         连接后，备忘录等应用将使用您在该服务中的身份访问数据。
       </p>
-
       {error && (
         <p className="text-xs text-destructive mb-2">{error}</p>
       )}
