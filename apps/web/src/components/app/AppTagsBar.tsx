@@ -104,9 +104,8 @@ function SortableTabItem({
   const baseClass = cn(
     'flex h-8 w-full cursor-grab touch-none select-none items-center gap-2 rounded-md text-left text-[12px] font-medium text-black transition-[background-color,border-color,color,padding] duration-150 ease-out dark:text-white',
     'hover:bg-zinc-200 dark:hover:bg-zinc-600/90 active:cursor-grabbing',
-    isTagBarExpanded ? 'min-w-0 justify-start px-3' : 'justify-center px-2',
-    isActive && 'bg-white dark:bg-white/10',
-    isActive && isTagBarExpanded && 'border-l-2 border-primary pl-[10px]',
+    isTagBarExpanded ? 'min-w-0 justify-start pl-3 pr-2' : 'justify-center px-3',
+    isActive && 'border border-border bg-white dark:border-zinc-600 dark:bg-white/10',
     isDragging && 'opacity-50'
   );
 
@@ -131,7 +130,10 @@ function SortableTabItem({
         ref={setActivatorNodeRef}
         {...attributes}
         {...listeners}
-        className="flex min-w-0 flex-1 cursor-grab touch-none select-none items-center gap-2 active:cursor-grabbing"
+        className={cn(
+          'flex min-w-0 flex-1 cursor-grab touch-none select-none items-center gap-2 active:cursor-grabbing',
+          isTagBarExpanded ? 'justify-start' : 'justify-center'
+        )}
       >
         {Icon && <Icon className="h-4 w-4 shrink-0" aria-hidden />}
         {isTagBarExpanded && (
@@ -193,7 +195,7 @@ export function AppTagsBar({
       className={cn(
         'group flex shrink-0 flex-col overflow-hidden rounded-l-2xl bg-transparent transition-[width] duration-200 ease-out',
         'pr-2', /* 右侧留出间距，与主内容区隔开，避免滚动条贴边 */
-        appTagsBarPinned ? 'w-[220px]' : 'w-[52px] hover:w-[220px]'
+        appTagsBarPinned ? 'w-[180px]' : 'w-[48px] hover:w-[180px]'
       )}
       aria-label="应用标签栏"
       onMouseEnter={onMouseEnter}
@@ -201,8 +203,8 @@ export function AppTagsBar({
     >
       <div
         className={cn(
-          'flex shrink-0 items-center gap-1 px-2 pb-2 pt-2',
-          isTagBarExpanded ? 'justify-between' : 'justify-center'
+          'flex shrink-0 items-center gap-1 pb-2 pt-2',
+          isTagBarExpanded ? 'justify-between px-2' : 'justify-center px-2'
         )}
       >
         <Toggle
@@ -257,7 +259,7 @@ export function AppTagsBar({
             className={cn(
               'flex h-8 w-full cursor-pointer items-center gap-2 text-left text-[12px] text-black transition-colors dark:text-white',
               'hover:text-zinc-500 dark:hover:text-zinc-400',
-              isTagBarExpanded ? 'justify-start rounded-[11px] px-3' : 'justify-center rounded-[46px] px-2'
+              isTagBarExpanded ? 'justify-start rounded-[11px] px-2' : 'justify-center rounded-[46px] px-2'
             )}
             onClick={onNewTab}
             aria-label="创建新标签"
