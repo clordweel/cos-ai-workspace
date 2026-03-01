@@ -216,8 +216,14 @@ function SpaceContent() {
     addTab,
     openView,
     closeTab,
+    reorderTabs,
     switchTab,
     closeAllTabs,
+    goBack,
+    goForward,
+    canGoBack,
+    canGoForward,
+    goHome,
   } = useAppTabs({
     onOpenPanel: useCallback(() => setAppAreaCollapsed(false), []),
   });
@@ -1146,6 +1152,7 @@ function SpaceContent() {
               activeTabId={activeTabId}
               onSwitchTab={switchTab}
               onCloseTab={closeTab}
+              onReorderTabs={reorderTabs}
               onNewTab={() => addTab('home')}
               onOpenProfile={() => openView('profile')}
               isTagBarExpanded={isTagBarExpanded}
@@ -1164,7 +1171,11 @@ function SpaceContent() {
               <AppContentToolbar
                 activeTab={activeTab}
                 onRefresh={() => setContentRefreshKey((k) => k + 1)}
-                onGoHome={() => addTab('home')}
+                onBack={goBack}
+                onForward={goForward}
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                onGoHome={goHome}
                 onOpenSettings={() => openView('settings')}
                 onReAuth={() => {
                   setReAuthLoading(true);
